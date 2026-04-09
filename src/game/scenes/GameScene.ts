@@ -190,13 +190,43 @@ export class GameScene extends Scene {
                 gfx.lineTo(x + TILE_W / 2 - 1, y);
                 gfx.strokePath();
 
-                // Dark edge
-                gfx.lineStyle(1, 0x000000, darkAlpha);
+                // Dark edge (thicker for depth)
+                gfx.lineStyle(2, 0x000000, darkAlpha + 0.04);
                 gfx.beginPath();
                 gfx.moveTo(x + TILE_W / 2 - 1, y);
                 gfx.lineTo(x, y + TILE_H / 2 - 1);
                 gfx.lineTo(x - TILE_W / 2 + 1, y);
                 gfx.strokePath();
+
+                // === 3D gradient overlay ===
+                // Top half lighter (light from top-left)
+                gfx.fillStyle(0xffffff, 0.12);
+                gfx.beginPath();
+                gfx.moveTo(x - TILE_W / 2, y);
+                gfx.lineTo(x, y - TILE_H / 2);
+                gfx.lineTo(x + TILE_W / 2, y);
+                gfx.closePath();
+                gfx.fillPath();
+
+                // Bottom half darker (shadow)
+                gfx.fillStyle(0x000000, 0.08);
+                gfx.beginPath();
+                gfx.moveTo(x - TILE_W / 2, y);
+                gfx.lineTo(x, y + TILE_H / 2);
+                gfx.lineTo(x + TILE_W / 2, y);
+                gfx.closePath();
+                gfx.fillPath();
+
+                // === Micro-texture noise (grass tiles only) ===
+                if (tileType !== 'sp' && tileType !== 'dp' && inGrid) {
+                    for (let d = 0; d < 4; d++) {
+                        const nx = x + rng.between(-TILE_W * 0.3, TILE_W * 0.3);
+                        const ny = y + rng.between(-TILE_H * 0.2, TILE_H * 0.2);
+                        const isDark = rng.frac() > 0.5;
+                        gfx.fillStyle(isDark ? 0x000000 : 0xffffff, isDark ? 0.06 : 0.08);
+                        gfx.fillCircle(nx, ny, 1.5 * DPR);
+                    }
+                }
 
                 // Stone cobblestone detail
                 if (tileType === 'sp') {
@@ -313,7 +343,7 @@ export class GameScene extends Scene {
                 const sprite = this.add.image(x, y, b.spriteKey);
                 const scale = b.isGiftBox ? TILE_W * 1.3 / sprite.width : TILE_W * 1.0 / sprite.width;
                 sprite.setScale(scale);
-                sprite.setOrigin(0.5, 0.75);
+                sprite.setOrigin(0.5, b.isGiftBox ? 0.82 : 0.85);
                 sprite.setDepth(depth + 2);
                 topY = y - sprite.displayHeight * 0.5;
 
