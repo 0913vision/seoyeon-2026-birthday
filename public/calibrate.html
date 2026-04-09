@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>타일/건물 캘리브레이션</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+        body { background: #2d5a3f; font-family: system-ui; color: #fff; overflow: hidden; height: 100dvh; }
+        #canvas { width: 100%; height: 100%; display: block; }
+        #panel {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.85); padding: 10px 12px; font-size: 12px;
+            max-height: 40vh; overflow-y: auto; z-index: 10;
+        }
+        #panel h3 { color: #f59e0b; margin-bottom: 6px; }
+        .val { color: #4ade80; font-family: monospace; font-size: 13px; }
+        button { background: #f59e0b; color: #000; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; margin: 4px 2px; font-size: 12px; }
+        button.active { background: #ef4444; color: #fff; }
+        #copyBtn { background: #3b82f6; color: #fff; }
+        .row { display: flex; gap: 8px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
+        .label { min-width: 80px; color: #aaa; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="panel">
+        <h3>캘리브레이션 도구</h3>
+        <div class="row">
+            <span class="label">모드:</span>
+            <button id="modeTile" class="active" onclick="setMode('tile')">타일 배치</button>
+            <button id="modeBuilding" onclick="setMode('building')">건물 배치</button>
+        </div>
+        <div class="row">
+            <span class="label">선택:</span>
+            <select id="buildingSelect" style="display:none; padding:4px; font-size:12px;">
+                <option value="woodfarm">나무밭</option>
+                <option value="flowerfarm">꽃밭</option>
+                <option value="quarry">채석장</option>
+                <option value="woodshop">목공방</option>
+                <option value="mine">광산</option>
+                <option value="jewelshop">세공소</option>
+                <option value="gemcave">수정동굴</option>
+                <option value="box_empty">선물상자</option>
+            </select>
+        </div>
+        <div class="row">
+            <span class="label">Origin Y:</span>
+            <input type="range" id="originY" min="0.5" max="1.0" step="0.01" value="0.85" style="flex:1">
+            <span class="val" id="originYVal">0.85</span>
+        </div>
+        <div class="row">
+            <span class="label">Scale:</span>
+            <input type="range" id="scale" min="0.5" max="3.0" step="0.05" value="1.0" style="flex:1">
+            <span class="val" id="scaleVal">1.0</span>
+        </div>
+        <div class="row" id="tileOffsetRow">
+            <span class="label">Tile OffX:</span>
+            <input type="range" id="tileOffX" min="-50" max="50" step="1" value="0" style="flex:1">
+            <span class="val" id="tileOffXVal">0</span>
+        </div>
+        <div class="row" id="tileOffsetRow2">
+            <span class="label">Tile OffY:</span>
+            <input type="range" id="tileOffY" min="-50" max="50" step="1" value="0" style="flex:1">
+            <span class="val" id="tileOffYVal">0</span>
+        </div>
+        <div id="output" style="margin-top:8px; padding:8px; background:rgba(255,255,255,0.1); border-radius:6px; font-family:monospace; font-size:11px; word-break:break-all;"></div>
+        <button id="copyBtn" onclick="copyValues()">값 복사</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+
+        const TILE_W = 110;
+        const TILE_H = 55;
+
+        let mode = 'tile';
+        let selectedBuilding = 'woodfarm';
+        let buildingImg = null;
+        let tileImg = null;
+
+        // Load images
+        const buildingImages = {};
+        const buildingNames = ['woodfarm', 'flowerfarm', 'quarry', 'woodshop', 'mine', 'jewelshop', 'gemcave', 'box_empty'];
+        const buildingPaths = {
+            woodfarm: 'assets/generated/buildings/wood_farm.png',
+            flowerfarm: 'assets/generated/buildings/flower_farm.png',
+            quarry: 'assets/generated/buildings/quarry.png',
+            woodshop: 'assets/generated/buildings/woodshop.png',
+            mine: 'assets/generated/buildings/mine.png',
+            jewelshop: 'assets/generated/buildings/jewelshop.png',
+            gemcave: 'assets/generated/buildings/gem_cave.png',
+            box_empty: 'assets/generated/giftbox/box_empty.png',
+        };
+
+        let loaded = 0;
+        for (const [name, path] of Object.entries(buildingPaths)) {
+            const img = new Image();
+            img.onload = () => { buildingImages[name] = img; loaded++; if (loaded >= buildingNames.length) draw(); };
+            img.src = path;
+        }
+
+        // Try loading simple tile
+        const simpleTile = new Image();
+        simpleTile.onload = () => { tileImg = simpleTile; draw(); };
+        simpleTile.onerror = () => { tileImg = null; draw(); };
+        simpleTile.src = 'assets/generated/terrain/simple_grass.png';
+
+        function resize() {
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            ctx.scale(dpr, dpr);
+            draw();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function toScreen(row, col) {
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight * 0.35;
+            return {
+                x: (col - row) * (TILE_W / 2) + cx,
+                y: (col + row) * (TILE_H / 2) + cy,
+            };
+        }
+
+        function drawDiamond(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x, y - TILE_H / 2);
+            ctx.lineTo(x + TILE_W / 2, y);
+            ctx.lineTo(x, y + TILE_H / 2);
+            ctx.lineTo(x - TILE_W / 2, y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+
+            const originY = parseFloat(document.getElementById('originY').value);
+            const scale = parseFloat(document.getElementById('scale').value);
+            const tileOffX = parseInt(document.getElementById('tileOffX').value);
+            const tileOffY = parseInt(document.getElementById('tileOffY').value);
+
+            // Draw 5x5 grid of tiles
+            for (let r = -2; r <= 2; r++) {
+                for (let c = -2; c <= 2; c++) {
+                    const { x, y } = toScreen(r, c);
+
+                    if (tileImg && mode === 'tile') {
+                        const tw = TILE_W * scale;
+                        const th = tw; // square source image
+                        ctx.drawImage(tileImg, x - tw/2 + tileOffX, y - th/2 + tileOffY, tw, th);
+                    } else {
+                        const isCenter = r === 0 && c === 0;
+                        drawDiamond(x, y, isCenter ? '#7acc8e' : '#6dbe82');
+                    }
+                }
+            }
+
+            // Draw building on center tile
+            if (mode === 'building') {
+                const img = buildingImages[selectedBuilding];
+                if (img) {
+                    const { x, y } = toScreen(0, 0);
+                    const w = TILE_W * scale;
+                    const h = w * (img.height / img.width);
+                    const drawX = x - w / 2;
+                    const drawY = y - h * originY;
+                    ctx.drawImage(img, drawX, drawY, w, h);
+
+                    // Draw crosshair at tile center
+                    ctx.strokeStyle = 'rgba(255,0,0,0.6)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x - 20, y); ctx.lineTo(x + 20, y);
+                    ctx.moveTo(x, y - 20); ctx.lineTo(x, y + 20);
+                    ctx.stroke();
+                }
+            }
+
+            // Update output
+            updateOutput();
+        }
+
+        function updateOutput() {
+            const originY = document.getElementById('originY').value;
+            const scale = document.getElementById('scale').value;
+            const tileOffX = document.getElementById('tileOffX').value;
+            const tileOffY = document.getElementById('tileOffY').value;
+
+            document.getElementById('originYVal').textContent = originY;
+            document.getElementById('scaleVal').textContent = scale;
+            document.getElementById('tileOffXVal').textContent = tileOffX;
+            document.getElementById('tileOffYVal').textContent = tileOffY;
+
+            let text = '';
+            if (mode === 'building') {
+                text = `Building: ${selectedBuilding}\noriginY: ${originY}\nscale: TILE_W * ${scale} / sprite.width`;
+            } else {
+                text = `Tile offset: (${tileOffX}, ${tileOffY})\nscale: ${scale}\nsetDisplaySize(TILE_W * ${scale}, TILE_W * ${scale})`;
+            }
+            document.getElementById('output').textContent = text;
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('modeTile').className = m === 'tile' ? 'active' : '';
+            document.getElementById('modeBuilding').className = m === 'building' ? 'active' : '';
+            document.getElementById('buildingSelect').style.display = m === 'building' ? 'inline' : 'none';
+            document.getElementById('tileOffsetRow').style.display = m === 'tile' ? 'flex' : 'none';
+            document.getElementById('tileOffsetRow2').style.display = m === 'tile' ? 'flex' : 'none';
+            draw();
+        }
+
+        function copyValues() {
+            const text = document.getElementById('output').textContent;
+            navigator.clipboard.writeText(text).then(() => alert('복사됨!')).catch(() => {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                alert('복사됨!');
+            });
+        }
+
+        // Event listeners for sliders
+        ['originY', 'scale', 'tileOffX', 'tileOffY'].forEach(id => {
+            document.getElementById(id).addEventListener('input', draw);
+        });
+
+        document.getElementById('buildingSelect').addEventListener('change', (e) => {
+            selectedBuilding = e.target.value;
+            draw();
+        });
+    </script>
+</body>
+</html>
