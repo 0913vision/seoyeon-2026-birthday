@@ -141,79 +141,56 @@ export class GameScene extends Scene {
 
     private drawGround() {
         const EXT = 25;
-        const gfx = this.add.graphics();
-        gfx.setDepth(0);
         const rng = new Phaser.Math.RandomDataGenerator(['ground42']);
+
+        // Extended background: programmatic tiles (outside main grid)
+        const bgGfx = this.add.graphics();
+        bgGfx.setDepth(-1);
 
         for (let row = -EXT; row < GRID_SIZE + EXT; row++) {
             for (let col = -EXT; col < GRID_SIZE + EXT; col++) {
+                const inGrid = row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE;
+                if (inGrid) continue;
+
+                const { x, y } = this.toScreen(row, col);
+                const idx = Math.abs((row * 3 + col * 7)) % GRASS_LIGHT.length;
+                const color = rng.frac() < 0.6 ? GRASS_LIGHT[idx] : GRASS_DARK[idx];
+
+                bgGfx.fillStyle(color, 1);
+                bgGfx.beginPath();
+                bgGfx.moveTo(x, y - TILE_H / 2);
+                bgGfx.lineTo(x + TILE_W / 2, y);
+                bgGfx.lineTo(x, y + TILE_H / 2);
+                bgGfx.lineTo(x - TILE_W / 2, y);
+                bgGfx.closePath();
+                bgGfx.fillPath();
+            }
+        }
+
+        // Main grid: use generated sprite tiles
+        for (let row = 0; row < GRID_SIZE; row++) {
+            for (let col = 0; col < GRID_SIZE; col++) {
                 const { x, y } = this.toScreen(row, col);
                 const key = `${row},${col}`;
                 const tileType = TILE_MAP[key];
-                const inGrid = row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE;
+                const depth = (row + col) * 10 - 5;
 
-                let fillColor: number;
-                let highlightColor = 0xffffff;
-                let shadowColor = 0x000000;
-                let highlightAlpha = 0.06;
-                let shadowAlpha = 0.1;
-
+                let spriteKey: string;
                 if (tileType === 'sp') {
-                    // Stone path
-                    fillColor = STONE_COLORS.fill;
-                    highlightColor = STONE_COLORS.highlight;
-                    shadowColor = STONE_COLORS.shadow;
-                    highlightAlpha = 0.3;
-                    shadowAlpha = 0.25;
+                    spriteKey = 'tile_stone';
                 } else if (tileType === 'dp') {
-                    // Dirt path
-                    fillColor = DIRT_COLORS.fill;
-                    highlightColor = DIRT_COLORS.highlight;
-                    shadowColor = DIRT_COLORS.shadow;
-                    highlightAlpha = 0.2;
-                    shadowAlpha = 0.2;
-                } else if (tileType === 'gd' || (!inGrid && rng.frac() < 0.5)) {
-                    // Dark grass
-                    const idx = Math.abs((row * 3 + col * 7)) % GRASS_DARK.length;
-                    fillColor = GRASS_DARK[idx];
+                    spriteKey = 'tile_dirt';
+                } else if (tileType === 'gd' || rng.frac() > 0.7) {
+                    spriteKey = 'tile_grass_dark';
                 } else {
-                    // Light grass (default) with weighted random
-                    const idx = Math.abs((row * 3 + col * 7)) % GRASS_LIGHT.length;
-                    fillColor = rng.frac() < 0.7 ? GRASS_LIGHT[idx] : GRASS_DARK[idx];
+                    spriteKey = 'tile_grass_light';
                 }
 
-                // Fill tile
-                gfx.fillStyle(fillColor, 1);
-                gfx.beginPath();
-                gfx.moveTo(x, y - TILE_H / 2);
-                gfx.lineTo(x + TILE_W / 2, y);
-                gfx.lineTo(x, y + TILE_H / 2);
-                gfx.lineTo(x - TILE_W / 2, y);
-                gfx.closePath();
-                gfx.fillPath();
-
-                // Highlight (top-left edge)
-                gfx.lineStyle(1, highlightColor, highlightAlpha);
-                gfx.beginPath();
-                gfx.moveTo(x - TILE_W / 2 + 1, y);
-                gfx.lineTo(x, y - TILE_H / 2 + 1);
-                gfx.lineTo(x + TILE_W / 2 - 1, y);
-                gfx.strokePath();
-
-                // Shadow (bottom-right edge)
-                gfx.lineStyle(1, shadowColor, shadowAlpha);
-                gfx.beginPath();
-                gfx.moveTo(x + TILE_W / 2 - 1, y);
-                gfx.lineTo(x, y + TILE_H / 2 - 1);
-                gfx.lineTo(x - TILE_W / 2 + 1, y);
-                gfx.strokePath();
-
-                // Stone path detail: subtle inner grid lines
-                if (tileType === 'sp') {
-                    gfx.lineStyle(1, 0x000000, 0.08);
-                    gfx.lineBetween(x - TILE_W / 6, y - TILE_H / 6, x + TILE_W / 6, y + TILE_H / 6);
-                    gfx.lineBetween(x - TILE_W / 6, y + TILE_H / 6, x + TILE_W / 6, y - TILE_H / 6);
-                }
+                const tile = this.add.image(x, y, spriteKey);
+                // Scale sprite to match tile dimensions
+                tile.setDisplaySize(TILE_W * 1.05, TILE_W * 1.05);
+                tile.setOrigin(0.5, 0.5);
+                tile.setDepth(depth);
             }
         }
 

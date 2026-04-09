@@ -15,7 +15,14 @@ export class Boot extends Scene {
         this.load.image('mine', 'mine.png');
         this.load.image('jewelshop', 'jewelshop.png');
         this.load.image('gemcave', 'gemcave.png');
+        // Terrain tiles
+        this.load.setPath('assets/generated/terrain');
+        this.load.image('tile_grass_light', 'grass_light.png');
+        this.load.image('tile_grass_dark', 'grass_dark.png');
+        this.load.image('tile_dirt', 'dirt_path.png');
+        this.load.image('tile_stone', 'stone_path.png');
         // Decorative items
+        this.load.setPath('assets/iso');
         this.load.image('deco_corn', 'corn_s.png');
         this.load.image('deco_cornDouble', 'corndouble_s.png');
         this.load.image('deco_hay', 'hay.png');
