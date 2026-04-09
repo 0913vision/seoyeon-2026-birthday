@@ -62,46 +62,46 @@
             <div style="color:#4ecdc4; font-size:11px; font-weight:bold; margin:6px 0;">➡ 우측</div>
             <div class="row">
                 <span class="label">OffX:</span>
-                <input type="range" id="tRightX" min="-30" max="30" step="1" value="0">
-                <span class="val" id="tRightXVal">0</span>
+                <input type="range" id="tRightX" min="-30" max="30" step="0.5" value="7">
+                <span class="val" id="tRightXVal">7</span>
             </div>
             <div class="row">
                 <span class="label">OffY:</span>
-                <input type="range" id="tRightY" min="-30" max="30" step="1" value="0">
-                <span class="val" id="tRightYVal">0</span>
+                <input type="range" id="tRightY" min="-30" max="30" step="0.5" value="8">
+                <span class="val" id="tRightYVal">8</span>
             </div>
             <div style="color:#ffe66d; font-size:11px; font-weight:bold; margin:6px 0;">⬇ 아래</div>
             <div class="row">
                 <span class="label">OffX:</span>
-                <input type="range" id="tBottomX" min="-30" max="30" step="1" value="0">
+                <input type="range" id="tBottomX" min="-30" max="30" step="0.5" value="0">
                 <span class="val" id="tBottomXVal">0</span>
             </div>
             <div class="row">
                 <span class="label">OffY:</span>
-                <input type="range" id="tBottomY" min="-30" max="30" step="1" value="0">
-                <span class="val" id="tBottomYVal">0</span>
+                <input type="range" id="tBottomY" min="-30" max="30" step="0.5" value="16">
+                <span class="val" id="tBottomYVal">16</span>
             </div>
             <div style="color:#a29bfe; font-size:11px; font-weight:bold; margin:6px 0;">⬅ 좌측</div>
             <div class="row">
                 <span class="label">OffX:</span>
-                <input type="range" id="tLeftX" min="-30" max="30" step="1" value="0">
-                <span class="val" id="tLeftXVal">0</span>
+                <input type="range" id="tLeftX" min="-30" max="30" step="0.5" value="-7">
+                <span class="val" id="tLeftXVal">-7</span>
             </div>
             <div class="row">
                 <span class="label">OffY:</span>
-                <input type="range" id="tLeftY" min="-30" max="30" step="1" value="0">
-                <span class="val" id="tLeftYVal">0</span>
+                <input type="range" id="tLeftY" min="-30" max="30" step="0.5" value="8">
+                <span class="val" id="tLeftYVal">8</span>
             </div>
             <hr style="border-color:#333; margin:6px 0;">
             <div class="row">
                 <span class="label">타일 Scale:</span>
-                <input type="range" id="tScale" min="0.5" max="2.5" step="0.05" value="1.15">
-                <span class="val" id="tScaleVal">1.15</span>
+                <input type="range" id="tScale" min="0.5" max="2.5" step="0.01" value="1.2">
+                <span class="val" id="tScaleVal">1.2</span>
             </div>
             <div class="row">
                 <span class="label">타일 OriginY:</span>
-                <input type="range" id="tOriginY" min="0.3" max="0.7" step="0.01" value="0.45">
-                <span class="val" id="tOriginYVal">0.45</span>
+                <input type="range" id="tOriginY" min="0.3" max="0.8" step="0.01" value="0.7">
+                <span class="val" id="tOriginYVal">0.7</span>
             </div>
             <div id="tileOutput" style="margin-top:6px; padding:8px; background:rgba(255,255,255,0.08); border-radius:6px; font-family:monospace; font-size:11px; white-space:pre-wrap;"></div>
             <button onclick="copyTile()">타일 값 복사</button>
