@@ -6,12 +6,13 @@
     <title>캘리브레이션</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
-        body { background: #2d5a3f; font-family: system-ui; color: #fff; overflow: hidden; height: 100dvh; }
-        #canvas { width: 100%; height: 60%; display: block; }
+        body { background: #2d5a3f; font-family: system-ui; color: #fff; overflow: hidden; height: 100vh; }
+        #canvas { width: 100%; height: 45%; display: block; }
         #panel {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: rgba(0,0,0,0.9); padding: 10px 12px; font-size: 12px;
-            height: 40%; overflow-y: auto; z-index: 10;
+            background: rgba(0,0,0,0.9); padding: 10px 12px 80px; font-size: 12px;
+            height: 55%; overflow-y: auto; z-index: 10;
+            -webkit-overflow-scrolling: touch;
         }
         .tab { display: inline-block; padding: 6px 14px; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: bold; font-size: 13px; }
         .tab.active { background: #f59e0b; color: #000; }
@@ -146,7 +147,7 @@
         ti.src = 'assets/generated/terrain/simple_grass.png';
 
         function resize() {
-            const h = window.innerHeight * 0.6;
+            const h = window.innerHeight * 0.45;
             canvas.width = window.innerWidth * dpr;
             canvas.height = h * dpr;
             canvas.style.width = window.innerWidth + 'px';
@@ -159,7 +160,7 @@
 
         function toScreen(row, col) {
             const cx = window.innerWidth / 2;
-            const cy = canvas.height / dpr * 0.45;
+            const cy = canvas.height / dpr * 0.5;
             return { x: (col - row) * (TILE_W / 2) + cx, y: (col + row) * (TILE_H / 2) + cy };
         }
 
@@ -224,7 +225,7 @@
             // 4 tiles forming a diamond, meeting at a center point
             // Isometric positions relative to center point:
             const cx = window.innerWidth / 2;
-            const cy = canvas.height / dpr * 0.45;
+            const cy = canvas.height / dpr * 0.5;
 
             // Top tile position: center point is at its bottom vertex
             const topPos = { x: cx, y: cy - TILE_H / 2 };
