@@ -6,10 +6,10 @@ const TILE_W = 110 * DPR;
 const TILE_H = 55 * DPR;
 const GRID_SIZE = 22;
 
-const GRASS_LIGHT = [0x5a9e6e, 0x5da872, 0x58a06a, 0x62ad76, 0x569c66];
-const GRASS_DARK = [0x4e8c60, 0x508e62, 0x4c8a5c, 0x529066, 0x4a8858];
-const DIRT_COLORS = { fill: 0x8B7355, highlight: 0x9d845f, shadow: 0x735e45 };
-const STONE_COLORS = { fill: 0x9a9590, highlight: 0xada8a3, shadow: 0x807b76 };
+const GRASS_LIGHT = [0x6dbe82, 0x70c386, 0x6bba7e, 0x75c88a, 0x68b67a];
+const GRASS_DARK = [0x5aaa6e, 0x5dae72, 0x58a66a, 0x62b276, 0x56a266];
+const DIRT_COLORS = { fill: 0xa08660, highlight: 0xb89870, shadow: 0x886e48 };
+const STONE_COLORS = { fill: 0xb0aaa5, highlight: 0xc8c2bd, shadow: 0x908a85 };
 
 // Tile layout: 'sp' = stone path, 'dp' = dirt path, 'gd' = dark grass
 const TILE_MAP: Record<string, string> = {
@@ -64,7 +64,7 @@ interface BuildingDef {
 const BUILDINGS: BuildingDef[] = [
     {
         row: 10, col: 10, label: '선물상자',
-        isoBox: { size: 95 * DPR, height: 75 * DPR, top: 0xdc3545, left: 0xb02a37, right: 0x8b2131 },
+        spriteKey: 'box_empty',
         isGiftBox: true,
     },
     {
@@ -310,13 +310,32 @@ export class GameScene extends Scene {
             shadowGfx.fillEllipse(x + 3 * DPR, y + 5 * DPR, TILE_W * 0.7, TILE_H * 0.4);
 
             if (b.spriteKey) {
-                // Use sprite image - TILE_W already includes DPR, don't multiply again
                 const sprite = this.add.image(x, y, b.spriteKey);
-                const targetW = TILE_W * 1.0;
-                sprite.setScale(targetW / sprite.width);
+                const scale = b.isGiftBox ? TILE_W * 1.3 / sprite.width : TILE_W * 1.0 / sprite.width;
+                sprite.setScale(scale);
                 sprite.setOrigin(0.5, 0.75);
                 sprite.setDepth(depth + 2);
                 topY = y - sprite.displayHeight * 0.5;
+
+                // Gift box sparkles
+                if (b.isGiftBox) {
+                    for (let i = 0; i < 6; i++) {
+                        const sx = x + Phaser.Math.Between(-50 * DPR, 50 * DPR);
+                        const sy = topY + Phaser.Math.Between(-20 * DPR, 30 * DPR);
+                        const star = this.add.text(sx, sy, '✨', { fontSize: `${14 * DPR}px` })
+                            .setDepth(depth + 4).setAlpha(0);
+                        this.tweens.add({
+                            targets: star,
+                            alpha: { from: 0, to: 0.9 },
+                            y: sy - 12 * DPR,
+                            duration: 1200 + i * 200,
+                            delay: i * 350,
+                            yoyo: true,
+                            repeat: -1,
+                            ease: 'Sine.easeInOut',
+                        });
+                    }
+                }
             } else if (b.isoBox) {
                 // Use IsoBox (gift box)
                 const boxY = y + TILE_H * 0.15;

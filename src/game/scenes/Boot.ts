@@ -6,21 +6,18 @@ export class Boot extends Scene {
     }
 
     preload() {
-        this.load.setPath('assets/iso');
-        // Buildings
-        this.load.image('woodfarm', 'woodfarm.png');
-        this.load.image('flowerfarm', 'flowerfarm.png');
+        // Buildings (AI-generated)
+        this.load.setPath('assets/generated/buildings');
+        this.load.image('woodfarm', 'wood_farm.png');
+        this.load.image('flowerfarm', 'flower_farm.png');
         this.load.image('quarry', 'quarry.png');
         this.load.image('woodshop', 'woodshop.png');
         this.load.image('mine', 'mine.png');
         this.load.image('jewelshop', 'jewelshop.png');
-        this.load.image('gemcave', 'gemcave.png');
-        // Terrain tiles
-        this.load.setPath('assets/generated/terrain');
-        this.load.image('tile_grass_light', 'grass_light.png');
-        this.load.image('tile_grass_dark', 'grass_dark.png');
-        this.load.image('tile_dirt', 'dirt_path.png');
-        this.load.image('tile_stone', 'stone_path.png');
+        this.load.image('gemcave', 'gem_cave.png');
+        // Gift box stages
+        this.load.setPath('assets/generated/giftbox');
+        this.load.image('box_empty', 'box_empty.png');
         // Decorative items
         this.load.setPath('assets/iso');
         this.load.image('deco_corn', 'corn_s.png');
