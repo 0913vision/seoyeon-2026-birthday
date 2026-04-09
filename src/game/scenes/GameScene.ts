@@ -164,38 +164,66 @@ export class GameScene extends Scene {
     }
 
     private addDecorations() {
-        // Scatter small decorative dots (grass tufts, flowers) on random tiles
+        const rng = new Phaser.Math.RandomDataGenerator(['deco42']);
+        const occupiedTiles = new Set(BUILDINGS.map(b => `${b.row},${b.col}`));
+        // Also block neighbors of buildings
+        for (const b of BUILDINGS) {
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    occupiedTiles.add(`${b.row + dr},${b.col + dc}`);
+                }
+            }
+        }
+
+        const decoKeys = [
+            'deco_corn', 'deco_cornDouble', 'deco_hay', 'deco_hayBales',
+            'deco_hayStacked', 'deco_planks', 'deco_planksHigh',
+            'deco_sack', 'deco_sacksCrate',
+        ];
+
+        // Place sprite decorations on random tiles
+        const placed = new Set<string>();
+        for (let i = 0; i < 30; i++) {
+            const row = rng.between(-2, GRID_SIZE + 1);
+            const col = rng.between(-2, GRID_SIZE + 1);
+            const key = `${row},${col}`;
+            if (occupiedTiles.has(key) || placed.has(key)) continue;
+            placed.add(key);
+
+            const { x, y } = this.toScreen(row, col);
+            const depth = (row + col) * 10;
+            const decoKey = decoKeys[rng.between(0, decoKeys.length - 1)];
+
+            const sprite = this.add.image(x, y, decoKey);
+            // Farm sprites are 256x512 with content at bottom — scale to fit ~0.5 tile width
+            const targetW = TILE_W * 0.45;
+            sprite.setScale(targetW / sprite.width);
+            sprite.setOrigin(0.5, 0.85);
+            sprite.setDepth(depth + 1);
+            sprite.setAlpha(0.9);
+        }
+
+        // Also add small programmatic dots (grass, flowers) for variety
         const decoGfx = this.add.graphics();
         decoGfx.setDepth(1);
 
-        const rng = new Phaser.Math.RandomDataGenerator(['deco']);
-        const occupiedTiles = new Set(BUILDINGS.map(b => `${b.row},${b.col}`));
-
-        for (let i = 0; i < 40; i++) {
-            const row = rng.between(0, GRID_SIZE - 1);
-            const col = rng.between(0, GRID_SIZE - 1);
+        for (let i = 0; i < 60; i++) {
+            const row = rng.between(-3, GRID_SIZE + 2);
+            const col = rng.between(-3, GRID_SIZE + 2);
             if (occupiedTiles.has(`${row},${col}`)) continue;
 
             const { x, y } = this.toScreen(row, col);
             const type = rng.between(0, 2);
 
             if (type === 0) {
-                // Small grass tuft
-                decoGfx.fillStyle(0x3aaa55, 0.5);
+                decoGfx.fillStyle(0x3aaa55, 0.4);
                 decoGfx.fillCircle(x + rng.between(-15, 15) * DPR, y + rng.between(-5, 5) * DPR, 3 * DPR);
-                decoGfx.fillCircle(x + rng.between(-15, 15) * DPR, y + rng.between(-5, 5) * DPR, 2 * DPR);
             } else if (type === 1) {
-                // Tiny flower
-                const fx = x + rng.between(-20, 20) * DPR;
-                const fy = y + rng.between(-8, 8) * DPR;
                 const colors = [0xff6b9d, 0xffd93d, 0xff8a5c, 0xc77dff];
-                decoGfx.fillStyle(colors[rng.between(0, 3)], 0.6);
-                decoGfx.fillCircle(fx, fy, 2.5 * DPR);
-                decoGfx.fillStyle(0x2d8a4e, 0.5);
-                decoGfx.fillCircle(fx, fy + 3 * DPR, 1.5 * DPR);
+                decoGfx.fillStyle(colors[rng.between(0, 3)], 0.5);
+                decoGfx.fillCircle(x + rng.between(-20, 20) * DPR, y + rng.between(-8, 8) * DPR, 2.5 * DPR);
             } else {
-                // Small rock
-                decoGfx.fillStyle(0x8a8a7a, 0.3);
+                decoGfx.fillStyle(0x8a8a7a, 0.25);
                 decoGfx.fillEllipse(x + rng.between(-15, 15) * DPR, y + rng.between(-5, 5) * DPR, 5 * DPR, 3 * DPR);
             }
         }
