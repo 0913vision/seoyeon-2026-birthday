@@ -55,7 +55,18 @@
 
         <!-- Tile tab -->
         <div id="tilePanel" style="display:none">
-            <p style="color:#aaa; font-size:11px; margin:6px 0;">위쪽 타일 고정. 나머지 3방향(오른쪽/아래/왼쪽) 개별 조절.</p>
+            <p style="color:#aaa; font-size:11px; margin:6px 0;">가운데 타일 고정(기준). 상/하/좌/우 4개 타일을 개별 조절하여 밀착시키세요.</p>
+            <div class="row">
+                <span class="label">위 OffX:</span>
+                <input type="range" id="tTopX" min="-30" max="30" step="1" value="0">
+                <span class="val" id="tTopXVal">0</span>
+            </div>
+            <div class="row">
+                <span class="label">위 OffY:</span>
+                <input type="range" id="tTopY" min="-30" max="30" step="1" value="0">
+                <span class="val" id="tTopYVal">0</span>
+            </div>
+            <hr style="border-color:#333; margin:4px 0;">
             <div class="row">
                 <span class="label">우측 OffX:</span>
                 <input type="range" id="tRightX" min="-30" max="30" step="1" value="0">
@@ -66,6 +77,7 @@
                 <input type="range" id="tRightY" min="-30" max="30" step="1" value="0">
                 <span class="val" id="tRightYVal">0</span>
             </div>
+            <hr style="border-color:#333; margin:4px 0;">
             <div class="row">
                 <span class="label">하단 OffX:</span>
                 <input type="range" id="tBottomX" min="-30" max="30" step="1" value="0">
@@ -76,6 +88,7 @@
                 <input type="range" id="tBottomY" min="-30" max="30" step="1" value="0">
                 <span class="val" id="tBottomYVal">0</span>
             </div>
+            <hr style="border-color:#333; margin:4px 0;">
             <div class="row">
                 <span class="label">좌측 OffX:</span>
                 <input type="range" id="tLeftX" min="-30" max="30" step="1" value="0">
@@ -86,6 +99,7 @@
                 <input type="range" id="tLeftY" min="-30" max="30" step="1" value="0">
                 <span class="val" id="tLeftYVal">0</span>
             </div>
+            <hr style="border-color:#333; margin:4px 0;">
             <div class="row">
                 <span class="label">타일 Scale:</span>
                 <input type="range" id="tScale" min="0.5" max="2.5" step="0.05" value="1.15">
@@ -212,56 +226,59 @@
             const s = parseFloat(document.getElementById('tScale').value);
             const originY = parseFloat(document.getElementById('tOriginY').value);
             const offsets = {
-                top: { x: 0, y: 0 },
+                top: { x: parseInt(document.getElementById('tTopX').value), y: parseInt(document.getElementById('tTopY').value) },
                 right: { x: parseInt(document.getElementById('tRightX').value), y: parseInt(document.getElementById('tRightY').value) },
                 bottom: { x: parseInt(document.getElementById('tBottomX').value), y: parseInt(document.getElementById('tBottomY').value) },
                 left: { x: parseInt(document.getElementById('tLeftX').value), y: parseInt(document.getElementById('tLeftY').value) },
             };
 
-            const tiles = [
-                { label: 'TOP (고정)', row: -1, col: 0, off: offsets.top },
-                { label: 'RIGHT', row: 0, col: 1, off: offsets.right },
-                { label: 'BOTTOM', row: 1, col: 0, off: offsets.bottom },
-                { label: 'LEFT', row: 0, col: -1, off: offsets.left },
+            // Center tile (fixed reference) + 4 neighbors
+            const neighbors = [
+                { label: '⬆ 위', row: -1, col: 0, off: offsets.top, color: '#ff6b6b' },
+                { label: '➡ 우', row: 0, col: 1, off: offsets.right, color: '#4ecdc4' },
+                { label: '⬇ 아래', row: 1, col: 0, off: offsets.bottom, color: '#ffe66d' },
+                { label: '⬅ 좌', row: 0, col: -1, off: offsets.left, color: '#a29bfe' },
             ];
 
-            // Draw center reference diamond
             const center = toScreen(0, 0);
-            ctx.strokeStyle = 'rgba(255,255,0,0.4)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([4, 4]);
+
+            // Draw center tile first (fixed)
+            if (tileImg) {
+                const tw = TILE_W * s;
+                ctx.drawImage(tileImg, center.x - tw / 2, center.y - tw * originY, tw, tw);
+            } else {
+                drawDiamond(center.x, center.y, '#6dbe82');
+            }
+            // Center crosshair
+            ctx.strokeStyle = 'rgba(255,0,0,0.5)';
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(center.x, center.y - TILE_H / 2);
-            ctx.lineTo(center.x + TILE_W / 2, center.y);
-            ctx.lineTo(center.x, center.y + TILE_H / 2);
-            ctx.lineTo(center.x - TILE_W / 2, center.y);
-            ctx.closePath();
+            ctx.moveTo(center.x - 15, center.y); ctx.lineTo(center.x + 15, center.y);
+            ctx.moveTo(center.x, center.y - 15); ctx.lineTo(center.x, center.y + 15);
             ctx.stroke();
-            ctx.setLineDash([]);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('CENTER (고정)', center.x, center.y - TILE_H * 0.8);
 
-            // Draw all 4 tiles + center tile (5 total)
-            const allTiles = [
-                { row: 0, col: 0, off: { x: 0, y: 0 }, label: 'CENTER' },
-                ...tiles,
-            ];
-
-            for (const t of allTiles) {
-                const { x, y } = toScreen(t.row, t.col);
-                const dx = x + t.off.x;
-                const dy = y + t.off.y;
+            // Draw 4 neighbor tiles
+            for (const n of neighbors) {
+                const { x, y } = toScreen(n.row, n.col);
+                const dx = x + n.off.x;
+                const dy = y + n.off.y;
 
                 if (tileImg) {
                     const tw = TILE_W * s;
-                    const th = tw;
-                    ctx.drawImage(tileImg, dx - tw / 2, dy - th * originY, tw, th);
+                    ctx.drawImage(tileImg, dx - tw / 2, dy - tw * originY, tw, tw);
                 } else {
                     drawDiamond(dx, dy, '#6dbe82');
                 }
 
-                ctx.fillStyle = 'rgba(255,255,255,0.7)';
-                ctx.font = '10px system-ui';
+                // Colored label for each direction
+                ctx.fillStyle = n.color;
+                ctx.font = 'bold 11px system-ui';
                 ctx.textAlign = 'center';
-                ctx.fillText(t.label, dx, dy - TILE_H * 0.7);
+                ctx.fillText(n.label, dx, dy - TILE_H * 0.8);
             }
 
             updateTileOutput();
@@ -277,6 +294,8 @@
 
         function updateTileOutput() {
             const vals = {
+                topX: document.getElementById('tTopX').value,
+                topY: document.getElementById('tTopY').value,
                 rightX: document.getElementById('tRightX').value,
                 rightY: document.getElementById('tRightY').value,
                 bottomX: document.getElementById('tBottomX').value,
@@ -288,7 +307,7 @@
             };
             document.getElementById('tileOutput').textContent = JSON.stringify(vals, null, 2);
 
-            for (const id of ['tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY']) {
+            for (const id of ['tTopX','tTopY','tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY']) {
                 document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
             }
         }
@@ -329,7 +348,7 @@
         });
 
         // Tile controls
-        ['tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale'].forEach(id => {
+        ['tTopX','tTopY','tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY'].forEach(id => {
             document.getElementById(id).addEventListener('input', draw);
         });
 
