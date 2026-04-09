@@ -6,8 +6,50 @@ const TILE_W = 110 * DPR;
 const TILE_H = 55 * DPR;
 const GRID_SIZE = 22;
 
-const GRASS_COLORS = [0x5a9e6e, 0x5da872, 0x58a06a, 0x62ad76, 0x569c66];
+const GRASS_LIGHT = [0x5a9e6e, 0x5da872, 0x58a06a, 0x62ad76, 0x569c66];
 const GRASS_DARK = [0x4e8c60, 0x508e62, 0x4c8a5c, 0x529066, 0x4a8858];
+const DIRT_COLORS = { fill: 0x8B7355, highlight: 0x9d845f, shadow: 0x735e45 };
+const STONE_COLORS = { fill: 0x9a9590, highlight: 0xada8a3, shadow: 0x807b76 };
+
+// Tile layout: 'sp' = stone path, 'dp' = dirt path, 'gd' = dark grass
+const TILE_MAP: Record<string, string> = {
+    // Stone ring around Gift Box (10,10)
+    '9,9': 'sp', '9,10': 'sp', '9,11': 'sp',
+    '10,9': 'sp', '10,11': 'sp',
+    '11,9': 'sp', '11,10': 'sp', '11,11': 'sp',
+
+    // Wood Farm (4,5) -> center
+    '4,6': 'dp', '4,7': 'dp', '4,8': 'dp', '4,9': 'dp',
+    '5,9': 'dp', '6,9': 'dp', '7,9': 'dp', '8,9': 'dp',
+
+    // Flower Farm (5,15) -> center
+    '5,14': 'dp', '5,13': 'dp', '5,12': 'dp', '5,11': 'dp',
+    '6,11': 'dp', '7,11': 'dp', '8,11': 'dp',
+
+    // Quarry (15,4) -> center + Gem Cave (14,8) joins
+    '15,5': 'dp', '15,6': 'dp', '15,7': 'dp', '15,8': 'dp', '15,9': 'dp',
+    '14,9': 'dp', '13,9': 'dp', '12,9': 'dp',
+
+    // Mine (15,14) -> center
+    '15,13': 'dp', '15,12': 'dp', '15,11': 'dp',
+    '14,11': 'dp', '13,11': 'dp', '12,11': 'dp',
+
+    // Jewelshop (8,15) -> center
+    '8,14': 'dp', '8,13': 'dp', '8,12': 'dp',
+    '9,12': 'dp',
+
+    // Dark grass clusters (corners + near buildings)
+    '0,0': 'gd', '0,1': 'gd', '1,0': 'gd',
+    '0,20': 'gd', '0,21': 'gd', '1,21': 'gd',
+    '20,0': 'gd', '21,0': 'gd', '21,1': 'gd',
+    '20,21': 'gd', '21,20': 'gd', '21,21': 'gd',
+    '3,4': 'gd', '3,5': 'gd',
+    '4,14': 'gd', '4,16': 'gd',
+    '16,3': 'gd', '16,5': 'gd',
+    '16,13': 'gd', '16,15': 'gd',
+    '13,7': 'gd', '13,8': 'gd',
+    '7,14': 'gd', '7,16': 'gd',
+};
 
 interface BuildingDef {
     row: number;
@@ -98,19 +140,50 @@ export class GameScene extends Scene {
     }
 
     private drawGround() {
-        // Draw all tiles (grid + extended) with same checkerboard pattern
         const EXT = 25;
         const gfx = this.add.graphics();
         gfx.setDepth(0);
+        const rng = new Phaser.Math.RandomDataGenerator(['ground42']);
 
         for (let row = -EXT; row < GRID_SIZE + EXT; row++) {
             for (let col = -EXT; col < GRID_SIZE + EXT; col++) {
                 const { x, y } = this.toScreen(row, col);
-                const colorIdx = (((row % 5) + 5) * 3 + ((col % 7) + 7) * 7) % GRASS_COLORS.length;
-                const isEven = (row + col) % 2 === 0;
-                const color = isEven ? GRASS_COLORS[colorIdx] : GRASS_DARK[colorIdx];
+                const key = `${row},${col}`;
+                const tileType = TILE_MAP[key];
+                const inGrid = row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE;
 
-                gfx.fillStyle(color, 1);
+                let fillColor: number;
+                let highlightColor = 0xffffff;
+                let shadowColor = 0x000000;
+                let highlightAlpha = 0.06;
+                let shadowAlpha = 0.1;
+
+                if (tileType === 'sp') {
+                    // Stone path
+                    fillColor = STONE_COLORS.fill;
+                    highlightColor = STONE_COLORS.highlight;
+                    shadowColor = STONE_COLORS.shadow;
+                    highlightAlpha = 0.3;
+                    shadowAlpha = 0.25;
+                } else if (tileType === 'dp') {
+                    // Dirt path
+                    fillColor = DIRT_COLORS.fill;
+                    highlightColor = DIRT_COLORS.highlight;
+                    shadowColor = DIRT_COLORS.shadow;
+                    highlightAlpha = 0.2;
+                    shadowAlpha = 0.2;
+                } else if (tileType === 'gd' || (!inGrid && rng.frac() < 0.5)) {
+                    // Dark grass
+                    const idx = Math.abs((row * 3 + col * 7)) % GRASS_DARK.length;
+                    fillColor = GRASS_DARK[idx];
+                } else {
+                    // Light grass (default) with weighted random
+                    const idx = Math.abs((row * 3 + col * 7)) % GRASS_LIGHT.length;
+                    fillColor = rng.frac() < 0.7 ? GRASS_LIGHT[idx] : GRASS_DARK[idx];
+                }
+
+                // Fill tile
+                gfx.fillStyle(fillColor, 1);
                 gfx.beginPath();
                 gfx.moveTo(x, y - TILE_H / 2);
                 gfx.lineTo(x + TILE_W / 2, y);
@@ -119,40 +192,29 @@ export class GameScene extends Scene {
                 gfx.closePath();
                 gfx.fillPath();
 
-                gfx.lineStyle(1, 0xffffff, 0.06);
+                // Highlight (top-left edge)
+                gfx.lineStyle(1, highlightColor, highlightAlpha);
                 gfx.beginPath();
                 gfx.moveTo(x - TILE_W / 2 + 1, y);
                 gfx.lineTo(x, y - TILE_H / 2 + 1);
                 gfx.lineTo(x + TILE_W / 2 - 1, y);
                 gfx.strokePath();
 
-                gfx.lineStyle(1, 0x000000, 0.1);
+                // Shadow (bottom-right edge)
+                gfx.lineStyle(1, shadowColor, shadowAlpha);
                 gfx.beginPath();
                 gfx.moveTo(x + TILE_W / 2 - 1, y);
                 gfx.lineTo(x, y + TILE_H / 2 - 1);
                 gfx.lineTo(x - TILE_W / 2 + 1, y);
                 gfx.strokePath();
-            }
-        }
 
-        // Dirt paths around gift box
-        const cx = 10, cy = 10;
-        const pathTiles = [
-            [cx-1, cy-1], [cx-1, cy], [cx-1, cy+1],
-            [cx, cy-1], [cx, cy+1],
-            [cx+1, cy-1], [cx+1, cy], [cx+1, cy+1],
-            [cx+2, cy], [cx, cy+2], [cx-2, cy], [cx, cy-2],
-        ];
-        for (const [row, col] of pathTiles) {
-            const { x, y } = this.toScreen(row, col);
-            gfx.fillStyle(0x8B7355, 0.2);
-            gfx.beginPath();
-            gfx.moveTo(x, y - TILE_H / 2);
-            gfx.lineTo(x + TILE_W / 2, y);
-            gfx.lineTo(x, y + TILE_H / 2);
-            gfx.lineTo(x - TILE_W / 2, y);
-            gfx.closePath();
-            gfx.fillPath();
+                // Stone path detail: subtle inner grid lines
+                if (tileType === 'sp') {
+                    gfx.lineStyle(1, 0x000000, 0.08);
+                    gfx.lineBetween(x - TILE_W / 6, y - TILE_H / 6, x + TILE_W / 6, y + TILE_H / 6);
+                    gfx.lineBetween(x - TILE_W / 6, y + TILE_H / 6, x + TILE_W / 6, y - TILE_H / 6);
+                }
+            }
         }
 
         // Decorative elements on empty tiles
