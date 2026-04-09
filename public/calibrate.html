@@ -55,51 +55,41 @@
 
         <!-- Tile tab -->
         <div id="tilePanel" style="display:none">
-            <p style="color:#aaa; font-size:11px; margin:6px 0;">가운데 타일 고정(기준). 상/하/좌/우 4개 타일을 개별 조절하여 밀착시키세요.</p>
+            <p style="color:#aaa; font-size:11px; margin:6px 0;">위쪽 타일 고정(기준). 좌/우/아래 3개를 위 타일에 맞닿게 조절하세요.<br>z-order: 위 → 좌/우 → 아래(가장 앞)</p>
+            <div style="color:#4ecdc4; font-size:11px; font-weight:bold; margin:6px 0;">➡ 우측</div>
             <div class="row">
-                <span class="label">위 OffX:</span>
-                <input type="range" id="tTopX" min="-30" max="30" step="1" value="0">
-                <span class="val" id="tTopXVal">0</span>
-            </div>
-            <div class="row">
-                <span class="label">위 OffY:</span>
-                <input type="range" id="tTopY" min="-30" max="30" step="1" value="0">
-                <span class="val" id="tTopYVal">0</span>
-            </div>
-            <hr style="border-color:#333; margin:4px 0;">
-            <div class="row">
-                <span class="label">우측 OffX:</span>
+                <span class="label">OffX:</span>
                 <input type="range" id="tRightX" min="-30" max="30" step="1" value="0">
                 <span class="val" id="tRightXVal">0</span>
             </div>
             <div class="row">
-                <span class="label">우측 OffY:</span>
+                <span class="label">OffY:</span>
                 <input type="range" id="tRightY" min="-30" max="30" step="1" value="0">
                 <span class="val" id="tRightYVal">0</span>
             </div>
-            <hr style="border-color:#333; margin:4px 0;">
+            <div style="color:#ffe66d; font-size:11px; font-weight:bold; margin:6px 0;">⬇ 아래</div>
             <div class="row">
-                <span class="label">하단 OffX:</span>
+                <span class="label">OffX:</span>
                 <input type="range" id="tBottomX" min="-30" max="30" step="1" value="0">
                 <span class="val" id="tBottomXVal">0</span>
             </div>
             <div class="row">
-                <span class="label">하단 OffY:</span>
+                <span class="label">OffY:</span>
                 <input type="range" id="tBottomY" min="-30" max="30" step="1" value="0">
                 <span class="val" id="tBottomYVal">0</span>
             </div>
-            <hr style="border-color:#333; margin:4px 0;">
+            <div style="color:#a29bfe; font-size:11px; font-weight:bold; margin:6px 0;">⬅ 좌측</div>
             <div class="row">
-                <span class="label">좌측 OffX:</span>
+                <span class="label">OffX:</span>
                 <input type="range" id="tLeftX" min="-30" max="30" step="1" value="0">
                 <span class="val" id="tLeftXVal">0</span>
             </div>
             <div class="row">
-                <span class="label">좌측 OffY:</span>
+                <span class="label">OffY:</span>
                 <input type="range" id="tLeftY" min="-30" max="30" step="1" value="0">
                 <span class="val" id="tLeftYVal">0</span>
             </div>
-            <hr style="border-color:#333; margin:4px 0;">
+            <hr style="border-color:#333; margin:6px 0;">
             <div class="row">
                 <span class="label">타일 Scale:</span>
                 <input type="range" id="tScale" min="0.5" max="2.5" step="0.05" value="1.15">
@@ -224,62 +214,57 @@
 
         function drawTiles() {
             const s = parseFloat(document.getElementById('tScale').value);
-            const originY = parseFloat(document.getElementById('tOriginY').value);
+            const oy = parseFloat(document.getElementById('tOriginY').value);
             const offsets = {
-                top: { x: parseInt(document.getElementById('tTopX').value), y: parseInt(document.getElementById('tTopY').value) },
                 right: { x: parseInt(document.getElementById('tRightX').value), y: parseInt(document.getElementById('tRightY').value) },
                 bottom: { x: parseInt(document.getElementById('tBottomX').value), y: parseInt(document.getElementById('tBottomY').value) },
                 left: { x: parseInt(document.getElementById('tLeftX').value), y: parseInt(document.getElementById('tLeftY').value) },
             };
 
-            // Center tile (fixed reference) + 4 neighbors
-            const neighbors = [
-                { label: '⬆ 위', row: -1, col: 0, off: offsets.top, color: '#ff6b6b' },
-                { label: '➡ 우', row: 0, col: 1, off: offsets.right, color: '#4ecdc4' },
-                { label: '⬇ 아래', row: 1, col: 0, off: offsets.bottom, color: '#ffe66d' },
-                { label: '⬅ 좌', row: 0, col: -1, off: offsets.left, color: '#a29bfe' },
-            ];
+            // 4 tiles forming a diamond, meeting at a center point
+            // Isometric positions relative to center point:
+            const cx = window.innerWidth / 2;
+            const cy = canvas.height / dpr * 0.45;
 
-            const center = toScreen(0, 0);
+            // Top tile position: center point is at its bottom vertex
+            const topPos = { x: cx, y: cy - TILE_H / 2 };
+            // Right: center point is at its left vertex
+            const rightPos = { x: cx + TILE_W / 2 + offsets.right.x, y: cy + offsets.right.y };
+            // Bottom: center point is at its top vertex
+            const bottomPos = { x: cx + offsets.bottom.x, y: cy + TILE_H / 2 + offsets.bottom.y };
+            // Left: center point is at its right vertex
+            const leftPos = { x: cx - TILE_W / 2 + offsets.left.x, y: cy + offsets.left.y };
 
-            // Draw center tile first (fixed)
-            if (tileImg) {
-                const tw = TILE_W * s;
-                ctx.drawImage(tileImg, center.x - tw / 2, center.y - tw * originY, tw, tw);
-            } else {
-                drawDiamond(center.x, center.y, '#6dbe82');
-            }
-            // Center crosshair
-            ctx.strokeStyle = 'rgba(255,0,0,0.5)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(center.x - 15, center.y); ctx.lineTo(center.x + 15, center.y);
-            ctx.moveTo(center.x, center.y - 15); ctx.lineTo(center.x, center.y + 15);
-            ctx.stroke();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px system-ui';
-            ctx.textAlign = 'center';
-            ctx.fillText('CENTER (고정)', center.x, center.y - TILE_H * 0.8);
-
-            // Draw 4 neighbor tiles
-            for (const n of neighbors) {
-                const { x, y } = toScreen(n.row, n.col);
-                const dx = x + n.off.x;
-                const dy = y + n.off.y;
-
+            function drawTileAt(px, py, label, color) {
                 if (tileImg) {
                     const tw = TILE_W * s;
-                    ctx.drawImage(tileImg, dx - tw / 2, dy - tw * originY, tw, tw);
+                    ctx.drawImage(tileImg, px - tw / 2, py - tw * oy, tw, tw);
                 } else {
-                    drawDiamond(dx, dy, '#6dbe82');
+                    drawDiamond(px, py, '#6dbe82');
                 }
-
-                // Colored label for each direction
-                ctx.fillStyle = n.color;
+                ctx.fillStyle = color;
                 ctx.font = 'bold 11px system-ui';
                 ctx.textAlign = 'center';
-                ctx.fillText(n.label, dx, dy - TILE_H * 0.8);
+                ctx.fillText(label, px, py - TILE_H * 0.7);
             }
+
+            // Draw in z-order: top (back) → left/right (middle) → bottom (front)
+            drawTileAt(topPos.x, topPos.y, '⬆ 위 (고정)', '#ff6b6b');
+            drawTileAt(leftPos.x, leftPos.y, '⬅ 좌', '#a29bfe');
+            drawTileAt(rightPos.x, rightPos.y, '➡ 우', '#4ecdc4');
+            drawTileAt(bottomPos.x, bottomPos.y, '⬇ 아래', '#ffe66d');
+
+            // Center point marker
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,0,0,0.6)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx - 10, cy); ctx.lineTo(cx + 10, cy);
+            ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy + 10);
+            ctx.stroke();
 
             updateTileOutput();
         }
@@ -294,8 +279,6 @@
 
         function updateTileOutput() {
             const vals = {
-                topX: document.getElementById('tTopX').value,
-                topY: document.getElementById('tTopY').value,
                 rightX: document.getElementById('tRightX').value,
                 rightY: document.getElementById('tRightY').value,
                 bottomX: document.getElementById('tBottomX').value,
@@ -307,7 +290,7 @@
             };
             document.getElementById('tileOutput').textContent = JSON.stringify(vals, null, 2);
 
-            for (const id of ['tTopX','tTopY','tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY']) {
+            for (const id of ['tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY']) {
                 document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
             }
         }
@@ -348,7 +331,7 @@
         });
 
         // Tile controls
-        ['tTopX','tTopY','tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY'].forEach(id => {
+        ['tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY'].forEach(id => {
             document.getElementById(id).addEventListener('input', draw);
         });
 
