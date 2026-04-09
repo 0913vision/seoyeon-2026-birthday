@@ -90,6 +90,31 @@ export class GameScene extends Scene {
     }
 
     private drawGround() {
+        // Extended background - large green area so edges never show void
+        const EXT = 15; // extra tiles beyond grid in each direction
+        const bgGfx = this.add.graphics();
+        bgGfx.setDepth(-1);
+
+        for (let row = -EXT; row < GRID_SIZE + EXT; row++) {
+            for (let col = -EXT; col < GRID_SIZE + EXT; col++) {
+                const { x, y } = this.toScreen(row, col);
+                const inGrid = row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE;
+
+                if (inGrid) continue; // drawn separately with detail
+
+                // Outer tiles - uniform dark green, no grid lines
+                bgGfx.fillStyle(0x3d7a4e, 1);
+                bgGfx.beginPath();
+                bgGfx.moveTo(x, y - TILE_H / 2);
+                bgGfx.lineTo(x + TILE_W / 2, y);
+                bgGfx.lineTo(x, y + TILE_H / 2);
+                bgGfx.lineTo(x - TILE_W / 2, y);
+                bgGfx.closePath();
+                bgGfx.fillPath();
+            }
+        }
+
+        // Main grid with detail
         const gfx = this.add.graphics();
         gfx.setDepth(0);
 
@@ -144,6 +169,54 @@ export class GameScene extends Scene {
             gfx.closePath();
             gfx.fillPath();
         }
+
+        // Decorative elements on empty tiles
+        this.addDecorations();
+
+        // Set camera bounds to limit movement
+        const topLeft = this.toScreen(-5, -5);
+        const bottomRight = this.toScreen(GRID_SIZE + 5, GRID_SIZE + 5);
+        const boundsW = bottomRight.x - topLeft.x + TILE_W;
+        const boundsH = bottomRight.y - topLeft.y + TILE_H;
+        this.cameras.main.setBounds(topLeft.x - TILE_W, topLeft.y - TILE_H, boundsW + TILE_W * 2, boundsH + TILE_H * 2);
+    }
+
+    private addDecorations() {
+        // Scatter small decorative dots (grass tufts, flowers) on random tiles
+        const decoGfx = this.add.graphics();
+        decoGfx.setDepth(1);
+
+        const rng = new Phaser.Math.RandomDataGenerator(['deco']);
+        const occupiedTiles = new Set(BUILDINGS.map(b => `${b.row},${b.col}`));
+
+        for (let i = 0; i < 40; i++) {
+            const row = rng.between(0, GRID_SIZE - 1);
+            const col = rng.between(0, GRID_SIZE - 1);
+            if (occupiedTiles.has(`${row},${col}`)) continue;
+
+            const { x, y } = this.toScreen(row, col);
+            const type = rng.between(0, 2);
+
+            if (type === 0) {
+                // Small grass tuft
+                decoGfx.fillStyle(0x3aaa55, 0.5);
+                decoGfx.fillCircle(x + rng.between(-15, 15) * DPR, y + rng.between(-5, 5) * DPR, 3 * DPR);
+                decoGfx.fillCircle(x + rng.between(-15, 15) * DPR, y + rng.between(-5, 5) * DPR, 2 * DPR);
+            } else if (type === 1) {
+                // Tiny flower
+                const fx = x + rng.between(-20, 20) * DPR;
+                const fy = y + rng.between(-8, 8) * DPR;
+                const colors = [0xff6b9d, 0xffd93d, 0xff8a5c, 0xc77dff];
+                decoGfx.fillStyle(colors[rng.between(0, 3)], 0.6);
+                decoGfx.fillCircle(fx, fy, 2.5 * DPR);
+                decoGfx.fillStyle(0x2d8a4e, 0.5);
+                decoGfx.fillCircle(fx, fy + 3 * DPR, 1.5 * DPR);
+            } else {
+                // Small rock
+                decoGfx.fillStyle(0x8a8a7a, 0.3);
+                decoGfx.fillEllipse(x + rng.between(-15, 15) * DPR, y + rng.between(-5, 5) * DPR, 5 * DPR, 3 * DPR);
+            }
+        }
     }
 
     private placeBuildings() {
@@ -153,6 +226,12 @@ export class GameScene extends Scene {
             const { x, y } = this.toScreen(b.row, b.col);
             const depth = (b.row + b.col) * 10;
             let topY: number;
+
+            // Shadow under every building
+            const shadowGfx = this.add.graphics();
+            shadowGfx.setDepth(depth);
+            shadowGfx.fillStyle(0x000000, 0.15);
+            shadowGfx.fillEllipse(x + 3 * DPR, y + 5 * DPR, TILE_W * 0.7, TILE_H * 0.4);
 
             if (b.spriteKey) {
                 // Use sprite image
