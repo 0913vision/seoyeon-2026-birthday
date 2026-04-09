@@ -13,7 +13,7 @@ function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
 
     return (
-        <div className="relative w-screen h-screen overflow-hidden">
+        <div className="relative w-full overflow-hidden" style={{ height: '100dvh' }}>
             <PhaserGame ref={phaserRef} />
 
             {/* UI Overlay */}
