@@ -141,56 +141,74 @@ export class GameScene extends Scene {
 
     private drawGround() {
         const EXT = 25;
+        const gfx = this.add.graphics();
+        gfx.setDepth(0);
         const rng = new Phaser.Math.RandomDataGenerator(['ground42']);
-
-        // Extended background: programmatic tiles (outside main grid)
-        const bgGfx = this.add.graphics();
-        bgGfx.setDepth(-1);
 
         for (let row = -EXT; row < GRID_SIZE + EXT; row++) {
             for (let col = -EXT; col < GRID_SIZE + EXT; col++) {
-                const inGrid = row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE;
-                if (inGrid) continue;
-
-                const { x, y } = this.toScreen(row, col);
-                const idx = Math.abs((row * 3 + col * 7)) % GRASS_LIGHT.length;
-                const color = rng.frac() < 0.6 ? GRASS_LIGHT[idx] : GRASS_DARK[idx];
-
-                bgGfx.fillStyle(color, 1);
-                bgGfx.beginPath();
-                bgGfx.moveTo(x, y - TILE_H / 2);
-                bgGfx.lineTo(x + TILE_W / 2, y);
-                bgGfx.lineTo(x, y + TILE_H / 2);
-                bgGfx.lineTo(x - TILE_W / 2, y);
-                bgGfx.closePath();
-                bgGfx.fillPath();
-            }
-        }
-
-        // Main grid: use generated sprite tiles
-        for (let row = 0; row < GRID_SIZE; row++) {
-            for (let col = 0; col < GRID_SIZE; col++) {
                 const { x, y } = this.toScreen(row, col);
                 const key = `${row},${col}`;
                 const tileType = TILE_MAP[key];
-                const depth = (row + col) * 10 - 5;
+                const inGrid = row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE;
 
-                let spriteKey: string;
+                let fillColor: number;
+                let lightAlpha = 0.08;
+                let darkAlpha = 0.12;
+
                 if (tileType === 'sp') {
-                    spriteKey = 'tile_stone';
+                    fillColor = 0x9a9590;
+                    lightAlpha = 0.35;
+                    darkAlpha = 0.3;
                 } else if (tileType === 'dp') {
-                    spriteKey = 'tile_dirt';
-                } else if (tileType === 'gd' || rng.frac() > 0.7) {
-                    spriteKey = 'tile_grass_dark';
+                    fillColor = 0x8B7355;
+                    lightAlpha = 0.25;
+                    darkAlpha = 0.25;
+                } else if (tileType === 'gd' || (!inGrid && rng.frac() < 0.4)) {
+                    const idx = Math.abs((row * 3 + col * 7)) % GRASS_DARK.length;
+                    fillColor = GRASS_DARK[idx];
                 } else {
-                    spriteKey = 'tile_grass_light';
+                    const idx = Math.abs((row * 3 + col * 7)) % GRASS_LIGHT.length;
+                    fillColor = rng.frac() < 0.7 ? GRASS_LIGHT[idx] : GRASS_DARK[idx];
                 }
 
-                const tile = this.add.image(x, y, spriteKey);
-                // Scale sprite to match tile dimensions
-                tile.setDisplaySize(TILE_W * 1.05, TILE_W * 1.05);
-                tile.setOrigin(0.5, 0.5);
-                tile.setDepth(depth);
+                // Fill
+                gfx.fillStyle(fillColor, 1);
+                gfx.beginPath();
+                gfx.moveTo(x, y - TILE_H / 2);
+                gfx.lineTo(x + TILE_W / 2, y);
+                gfx.lineTo(x, y + TILE_H / 2);
+                gfx.lineTo(x - TILE_W / 2, y);
+                gfx.closePath();
+                gfx.fillPath();
+
+                // Light edge
+                gfx.lineStyle(1, 0xffffff, lightAlpha);
+                gfx.beginPath();
+                gfx.moveTo(x - TILE_W / 2 + 1, y);
+                gfx.lineTo(x, y - TILE_H / 2 + 1);
+                gfx.lineTo(x + TILE_W / 2 - 1, y);
+                gfx.strokePath();
+
+                // Dark edge
+                gfx.lineStyle(1, 0x000000, darkAlpha);
+                gfx.beginPath();
+                gfx.moveTo(x + TILE_W / 2 - 1, y);
+                gfx.lineTo(x, y + TILE_H / 2 - 1);
+                gfx.lineTo(x - TILE_W / 2 + 1, y);
+                gfx.strokePath();
+
+                // Stone cobblestone detail
+                if (tileType === 'sp') {
+                    gfx.lineStyle(1, 0x7a7570, 0.12);
+                    const s = TILE_W * 0.15;
+                    for (let i = -1; i <= 1; i++) {
+                        gfx.lineBetween(x + i * s, y - TILE_H * 0.25, x + i * s, y + TILE_H * 0.25);
+                    }
+                    for (let i = -1; i <= 1; i++) {
+                        gfx.lineBetween(x - TILE_W * 0.25, y + i * s * 0.5, x + TILE_W * 0.25, y + i * s * 0.5);
+                    }
+                }
             }
         }
 
