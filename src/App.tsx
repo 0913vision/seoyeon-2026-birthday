@@ -2,11 +2,11 @@ import { useRef } from 'react';
 import { IRefPhaserGame, PhaserGame } from './PhaserGame';
 
 const RESOURCES = [
-    { id: 'wood', icon: '🪵', value: '1,200', unlocked: true },
-    { id: 'flower', icon: '🌸', value: '400', unlocked: true },
-    { id: 'stone', icon: '🪨', value: '600', unlocked: true },
-    { id: 'metal', icon: '⚙️', value: '--', unlocked: false },
-    { id: 'gem', icon: '💎', value: '--', unlocked: false },
+    { id: 'wood', img: 'assets/generated/resources/wood.png', value: '1,200', unlocked: true },
+    { id: 'flower', img: 'assets/generated/resources/flower.png', value: '400', unlocked: true },
+    { id: 'stone', img: 'assets/generated/resources/stone.png', value: '600', unlocked: true },
+    { id: 'metal', img: 'assets/generated/resources/metal.png', value: '--', unlocked: false },
+    { id: 'gem', img: 'assets/generated/resources/gem.png', value: '--', unlocked: false },
 ];
 
 function App() {
@@ -46,7 +46,7 @@ function TopBar() {
                             border: r.unlocked ? '2px solid #5a4530' : '2px solid rgba(50,40,30,0.5)',
                         }}
                     >
-                        <span className="text-sm leading-none">{r.icon}</span>
+                        <img src={r.img} alt={r.id} className="w-5 h-5 object-contain" />
                         <span className={`${r.unlocked ? 'text-amber-100' : 'text-white/25'}`}
                               style={{
                                   fontFamily: "Fredoka, sans-serif",
