@@ -46,6 +46,14 @@ const BUILDINGS: BuildingDef[] = [
         row: 15, col: 14, label: '광산',
         spriteKey: 'mine',
     },
+    {
+        row: 8, col: 15, label: '세공소',
+        spriteKey: 'jewelshop',
+    },
+    {
+        row: 14, col: 8, label: '수정동굴',
+        spriteKey: 'gemcave',
+    },
 ];
 
 const LABEL_HIDE_ZOOM = 0.35;

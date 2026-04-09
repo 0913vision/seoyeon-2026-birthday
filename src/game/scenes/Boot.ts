@@ -13,6 +13,8 @@ export class Boot extends Scene {
         this.load.image('quarry', 'quarry.png');
         this.load.image('woodshop', 'woodshop.png');
         this.load.image('mine', 'mine.png');
+        this.load.image('jewelshop', 'jewelshop.png');
+        this.load.image('gemcave', 'gemcave.png');
         // Decorative items
         this.load.image('deco_corn', 'corn_s.png');
         this.load.image('deco_cornDouble', 'corndouble_s.png');
