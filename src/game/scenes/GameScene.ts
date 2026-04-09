@@ -4,7 +4,7 @@ import { Scene } from 'phaser';
 const DPR = window.devicePixelRatio || 1;
 const TILE_W = 110 * DPR;
 const TILE_H = 55 * DPR;
-const GRID_SIZE = 16;
+const GRID_SIZE = 22;
 
 const GRASS_COLORS = [0x5a9e6e, 0x5da872, 0x58a06a, 0x62ad76, 0x569c66];
 const GRASS_DARK = [0x4e8c60, 0x508e62, 0x4c8a5c, 0x529066, 0x4a8858];
@@ -13,47 +13,38 @@ interface BuildingDef {
     row: number;
     col: number;
     label: string;
-    size: number;
-    height: number;
-    topColor: number;
-    leftColor: number;
-    rightColor: number;
+    spriteKey?: string;       // use sprite image
+    isoBox?: { size: number; height: number; top: number; left: number; right: number }; // use IsoBox
     showExclaim?: boolean;
     isGiftBox?: boolean;
 }
 
 const BUILDINGS: BuildingDef[] = [
     {
-        row: 7, col: 7, label: '선물상자',
-        size: 95 * DPR, height: 75 * DPR,
-        topColor: 0xdc3545, leftColor: 0xb02a37, rightColor: 0x8b2131,
+        row: 10, col: 10, label: '선물상자',
+        isoBox: { size: 95 * DPR, height: 75 * DPR, top: 0xdc3545, left: 0xb02a37, right: 0x8b2131 },
         isGiftBox: true,
     },
     {
-        row: 3, col: 3, label: '나무밭',
-        size: 70 * DPR, height: 30 * DPR,
-        topColor: 0x3cb371, leftColor: 0x2e8b57, rightColor: 0x267349,
+        row: 4, col: 5, label: '나무밭',
+        spriteKey: 'woodfarm',
         showExclaim: true,
     },
     {
-        row: 3, col: 11, label: '꽃밭',
-        size: 70 * DPR, height: 24 * DPR,
-        topColor: 0xf48fb1, leftColor: 0xe91e63, rightColor: 0xc2185b,
+        row: 5, col: 15, label: '꽃밭',
+        spriteKey: 'flowerfarm',
     },
     {
-        row: 11, col: 3, label: '채석장',
-        size: 70 * DPR, height: 38 * DPR,
-        topColor: 0xa0adb5, leftColor: 0x8a9aa3, rightColor: 0x748690,
+        row: 15, col: 4, label: '채석장',
+        spriteKey: 'quarry',
     },
     {
-        row: 4, col: 8, label: '목공방',
-        size: 68 * DPR, height: 44 * DPR,
-        topColor: 0xd4a574, leftColor: 0xb8844f, rightColor: 0x9c6b3a,
+        row: 6, col: 11, label: '목공방',
+        spriteKey: 'woodshop',
     },
     {
-        row: 11, col: 10, label: '광산',
-        size: 65 * DPR, height: 40 * DPR,
-        topColor: 0x6b7b8d, leftColor: 0x576a7a, rightColor: 0x475a68,
+        row: 15, col: 14, label: '광산',
+        spriteKey: 'mine',
     },
 ];
 
@@ -81,19 +72,19 @@ export class GameScene extends Scene {
         const cam = this.cameras.main;
         const center = this.toScreen(GRID_SIZE / 2, GRID_SIZE / 2);
         cam.scrollX = center.x - cam.width / 2;
-        cam.scrollY = center.y - cam.height / 2 - 50;
+        cam.scrollY = center.y - cam.height / 2 - 50 * DPR;
 
         this.drawGround();
         this.placeBuildings();
         this.setupCameraDrag();
-        this.updateLabels(0.55);
+        this.updateLabels(0.5);
 
         EventBus.emit('current-scene-ready', this);
     }
 
     private toScreen(row: number, col: number): { x: number; y: number } {
         return {
-            x: (col - row) * (TILE_W / 2) + 900 * DPR,
+            x: (col - row) * (TILE_W / 2) + 1200 * DPR,
             y: (col + row) * (TILE_H / 2) + 200 * DPR,
         };
     }
@@ -109,7 +100,6 @@ export class GameScene extends Scene {
                 const isEven = (row + col) % 2 === 0;
                 const color = isEven ? GRASS_COLORS[colorIdx] : GRASS_DARK[colorIdx];
 
-                // Tile fill
                 gfx.fillStyle(color, 1);
                 gfx.beginPath();
                 gfx.moveTo(x, y - TILE_H / 2);
@@ -119,7 +109,6 @@ export class GameScene extends Scene {
                 gfx.closePath();
                 gfx.fillPath();
 
-                // Subtle inner highlight on top-left edge
                 gfx.lineStyle(1, 0xffffff, 0.06);
                 gfx.beginPath();
                 gfx.moveTo(x - TILE_W / 2 + 1, y);
@@ -127,7 +116,6 @@ export class GameScene extends Scene {
                 gfx.lineTo(x + TILE_W / 2 - 1, y);
                 gfx.strokePath();
 
-                // Bottom edge shadow
                 gfx.lineStyle(1, 0x000000, 0.1);
                 gfx.beginPath();
                 gfx.moveTo(x + TILE_W / 2 - 1, y);
@@ -137,15 +125,17 @@ export class GameScene extends Scene {
             }
         }
 
-        // Dirt path tiles
+        // Dirt paths around gift box
+        const cx = 10, cy = 10;
         const pathTiles = [
-            [3, 3], [3, 4], [3, 5],
-            [4, 3], [5, 3], [5, 4], [5, 5],
-            [4, 5], [6, 4], [6, 5],
+            [cx-1, cy-1], [cx-1, cy], [cx-1, cy+1],
+            [cx, cy-1], [cx, cy+1],
+            [cx+1, cy-1], [cx+1, cy], [cx+1, cy+1],
+            [cx+2, cy], [cx, cy+2], [cx-2, cy], [cx, cy-2],
         ];
         for (const [row, col] of pathTiles) {
             const { x, y } = this.toScreen(row, col);
-            gfx.fillStyle(0x8B7355, 0.25);
+            gfx.fillStyle(0x8B7355, 0.2);
             gfx.beginPath();
             gfx.moveTo(x, y - TILE_H / 2);
             gfx.lineTo(x + TILE_W / 2, y);
@@ -162,42 +152,47 @@ export class GameScene extends Scene {
         for (const b of sorted) {
             const { x, y } = this.toScreen(b.row, b.col);
             const depth = (b.row + b.col) * 10;
+            let topY: number;
 
-            // IsoBox - offset down slightly so it visually sits on the tile surface
-            const boxY = y + TILE_H * 0.15;
-            const box = this.add.isobox(x, boxY, b.size, b.height, b.topColor, b.leftColor, b.rightColor);
-            box.setDepth(depth + 2);
+            if (b.spriteKey) {
+                // Use sprite image
+                const sprite = this.add.image(x, y, b.spriteKey);
+                const targetW = TILE_W * 1.1;
+                sprite.setScale(targetW / sprite.width * DPR);
+                sprite.setOrigin(0.5, 0.75);
+                sprite.setDepth(depth + 2);
+                topY = y - sprite.displayHeight * 0.5;
+            } else if (b.isoBox) {
+                // Use IsoBox (gift box)
+                const boxY = y + TILE_H * 0.15;
+                const box = this.add.isobox(x, boxY, b.isoBox.size, b.isoBox.height, b.isoBox.top, b.isoBox.left, b.isoBox.right);
+                box.setDepth(depth + 2);
+                topY = boxY - b.isoBox.height;
 
-            // Gift box decorations
-            if (b.isGiftBox) {
+                // Gift box decorations
                 const ribbonGfx = this.add.graphics();
                 ribbonGfx.setDepth(depth + 3);
 
-                // Gold ribbon horizontal
                 ribbonGfx.lineStyle(4 * DPR, 0xffd700, 0.95);
                 ribbonGfx.lineBetween(
-                    x - b.size / 2 + 12 * DPR, boxY - b.height,
-                    x + b.size / 2 - 12 * DPR, boxY - b.height
+                    x - b.isoBox.size / 2 + 12 * DPR, topY,
+                    x + b.isoBox.size / 2 - 12 * DPR, topY
                 );
-                // Gold ribbon vertical
                 ribbonGfx.lineBetween(
-                    x, boxY - b.height - b.size / 4 + 5 * DPR,
-                    x, boxY - b.height + b.size / 4 - 5 * DPR
+                    x, topY - b.isoBox.size / 4 + 5 * DPR,
+                    x, topY + b.isoBox.size / 4 - 5 * DPR
                 );
 
-                // Bow
                 ribbonGfx.fillStyle(0xffd700, 1);
-                ribbonGfx.fillCircle(x - 6 * DPR, boxY - b.height - 6 * DPR, 6 * DPR);
-                ribbonGfx.fillCircle(x + 6 * DPR, boxY - b.height - 6 * DPR, 6 * DPR);
-                ribbonGfx.fillCircle(x, boxY - b.height - 3 * DPR, 5 * DPR);
+                ribbonGfx.fillCircle(x - 6 * DPR, topY - 6 * DPR, 6 * DPR);
+                ribbonGfx.fillCircle(x + 6 * DPR, topY - 6 * DPR, 6 * DPR);
+                ribbonGfx.fillCircle(x, topY - 3 * DPR, 5 * DPR);
 
-                // Sparkles
                 for (let i = 0; i < 6; i++) {
                     const sx = x + Phaser.Math.Between(-55 * DPR, 55 * DPR);
-                    const sy = boxY - b.height + Phaser.Math.Between(-30 * DPR, 15 * DPR);
+                    const sy = topY + Phaser.Math.Between(-30 * DPR, 15 * DPR);
                     const star = this.add.text(sx, sy, '✨', { fontSize: `${14 * DPR}px` })
-                        .setDepth(depth + 4)
-                        .setAlpha(0);
+                        .setDepth(depth + 4).setAlpha(0);
                     this.tweens.add({
                         targets: star,
                         alpha: { from: 0, to: 0.9 },
@@ -209,10 +204,12 @@ export class GameScene extends Scene {
                         ease: 'Sine.easeInOut',
                     });
                 }
+            } else {
+                topY = y - 30 * DPR;
             }
 
-            // Label - dynamically sized text (re-rendered on zoom for sharpness)
-            const labelPosY = boxY - b.height - 24 * DPR;
+            // Label
+            const labelPosY = topY - 18 * DPR;
             const baseFontSize = (b.isGiftBox ? 15 : 13) * DPR;
 
             const labelText = this.add.text(x, labelPosY, b.label, {
@@ -221,7 +218,7 @@ export class GameScene extends Scene {
                 fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontStyle: 'bold',
                 stroke: '#000000',
-                strokeThickness: 3,
+                strokeThickness: 3 * DPR,
                 resolution: window.devicePixelRatio || 3,
             }).setOrigin(0.5).setDepth(depth + 6);
 
@@ -229,7 +226,7 @@ export class GameScene extends Scene {
 
             // Harvest exclamation
             if (b.showExclaim) {
-                const exContainer = this.add.container(x + 35 * DPR, boxY - b.height - 46 * DPR);
+                const exContainer = this.add.container(x + 35 * DPR, topY - 30 * DPR);
                 exContainer.setDepth(depth + 7);
 
                 const exBg = this.add.graphics();
@@ -291,8 +288,8 @@ export class GameScene extends Scene {
         const cam = this.cameras.main;
         let lastPinchDist = 0;
 
-        cam.setZoom(0.55);
-        this.updateLabels(0.55);
+        cam.setZoom(0.5);
+        this.updateLabels(0.5);
 
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             this.isDragging = false;
@@ -303,7 +300,6 @@ export class GameScene extends Scene {
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
             if (!pointer.isDown) return;
 
-            // Check for pinch zoom (two pointers)
             const pointer1 = this.input.pointer1;
             const pointer2 = this.input.pointer2;
 
@@ -315,7 +311,7 @@ export class GameScene extends Scene {
 
                 if (lastPinchDist > 0) {
                     const scale = dist / lastPinchDist;
-                    const newZoom = Phaser.Math.Clamp(cam.zoom * scale, 0.25, 1.5);
+                    const newZoom = Phaser.Math.Clamp(cam.zoom * scale, 0.2, 1.5);
                     cam.setZoom(newZoom);
                     this.updateLabels(newZoom);
                 }
@@ -326,7 +322,6 @@ export class GameScene extends Scene {
 
             lastPinchDist = 0;
 
-            // Single pointer drag
             const dx = pointer.x - pointer.prevPosition.x;
             const dy = pointer.y - pointer.prevPosition.y;
 
@@ -344,9 +339,8 @@ export class GameScene extends Scene {
             lastPinchDist = 0;
         });
 
-        // Mouse wheel zoom for desktop testing
         this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: Phaser.GameObjects.GameObject[], _deltaX: number, deltaY: number) => {
-            const newZoom = Phaser.Math.Clamp(cam.zoom - deltaY * 0.001, 0.25, 1.5);
+            const newZoom = Phaser.Math.Clamp(cam.zoom - deltaY * 0.001, 0.2, 1.5);
             cam.setZoom(newZoom);
             this.updateLabels(newZoom);
         });
