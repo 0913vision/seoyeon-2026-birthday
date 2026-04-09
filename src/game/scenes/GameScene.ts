@@ -173,12 +173,17 @@ export class GameScene extends Scene {
         // Decorative elements on empty tiles
         this.addDecorations();
 
-        // Set camera bounds to limit movement
-        const topLeft = this.toScreen(-5, -5);
-        const bottomRight = this.toScreen(GRID_SIZE + 5, GRID_SIZE + 5);
-        const boundsW = bottomRight.x - topLeft.x + TILE_W;
-        const boundsH = bottomRight.y - topLeft.y + TILE_H;
-        this.cameras.main.setBounds(topLeft.x - TILE_W, topLeft.y - TILE_H, boundsW + TILE_W * 2, boundsH + TILE_H * 2);
+        // Set camera bounds using actual isometric diamond corners
+        const top = this.toScreen(0, 0);                          // top vertex
+        const right = this.toScreen(0, GRID_SIZE + 10);           // right vertex
+        const bottom = this.toScreen(GRID_SIZE + 10, GRID_SIZE + 10); // bottom vertex
+        const left = this.toScreen(GRID_SIZE + 10, 0);            // left vertex
+
+        const boundsX = left.x - TILE_W * 2;
+        const boundsY = top.y - TILE_H * 5;
+        const boundsW = (right.x - left.x) + TILE_W * 4;
+        const boundsH = (bottom.y - top.y) + TILE_H * 10;
+        this.cameras.main.setBounds(boundsX, boundsY, boundsW, boundsH);
     }
 
     private addDecorations() {
