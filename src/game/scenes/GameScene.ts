@@ -91,7 +91,7 @@ export class GameScene extends Scene {
 
     private drawGround() {
         // Draw all tiles (grid + extended) with same checkerboard pattern
-        const EXT = 15;
+        const EXT = 25;
         const gfx = this.add.graphics();
         gfx.setDepth(0);
 
@@ -150,16 +150,16 @@ export class GameScene extends Scene {
         // Decorative elements on empty tiles
         this.addDecorations();
 
-        // Set camera bounds using actual isometric diamond corners
-        const top = this.toScreen(0, 0);                          // top vertex
-        const right = this.toScreen(0, GRID_SIZE + 10);           // right vertex
-        const bottom = this.toScreen(GRID_SIZE + 10, GRID_SIZE + 10); // bottom vertex
-        const left = this.toScreen(GRID_SIZE + 10, 0);            // left vertex
+        // Set camera bounds using actual isometric diamond corners (generous)
+        const top = this.toScreen(-10, -10);
+        const right = this.toScreen(-10, GRID_SIZE + 10);
+        const bottom = this.toScreen(GRID_SIZE + 10, GRID_SIZE + 10);
+        const left = this.toScreen(GRID_SIZE + 10, -10);
 
-        const boundsX = left.x - TILE_W * 2;
-        const boundsY = top.y - TILE_H * 5;
-        const boundsW = (right.x - left.x) + TILE_W * 4;
-        const boundsH = (bottom.y - top.y) + TILE_H * 10;
+        const boundsX = left.x - TILE_W * 3;
+        const boundsY = top.y - TILE_H * 6;
+        const boundsW = (right.x - left.x) + TILE_W * 6;
+        const boundsH = (bottom.y - top.y) + TILE_H * 12;
         this.cameras.main.setBounds(boundsX, boundsY, boundsW, boundsH);
     }
 
@@ -216,10 +216,10 @@ export class GameScene extends Scene {
             shadowGfx.fillEllipse(x + 3 * DPR, y + 5 * DPR, TILE_W * 0.7, TILE_H * 0.4);
 
             if (b.spriteKey) {
-                // Use sprite image
+                // Use sprite image - TILE_W already includes DPR, don't multiply again
                 const sprite = this.add.image(x, y, b.spriteKey);
-                const targetW = TILE_W * 1.1;
-                sprite.setScale(targetW / sprite.width * DPR);
+                const targetW = TILE_W * 1.0;
+                sprite.setScale(targetW / sprite.width);
                 sprite.setOrigin(0.5, 0.75);
                 sprite.setDepth(depth + 2);
                 topY = y - sprite.displayHeight * 0.5;
