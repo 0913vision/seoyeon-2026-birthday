@@ -158,16 +158,17 @@ export class GameScene extends Scene {
         // Decorative elements on empty tiles
         this.addDecorations();
 
-        // Set camera bounds using actual isometric diamond corners (generous)
-        const top = this.toScreen(-10, -10);
-        const right = this.toScreen(-10, GRID_SIZE + 10);
-        const bottom = this.toScreen(GRID_SIZE + 10, GRID_SIZE + 10);
-        const left = this.toScreen(GRID_SIZE + 10, -10);
+        // Camera bounds - tight around the building area with small margin
+        const margin = 3;
+        const top = this.toScreen(-margin, -margin);
+        const right = this.toScreen(-margin, GRID_SIZE + margin);
+        const bottom = this.toScreen(GRID_SIZE + margin, GRID_SIZE + margin);
+        const left = this.toScreen(GRID_SIZE + margin, -margin);
 
-        const boundsX = left.x - TILE_W * 3;
-        const boundsY = top.y - TILE_H * 6;
-        const boundsW = (right.x - left.x) + TILE_W * 6;
-        const boundsH = (bottom.y - top.y) + TILE_H * 12;
+        const boundsX = left.x - TILE_W;
+        const boundsY = top.y - TILE_H * 2;
+        const boundsW = (right.x - left.x) + TILE_W * 2;
+        const boundsH = (bottom.y - top.y) + TILE_H * 4;
         this.cameras.main.setBounds(boundsX, boundsY, boundsW, boundsH);
     }
 
@@ -384,14 +385,21 @@ export class GameScene extends Scene {
     private setupCameraDrag() {
         const cam = this.cameras.main;
         let lastPinchDist = 0;
+        let velocityX = 0;
+        let velocityY = 0;
 
-        cam.setZoom(0.5);
-        this.updateLabels(0.5);
+        const MIN_ZOOM = 0.4;
+        const MAX_ZOOM = 1.2;
+
+        cam.setZoom(0.55);
+        this.updateLabels(0.55);
 
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             this.isDragging = false;
             this.dragStartX = pointer.x;
             this.dragStartY = pointer.y;
+            velocityX = 0;
+            velocityY = 0;
         });
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -408,7 +416,7 @@ export class GameScene extends Scene {
 
                 if (lastPinchDist > 0) {
                     const scale = dist / lastPinchDist;
-                    const newZoom = Phaser.Math.Clamp(cam.zoom * scale, 0.2, 1.5);
+                    const newZoom = Phaser.Math.Clamp(cam.zoom * scale, MIN_ZOOM, MAX_ZOOM);
                     cam.setZoom(newZoom);
                     this.updateLabels(newZoom);
                 }
@@ -427,8 +435,12 @@ export class GameScene extends Scene {
             }
 
             if (this.isDragging) {
-                cam.scrollX -= dx / cam.zoom;
-                cam.scrollY -= dy / cam.zoom;
+                const moveX = dx / cam.zoom;
+                const moveY = dy / cam.zoom;
+                cam.scrollX -= moveX;
+                cam.scrollY -= moveY;
+                velocityX = moveX;
+                velocityY = moveY;
             }
         });
 
@@ -436,10 +448,26 @@ export class GameScene extends Scene {
             lastPinchDist = 0;
         });
 
+        // Inertia - smooth deceleration after drag
+        this.events.on('update', () => {
+            if (!this.input.activePointer.isDown && (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5)) {
+                cam.scrollX -= velocityX;
+                cam.scrollY -= velocityY;
+                velocityX *= 0.92;
+                velocityY *= 0.92;
+            }
+        });
+
+        // Smooth zoom with wheel
         this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: Phaser.GameObjects.GameObject[], _deltaX: number, deltaY: number) => {
-            const newZoom = Phaser.Math.Clamp(cam.zoom - deltaY * 0.001, 0.2, 1.5);
-            cam.setZoom(newZoom);
-            this.updateLabels(newZoom);
+            const targetZoom = Phaser.Math.Clamp(cam.zoom - deltaY * 0.001, MIN_ZOOM, MAX_ZOOM);
+            this.tweens.add({
+                targets: cam,
+                zoom: targetZoom,
+                duration: 150,
+                ease: 'Sine.easeOut',
+                onUpdate: () => this.updateLabels(cam.zoom),
+            });
         });
     }
 }
