@@ -20,9 +20,12 @@
         .tab.active { background: #f59e0b; color: #000; }
         .tab:not(.active) { background: #333; color: #aaa; }
         .val { color: #4ade80; font-family: monospace; font-size: 13px; }
-        .row { display: flex; gap: 6px; align-items: center; margin: 4px 0; }
-        .label { min-width: 70px; color: #aaa; font-size: 11px; }
+        .row { display: flex; gap: 4px; align-items: center; margin: 4px 0; }
+        .label { min-width: 60px; color: #aaa; font-size: 11px; }
         input[type=range] { flex: 1; }
+        .pm { width: 28px; height: 28px; background: #444; color: #fff; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .pm:active { background: #666; }
+        .num-input { width: 50px; background: #222; color: #4ade80; border: 1px solid #555; border-radius: 4px; padding: 3px 4px; font-size: 12px; font-family: monospace; text-align: center; }
         select { padding: 4px; font-size: 12px; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
         button { background: #3b82f6; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; margin: 6px 2px; font-size: 13px; }
         #output { margin-top: 6px; padding: 8px; background: rgba(255,255,255,0.08); border-radius: 6px; font-family: monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; max-height: 100px; overflow-y: auto; }
@@ -59,50 +62,7 @@
         <!-- Tile tab -->
         <div id="tilePanel" style="display:none">
             <p style="color:#aaa; font-size:11px; margin:6px 0;">위쪽 타일 고정(기준). 좌/우/아래 3개를 위 타일에 맞닿게 조절하세요.<br>z-order: 위 → 좌/우 → 아래(가장 앞)</p>
-            <div style="color:#4ecdc4; font-size:11px; font-weight:bold; margin:6px 0;">➡ 우측</div>
-            <div class="row">
-                <span class="label">OffX:</span>
-                <input type="range" id="tRightX" min="-30" max="30" step="0.5" value="7">
-                <span class="val" id="tRightXVal">7</span>
-            </div>
-            <div class="row">
-                <span class="label">OffY:</span>
-                <input type="range" id="tRightY" min="-30" max="30" step="0.5" value="8">
-                <span class="val" id="tRightYVal">8</span>
-            </div>
-            <div style="color:#ffe66d; font-size:11px; font-weight:bold; margin:6px 0;">⬇ 아래</div>
-            <div class="row">
-                <span class="label">OffX:</span>
-                <input type="range" id="tBottomX" min="-30" max="30" step="0.5" value="0">
-                <span class="val" id="tBottomXVal">0</span>
-            </div>
-            <div class="row">
-                <span class="label">OffY:</span>
-                <input type="range" id="tBottomY" min="-30" max="30" step="0.5" value="16">
-                <span class="val" id="tBottomYVal">16</span>
-            </div>
-            <div style="color:#a29bfe; font-size:11px; font-weight:bold; margin:6px 0;">⬅ 좌측</div>
-            <div class="row">
-                <span class="label">OffX:</span>
-                <input type="range" id="tLeftX" min="-30" max="30" step="0.5" value="-7">
-                <span class="val" id="tLeftXVal">-7</span>
-            </div>
-            <div class="row">
-                <span class="label">OffY:</span>
-                <input type="range" id="tLeftY" min="-30" max="30" step="0.5" value="8">
-                <span class="val" id="tLeftYVal">8</span>
-            </div>
-            <hr style="border-color:#333; margin:6px 0;">
-            <div class="row">
-                <span class="label">타일 Scale:</span>
-                <input type="range" id="tScale" min="0.5" max="2.5" step="0.01" value="1.2">
-                <span class="val" id="tScaleVal">1.2</span>
-            </div>
-            <div class="row">
-                <span class="label">타일 OriginY:</span>
-                <input type="range" id="tOriginY" min="0.3" max="0.8" step="0.01" value="0.7">
-                <span class="val" id="tOriginYVal">0.7</span>
-            </div>
+            <div id="tileControls"></div>
             <div id="tileOutput" style="margin-top:6px; padding:8px; background:rgba(255,255,255,0.08); border-radius:6px; font-family:monospace; font-size:11px; white-space:pre-wrap;"></div>
             <button onclick="copyTile()">타일 값 복사</button>
         </div>
@@ -292,10 +252,6 @@
                 originY: document.getElementById('tOriginY').value,
             };
             document.getElementById('tileOutput').textContent = JSON.stringify(vals, null, 2);
-
-            for (const id of ['tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY']) {
-                document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
-            }
         }
 
         function setTab(t) {
@@ -333,9 +289,64 @@
             draw();
         });
 
-        // Tile controls
-        ['tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY'].forEach(id => {
-            document.getElementById(id).addEventListener('input', draw);
+        // Generate tile controls with +/- buttons and number input
+        const tileControlDefs = [
+            { header: '➡ 우측', color: '#4ecdc4', controls: [
+                { id: 'tRightX', label: 'OffX', min: -30, max: 30, step: 0.5, value: 7 },
+                { id: 'tRightY', label: 'OffY', min: -30, max: 30, step: 0.5, value: 8 },
+            ]},
+            { header: '⬇ 아래', color: '#ffe66d', controls: [
+                { id: 'tBottomX', label: 'OffX', min: -30, max: 30, step: 0.5, value: 0 },
+                { id: 'tBottomY', label: 'OffY', min: -30, max: 30, step: 0.5, value: 16 },
+            ]},
+            { header: '⬅ 좌측', color: '#a29bfe', controls: [
+                { id: 'tLeftX', label: 'OffX', min: -30, max: 30, step: 0.5, value: -7 },
+                { id: 'tLeftY', label: 'OffY', min: -30, max: 30, step: 0.5, value: 8 },
+            ]},
+            { header: '공통', color: '#aaa', controls: [
+                { id: 'tScale', label: 'Scale', min: 0.5, max: 2.5, step: 0.01, value: 1.2 },
+                { id: 'tOriginY', label: 'OriginY', min: 0.3, max: 0.8, step: 0.01, value: 0.7 },
+            ]},
+        ];
+
+        const tileContainer = document.getElementById('tileControls');
+        const allTileIds = [];
+
+        tileControlDefs.forEach(group => {
+            tileContainer.innerHTML += `<div style="color:${group.color}; font-size:11px; font-weight:bold; margin:6px 0;">${group.header}</div>`;
+            group.controls.forEach(c => {
+                allTileIds.push(c.id);
+                tileContainer.innerHTML += `
+                    <div class="row">
+                        <span class="label">${c.label}:</span>
+                        <button class="pm" onclick="adj('${c.id}', -${c.step})">−</button>
+                        <input type="range" id="${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.value}">
+                        <button class="pm" onclick="adj('${c.id}', ${c.step})">+</button>
+                        <input type="number" class="num-input" id="${c.id}Num" value="${c.value}" step="${c.step}" onchange="syncFromNum('${c.id}')">
+                    </div>`;
+            });
+        });
+
+        function adj(id, delta) {
+            const el = document.getElementById(id);
+            const v = parseFloat(el.value) + delta;
+            el.value = Math.max(el.min, Math.min(el.max, v));
+            document.getElementById(id + 'Num').value = el.value;
+            draw();
+        }
+
+        function syncFromNum(id) {
+            const numEl = document.getElementById(id + 'Num');
+            const rangeEl = document.getElementById(id);
+            rangeEl.value = numEl.value;
+            draw();
+        }
+
+        allTileIds.forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                document.getElementById(id + 'Num').value = e.target.value;
+                draw();
+            });
         });
 
         function copyAll() {
