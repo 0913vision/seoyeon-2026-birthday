@@ -88,8 +88,13 @@
             </div>
             <div class="row">
                 <span class="label">타일 Scale:</span>
-                <input type="range" id="tScale" min="0.5" max="2.0" step="0.05" value="1.0">
-                <span class="val" id="tScaleVal">1.0</span>
+                <input type="range" id="tScale" min="0.5" max="2.5" step="0.05" value="1.15">
+                <span class="val" id="tScaleVal">1.15</span>
+            </div>
+            <div class="row">
+                <span class="label">타일 OriginY:</span>
+                <input type="range" id="tOriginY" min="0.3" max="0.7" step="0.01" value="0.45">
+                <span class="val" id="tOriginYVal">0.45</span>
             </div>
             <div id="tileOutput" style="margin-top:6px; padding:8px; background:rgba(255,255,255,0.08); border-radius:6px; font-family:monospace; font-size:11px; white-space:pre-wrap;"></div>
             <button onclick="copyTile()">타일 값 복사</button>
@@ -205,16 +210,14 @@
 
         function drawTiles() {
             const s = parseFloat(document.getElementById('tScale').value);
+            const originY = parseFloat(document.getElementById('tOriginY').value);
             const offsets = {
-                top: { x: 0, y: 0 },  // fixed
+                top: { x: 0, y: 0 },
                 right: { x: parseInt(document.getElementById('tRightX').value), y: parseInt(document.getElementById('tRightY').value) },
                 bottom: { x: parseInt(document.getElementById('tBottomX').value), y: parseInt(document.getElementById('tBottomY').value) },
                 left: { x: parseInt(document.getElementById('tLeftX').value), y: parseInt(document.getElementById('tLeftY').value) },
             };
 
-            // 4 tiles: top(0,-1), right(0,0 actually let's do proper iso neighbors)
-            // In isometric: neighbors of center(0,0) are:
-            // top = (-1, 0), right = (0, 1), bottom = (1, 0), left = (0, -1)
             const tiles = [
                 { label: 'TOP (고정)', row: -1, col: 0, off: offsets.top },
                 { label: 'RIGHT', row: 0, col: 1, off: offsets.right },
@@ -222,27 +225,43 @@
                 { label: 'LEFT', row: 0, col: -1, off: offsets.left },
             ];
 
-            // Draw center diamond as reference
+            // Draw center reference diamond
             const center = toScreen(0, 0);
-            drawDiamond(center.x, center.y, '#557755');
+            ctx.strokeStyle = 'rgba(255,255,0,0.4)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(center.x, center.y - TILE_H / 2);
+            ctx.lineTo(center.x + TILE_W / 2, center.y);
+            ctx.lineTo(center.x, center.y + TILE_H / 2);
+            ctx.lineTo(center.x - TILE_W / 2, center.y);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.setLineDash([]);
 
-            for (const t of tiles) {
+            // Draw all 4 tiles + center tile (5 total)
+            const allTiles = [
+                { row: 0, col: 0, off: { x: 0, y: 0 }, label: 'CENTER' },
+                ...tiles,
+            ];
+
+            for (const t of allTiles) {
                 const { x, y } = toScreen(t.row, t.col);
                 const dx = x + t.off.x;
                 const dy = y + t.off.y;
 
                 if (tileImg) {
                     const tw = TILE_W * s;
-                    ctx.drawImage(tileImg, dx - tw / 2, dy - tw / 2, tw, tw);
+                    const th = tw;
+                    ctx.drawImage(tileImg, dx - tw / 2, dy - th * originY, tw, th);
                 } else {
                     drawDiamond(dx, dy, '#6dbe82');
                 }
 
-                // Label
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
                 ctx.font = '10px system-ui';
                 ctx.textAlign = 'center';
-                ctx.fillText(t.label, dx, dy - TILE_H * 0.6);
+                ctx.fillText(t.label, dx, dy - TILE_H * 0.7);
             }
 
             updateTileOutput();
@@ -265,11 +284,11 @@
                 leftX: document.getElementById('tLeftX').value,
                 leftY: document.getElementById('tLeftY').value,
                 scale: document.getElementById('tScale').value,
+                originY: document.getElementById('tOriginY').value,
             };
             document.getElementById('tileOutput').textContent = JSON.stringify(vals, null, 2);
 
-            // Update val displays
-            for (const id of ['tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale']) {
+            for (const id of ['tRightX','tRightY','tBottomX','tBottomY','tLeftX','tLeftY','tScale','tOriginY']) {
                 document.getElementById(id + 'Val').textContent = document.getElementById(id).value;
             }
         }
