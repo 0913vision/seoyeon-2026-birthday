@@ -90,38 +90,15 @@ export class GameScene extends Scene {
     }
 
     private drawGround() {
-        // Extended background - large green area so edges never show void
-        const EXT = 15; // extra tiles beyond grid in each direction
-        const bgGfx = this.add.graphics();
-        bgGfx.setDepth(-1);
+        // Draw all tiles (grid + extended) with same checkerboard pattern
+        const EXT = 15;
+        const gfx = this.add.graphics();
+        gfx.setDepth(0);
 
         for (let row = -EXT; row < GRID_SIZE + EXT; row++) {
             for (let col = -EXT; col < GRID_SIZE + EXT; col++) {
                 const { x, y } = this.toScreen(row, col);
-                const inGrid = row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE;
-
-                if (inGrid) continue; // drawn separately with detail
-
-                // Outer tiles - uniform dark green, no grid lines
-                bgGfx.fillStyle(0x3d7a4e, 1);
-                bgGfx.beginPath();
-                bgGfx.moveTo(x, y - TILE_H / 2);
-                bgGfx.lineTo(x + TILE_W / 2, y);
-                bgGfx.lineTo(x, y + TILE_H / 2);
-                bgGfx.lineTo(x - TILE_W / 2, y);
-                bgGfx.closePath();
-                bgGfx.fillPath();
-            }
-        }
-
-        // Main grid with detail
-        const gfx = this.add.graphics();
-        gfx.setDepth(0);
-
-        for (let row = 0; row < GRID_SIZE; row++) {
-            for (let col = 0; col < GRID_SIZE; col++) {
-                const { x, y } = this.toScreen(row, col);
-                const colorIdx = (row * 3 + col * 7) % GRASS_COLORS.length;
+                const colorIdx = (((row % 5) + 5) * 3 + ((col % 7) + 7) * 7) % GRASS_COLORS.length;
                 const isEven = (row + col) % 2 === 0;
                 const color = isEven ? GRASS_COLORS[colorIdx] : GRASS_DARK[colorIdx];
 
