@@ -246,18 +246,43 @@ function ActionButton({
 }
 
 const BUILD_ITEMS = [
-    { id: 'woodshop', name: '목공방', desc: '파츠를 제작하는 시설', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 500 }], available: true, built: false },
-    { id: 'flower_farm', name: '꽃밭', desc: '꽃을 생산하는 시설', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 1000 }], available: true, built: false },
-    { id: 'quarry', name: '채석장', desc: '돌을 생산하는 시설', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 1000 }], available: false, built: false },
-    { id: 'mine', name: '광산', desc: '금속을 생산하는 시설', cost: [{ res: 'stone', img: 'assets/generated/resources/stone.png', amount: 1000 }], available: false, built: false },
-    { id: 'jewelshop', name: '세공소', desc: '금속/보석 파츠 제작', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 1500 }, { res: 'stone', img: 'assets/generated/resources/stone.png', amount: 1000 }], available: false, built: false },
-    { id: 'gem_cave', name: '수정동굴', desc: '보석을 생산하는 시설', cost: [{ res: 'stone', img: 'assets/generated/resources/stone.png', amount: 1500 }, { res: 'metal', img: 'assets/generated/resources/metal.png', amount: 500 }], available: false, built: false },
+    { id: 'woodshop', name: '목공방', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 500 }], available: true, built: false, affordable: true, scale: 1.25 },
+    { id: 'flower_farm', name: '꽃밭', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 1000 }], available: true, built: false, affordable: false, scale: 1.1 },
+    { id: 'quarry', name: '채석장', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 1000 }], available: false, built: false, affordable: false, scale: 1.05 },
+    { id: 'mine', name: '광산', cost: [{ res: 'stone', img: 'assets/generated/resources/stone.png', amount: 1000 }], available: false, built: false, affordable: false, scale: 1.1 },
+    { id: 'jewelshop', name: '세공소', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 1500 }, { res: 'stone', img: 'assets/generated/resources/stone.png', amount: 1000 }], available: false, built: false, affordable: false, scale: 1.1 },
+    { id: 'gem_cave', name: '수정동굴', cost: [{ res: 'stone', img: 'assets/generated/resources/stone.png', amount: 1500 }, { res: 'metal', img: 'assets/generated/resources/metal.png', amount: 500 }], available: false, built: false, affordable: false, scale: 1.1 },
 ];
 
 function BuildMenu({ onClose }: { onClose: () => void }) {
+    const [toast, setToast] = useState('');
+    const [pressed, setPressed] = useState<string | null>(null);
+
+    const handleCardTap = (item: typeof BUILD_ITEMS[0]) => {
+        if (!item.available) return;
+        if (!item.affordable) {
+            setToast('자원이 부족합니다');
+            setTimeout(() => setToast(''), 2000);
+            return;
+        }
+        // TODO: enter build placement mode
+    };
+
     return (
-        <div className="pointer-events-auto" style={{ marginBottom: '6px' }}>
-            <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.2)', zIndex: -1 }} />
+        <div className="pointer-events-auto" style={{ marginBottom: '6px', position: 'relative' }}>
+            {/* Backdrop */}
+            <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: -1 }} />
+
+            {/* Toast */}
+            {toast && (
+                <div style={{
+                    position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)',
+                    background: 'rgba(220,50,50,0.9)', color: '#fff', padding: '6px 16px',
+                    borderRadius: '20px', fontSize: '13px', fontFamily: 'Fredoka, sans-serif',
+                    fontWeight: 700, whiteSpace: 'nowrap', zIndex: 10,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}>{toast}</div>
+            )}
 
             <div style={{
                 background: 'linear-gradient(180deg, #5a3a1e 0%, #3a220e 100%)',
@@ -266,42 +291,61 @@ function BuildMenu({ onClose }: { onClose: () => void }) {
                 padding: '10px 0',
                 boxShadow: '0 -4px 20px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,220,150,0.1)',
             }}>
-                {/* Horizontal scroll */}
                 <div style={{
-                    display: 'flex',
-                    overflowX: 'auto',
-                    gap: '10px',
-                    padding: '0 14px',
-                    scrollSnapType: 'x mandatory',
-                    WebkitOverflowScrolling: 'touch',
+                    display: 'flex', overflowX: 'auto', gap: '10px', padding: '0 14px',
+                    scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch',
                 }}>
                     {BUILD_ITEMS.map(item => {
                         const imgSrc = `assets/generated/buildings/${item.id === 'flower_farm' ? 'flower_farm' : item.id === 'gem_cave' ? 'gem_cave' : item.id}.png`;
+                        const isLocked = !item.available;
+                        const isPressed = pressed === item.id;
+                        const imgSize = 80 * item.scale;
+
+                        // Card background
+                        let cardBg: string, cardBorder: string, cardOpacity: number;
+                        if (isLocked) {
+                            cardBg = 'linear-gradient(180deg, #5a5550 0%, #4a4540 100%)';
+                            cardBorder = '3px solid #3a3530';
+                            cardOpacity = 0.5;
+                        } else if (!item.affordable) {
+                            cardBg = 'linear-gradient(180deg, #e8d0b0 0%, #d0b890 100%)';
+                            cardBorder = '3px solid #a08050';
+                            cardOpacity = 0.7;
+                        } else {
+                            cardBg = 'linear-gradient(180deg, #f5e6c8 0%, #e0c898 100%)';
+                            cardBorder = '3px solid #c8a060';
+                            cardOpacity = 1;
+                        }
+
                         return (
-                            <div key={item.id} style={{
-                                scrollSnapAlign: 'center',
-                                flexShrink: 0,
-                                width: '140px',
-                                background: item.available
-                                    ? 'linear-gradient(180deg, #f5e6c8 0%, #e0c898 100%)'
-                                    : '#5a5550',
-                                border: item.available ? '3px solid #c8a060' : '3px solid #4a4540',
-                                borderRadius: '14px',
-                                overflow: 'hidden',
-                                opacity: item.available ? 1 : 0.5,
-                                position: 'relative',
-                            }}>
-                                {/* Large building image */}
+                            <div key={item.id}
+                                onPointerDown={() => item.available && setPressed(item.id)}
+                                onPointerUp={() => { setPressed(null); handleCardTap(item); }}
+                                onPointerLeave={() => setPressed(null)}
+                                style={{
+                                    scrollSnapAlign: 'center',
+                                    flexShrink: 0,
+                                    width: '140px',
+                                    background: cardBg,
+                                    border: cardBorder,
+                                    borderRadius: '14px',
+                                    overflow: 'hidden',
+                                    opacity: cardOpacity,
+                                    position: 'relative',
+                                    transform: isPressed ? 'scale(0.93)' : 'scale(1)',
+                                    transition: 'transform 0.1s',
+                                    cursor: item.available ? 'pointer' : 'default',
+                                }}>
+                                {/* Building image */}
                                 <div style={{
                                     height: '110px',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: item.available ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.2)',
                                 }}>
                                     <img src={imgSrc} alt={item.name} style={{
-                                        width: '100px', height: '100px', objectFit: 'contain',
-                                        opacity: item.available ? 1 : 0.3,
+                                        width: `${imgSize}px`, height: `${imgSize}px`, objectFit: 'contain',
+                                        opacity: isLocked ? 0.3 : 1,
                                     }} />
-                                    {!item.available && !item.built && (
+                                    {isLocked && (
                                         <span style={{ position: 'absolute', fontSize: '32px', opacity: 0.6 }}>🔒</span>
                                     )}
                                     {item.built && (
@@ -312,16 +356,21 @@ function BuildMenu({ onClose }: { onClose: () => void }) {
                                             fontSize: '14px', fontWeight: 700, border: '2px solid #fff',
                                         }}>✓</span>
                                     )}
+                                    {/* Insufficient overlay */}
+                                    {item.available && !item.affordable && !item.built && (
+                                        <div style={{
+                                            position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)',
+                                            background: 'rgba(200,50,50,0.8)', color: '#fff', fontSize: '10px',
+                                            padding: '1px 8px', borderRadius: '8px', fontWeight: 700,
+                                        }}>자원 부족</div>
+                                    )}
                                 </div>
 
-                                {/* Bottom: name + cost */}
-                                <div style={{
-                                    padding: '8px 8px',
-                                    background: item.available ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.3)',
-                                }}>
+                                {/* Name + cost */}
+                                <div style={{ padding: '8px 8px' }}>
                                     <div style={{
                                         fontFamily: 'Fredoka, sans-serif', fontSize: '15px', fontWeight: 700,
-                                        color: item.available ? '#3a2810' : '#aaa', textAlign: 'center',
+                                        color: isLocked ? '#888' : '#3a2810', textAlign: 'center',
                                     }}>
                                         {item.name}
                                     </div>
@@ -330,8 +379,8 @@ function BuildMenu({ onClose }: { onClose: () => void }) {
                                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                                                 <img src={c.img} alt={c.res} style={{ width: '16px', height: '16px' }} />
                                                 <span style={{
-                                                    fontSize: '14px', fontFamily: 'Fredoka, sans-serif', fontWeight: 700,
-                                                    color: item.available ? '#5a4a30' : '#888',
+                                                    fontSize: '15px', fontFamily: 'Fredoka, sans-serif', fontWeight: 700,
+                                                    color: isLocked ? '#666' : (item.affordable ? '#3a2810' : '#c04030'),
                                                 }}>{c.amount.toLocaleString()}</span>
                                             </div>
                                         ))}
