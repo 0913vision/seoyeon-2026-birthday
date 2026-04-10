@@ -241,13 +241,39 @@
                 const h = w * (img.height / img.width);
                 ctx.drawImage(img, bx - w / 2, by - h * b.originY, w, h);
 
-                // Crosshair at tile center
-                ctx.strokeStyle = 'rgba(255,0,0,0.4)';
-                ctx.lineWidth = 1;
+                // Tile diamond guide lines (left/right/bottom vertices)
+                const leftVx = cx2 - TILE_W / 2;
+                const rightVx = cx2 + TILE_W / 2;
+                const bottomVy = cy2 + actualTileH / 2;
+
+                // Draw tile outline highlight
+                ctx.strokeStyle = 'rgba(255,0,0,0.5)';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.moveTo(cx2 - 20, cy2); ctx.lineTo(cx2 + 20, cy2);
-                ctx.moveTo(cx2, cy2 - 20); ctx.lineTo(cx2, cy2 + 20);
+                ctx.moveTo(leftVx, cy2);       // left vertex
+                ctx.lineTo(cx2, bottomVy);      // bottom vertex
+                ctx.lineTo(rightVx, cy2);       // right vertex
                 ctx.stroke();
+
+                // Vertex dots
+                ctx.fillStyle = 'rgba(255,0,0,0.8)';
+                [
+                    [leftVx, cy2],
+                    [rightVx, cy2],
+                    [cx2, bottomVy],
+                ].forEach(([px, py]) => {
+                    ctx.beginPath();
+                    ctx.arc(px, py, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Labels
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.font = '9px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText('◀ 좌', leftVx - 12, cy2 - 5);
+                ctx.fillText('우 ▶', rightVx + 12, cy2 - 5);
+                ctx.fillText('▼ 하', cx2, bottomVy + 14);
             }
 
             updateOutput();
