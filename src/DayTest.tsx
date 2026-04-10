@@ -198,15 +198,22 @@ type DayRow = {
     demand: number;
     remaining: number;
     surplusRate: number; // percentage
+    // Production detail
+    harvests: number;        // 수확 횟수 (0, 1, 2)
+    cyclesPerHarvest: number; // 12h 내 사이클 수
+    perCycle: number;         // 사이클당 생산량
+    cycleMin: number;         // 사이클 주기(분)
+    prodHours: number;        // 총 생산 소요시간(h)
 };
 
 function simulateDays(): Record<number, Record<string, DayRow>> {
     // Compute 12h harvest per resource
     const harvest12h: Record<string, number> = {};
+    const cyclesPer12h: Record<string, number> = {};
     for (const rid of RES_IDS) {
         const p = PRODUCTION[rid];
-        const cyclesIn12h = (12 * 60) / p.cycle;
-        harvest12h[rid] = Math.min(p.perCycle * cyclesIn12h, p.cap);
+        cyclesPer12h[rid] = (12 * 60) / p.cycle;
+        harvest12h[rid] = Math.min(p.perCycle * cyclesPer12h[rid], p.cap);
     }
 
     // Daily production (2 harvests) — but on unlock day: buffer + 1 extra harvest
@@ -259,15 +266,21 @@ function simulateDays(): Record<number, Record<string, DayRow>> {
 
             let buffer = 0;
             let production = 0;
+            let harvests = 0;
+
+            const p = PRODUCTION[rid];
+            const cph = cyclesPer12h[rid];
 
             if (d === unlock) {
                 // Unlock day: buffer (cap) + 1 extra harvest
-                buffer = PRODUCTION[rid].cap;
+                buffer = p.cap;
                 production = harvest12h[rid];
+                harvests = 1;
             } else if (d > unlock) {
                 // After unlock: 2 full harvests
                 buffer = 0;
                 production = dailyProd[rid];
+                harvests = 2;
             }
             // Before unlock: nothing
 
@@ -284,6 +297,11 @@ function simulateDays(): Record<number, Record<string, DayRow>> {
                 demand,
                 remaining,
                 surplusRate,
+                harvests,
+                cyclesPerHarvest: cph,
+                perCycle: p.perCycle,
+                cycleMin: p.cycle,
+                prodHours: harvests * 12,
             };
 
             carry[rid] = remaining;
@@ -314,6 +332,7 @@ function ResourceSimulation({ currentDay }: { currentDay: number }) {
                             <th style={{ ...thStyle, textAlign: 'right' }}>이월</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>버퍼</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>생산</th>
+                            <th style={{ ...thStyle, textAlign: 'left' }}>상세</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>총공급</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>수요</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>잔여</th>
@@ -359,6 +378,15 @@ function ResourceSimulation({ currentDay }: { currentDay: number }) {
                                             {r.buffer > 0 ? r.buffer.toLocaleString() : '-'}
                                         </td>
                                         <td style={numStyle}>{r.production.toLocaleString()}</td>
+                                        <td style={{ ...tdStyle, color: '#777', fontSize: '10px' }}>
+                                            {r.harvests > 0 ? (
+                                                <span>
+                                                    {r.perCycle}×{r.cyclesPerHarvest}회
+                                                    {r.harvests > 1 ? ` ×${r.harvests}수확` : ' ×1수확'}
+                                                    {' '}({r.prodHours}h)
+                                                </span>
+                                            ) : '-'}
+                                        </td>
                                         <td style={{ ...numStyle, fontWeight: 700, color: '#4ade80' }}>
                                             {r.totalSupply.toLocaleString()}
                                         </td>
