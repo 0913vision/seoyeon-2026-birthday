@@ -58,7 +58,7 @@ interface BuildingDef {
 
 const BUILDINGS: BuildingDef[] = [
     { row: 8, col: 8, label: '선물상자', spriteKey: 'box_empty', isGiftBox: true,
-      originY: 0.62, scale: 1.25, offX: 0, offY: -4 },
+      originY: 0.6, scale: 1.3, offX: 1.5, offY: 0 },
     { row: 3, col: 4, label: '나무밭', spriteKey: 'woodfarm', showExclaim: true,
       originY: 0.71, scale: 1.2, offX: 0, offY: 0 },
     { row: 4, col: 12, label: '꽃밭', spriteKey: 'flowerfarm',
