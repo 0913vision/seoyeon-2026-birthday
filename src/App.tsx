@@ -9,13 +9,18 @@ const RESOURCES = [
     { id: 'gem', img: 'assets/generated/resources/gem.png', value: '--', unlocked: false },
 ];
 
-const SAMPLE_DIALOGUE = [
-    '왈왈! 누나 왔다!',
-    '누나, 나 초코야. 오늘 누나한테 할 말 있어!',
-    '8일 뒤에 누나 생일이잖아. 24살 되는 날!',
-    '나 누나한테 특별한 선물 주고 싶어',
-    '근데 나 혼자서는 못 만들겠어...',
-    '그래서 누나, 나랑 같이 만들어줄래? 왈!',
+interface DialogLine {
+    text: string;
+    action?: string; // shown as yellow button-like text on last line
+}
+
+const SAMPLE_DIALOGUE: DialogLine[] = [
+    { text: '왈왈! 누나 왔다!' },
+    { text: '누나, 나 초코야. 오늘 누나한테 할 말 있어!' },
+    { text: '8일 뒤에 누나 생일이잖아. 24살 되는 날!' },
+    { text: '나 누나한테 특별한 선물 주고 싶어' },
+    { text: '근데 나 혼자서는 못 만들겠어...' },
+    { text: '그래서 누나, 나랑 같이 만들어줄래? 왈!', action: '도와줄게' },
 ];
 
 function App() {
@@ -44,7 +49,8 @@ function App() {
                 {/* Dialog */}
                 {showDialog && (
                     <DialogBox
-                        text={SAMPLE_DIALOGUE[dialogIndex]}
+                        text={SAMPLE_DIALOGUE[dialogIndex].text}
+                        action={SAMPLE_DIALOGUE[dialogIndex].action}
                         onTap={handleDialogTap}
                         isLast={dialogIndex === SAMPLE_DIALOGUE.length - 1}
                     />
@@ -224,7 +230,7 @@ function ActionButton({
     );
 }
 
-function DialogBox({ text, onTap, isLast }: { text: string; onTap: () => void; isLast: boolean }) {
+function DialogBox({ text, action, onTap, isLast }: { text: string; action?: string; onTap: () => void; isLast: boolean }) {
     const [displayedText, setDisplayedText] = useState('');
     const [isAnimating, setIsAnimating] = useState(true);
     const animRef = useRef<number | null>(null);
@@ -276,7 +282,7 @@ function DialogBox({ text, onTap, isLast }: { text: string; onTap: () => void; i
                     border: '2px solid #5a4530',
                     padding: '14px 16px',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                    height: '120px',
+                    height: '145px',
                     display: 'flex',
                     flexDirection: 'column',
                     position: 'relative',
@@ -319,18 +325,38 @@ function DialogBox({ text, onTap, isLast }: { text: string; onTap: () => void; i
                     {displayedText}
                 </div>
 
-                {/* Tap indicator */}
+                {/* Tap indicator or action button */}
                 {!isAnimating && (
-                    <div style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        right: '14px',
-                        fontSize: '11px',
-                        color: '#8a7a60',
-                        fontFamily: 'Fredoka, sans-serif',
-                    }}>
-                        {isLast ? '[ 확인 ]' : '▼'}
-                    </div>
+                    action ? (
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '10px',
+                            right: '14px',
+                        }}>
+                            <span style={{
+                                fontFamily: 'Fredoka, sans-serif',
+                                fontSize: '14px',
+                                color: '#fbbf24',
+                                border: '2px solid #fbbf24',
+                                borderRadius: '8px',
+                                padding: '4px 14px',
+                                fontWeight: 700,
+                            }}>
+                                {action}
+                            </span>
+                        </div>
+                    ) : (
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '8px',
+                            right: '14px',
+                            fontSize: '11px',
+                            color: '#8a7a60',
+                            fontFamily: 'Fredoka, sans-serif',
+                        }}>
+                            ▼
+                        </div>
+                    )
                 )}
             </div>
         </div>
