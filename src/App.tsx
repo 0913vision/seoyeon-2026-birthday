@@ -28,6 +28,13 @@ function App() {
     const [showDialog, setShowDialog] = useState(false);
     const [dialogIndex, setDialogIndex] = useState(0);
 
+    const goToBox = () => {
+        if (phaserRef.current?.scene) {
+            const scene = phaserRef.current.scene as any;
+            if (scene.goToGiftBox) scene.goToGiftBox();
+        }
+    };
+
     const handleDialogTap = () => {
         if (dialogIndex < SAMPLE_DIALOGUE.length - 1) {
             setDialogIndex(dialogIndex + 1);
@@ -56,7 +63,7 @@ function App() {
                     />
                 )}
 
-                <BottomBar />
+                <BottomBar onGoToBox={goToBox} />
             </div>
 
             {/* Debug: toggle dialog floating button */}
@@ -157,16 +164,15 @@ function TopBar() {
     );
 }
 
-function BottomBar() {
+function BottomBar({ onGoToBox }: { onGoToBox: () => void }) {
     return (
         <div
             className="pointer-events-auto pb-2 px-4"
             style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
         >
-            <div className="flex justify-center gap-5">
+            <div className="flex justify-start gap-3">
                 <ActionButton icon="🏗️" label="BUILD" badge="NEW" badgeColor="#ef4444" bgColor="linear-gradient(180deg, #22c55e 0%, #16a34a 100%)" />
-                <ActionButton icon="🔨" label="CRAFT" badge="1" badgeColor="#f59e0b" bgColor="linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)" />
-                <ActionButton icon="🎁" label="BOX" bgColor="linear-gradient(180deg, #f59e0b 0%, #d97706 100%)" />
+                <ActionButton icon="🎁" label="BOX" bgColor="linear-gradient(180deg, #f59e0b 0%, #d97706 100%)" onClick={onGoToBox} />
             </div>
         </div>
     );
@@ -178,16 +184,19 @@ function ActionButton({
     badge,
     badgeColor,
     bgColor,
+    onClick,
 }: {
     icon: string;
     label: string;
     badge?: string;
     badgeColor?: string;
     bgColor?: string;
+    onClick?: () => void;
 }) {
     return (
         <div className="relative">
             <button
+                onClick={onClick}
                 className="flex flex-col items-center justify-center gap-1.5 rounded-2xl transition-all active:scale-95"
                 style={{
                     background: bgColor || 'linear-gradient(180deg, rgba(20,20,40,0.7) 0%, rgba(10,10,25,0.85) 100%)',

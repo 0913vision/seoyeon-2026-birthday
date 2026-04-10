@@ -356,6 +356,24 @@ export class GameScene extends Scene {
         }
     }
 
+    public goToGiftBox() {
+        // Find the gift box building
+        const giftBox = BUILDINGS.find(b => b.isGiftBox);
+        if (!giftBox) return;
+
+        const { x, y } = this.toScreen(giftBox.row, giftBox.col);
+        const cam = this.cameras.main;
+
+        // Smooth pan to gift box (respects camera bounds)
+        this.tweens.add({
+            targets: cam,
+            scrollX: x - cam.width / 2,
+            scrollY: y - cam.height / 2,
+            duration: 500,
+            ease: 'Sine.easeInOut',
+        });
+    }
+
     private setupCameraDrag() {
         const cam = this.cameras.main;
         let lastPinchDist = 0;
