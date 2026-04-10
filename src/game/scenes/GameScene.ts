@@ -196,17 +196,17 @@ export class GameScene extends Scene {
         }
 
 
-        // Camera bounds - tight around the building area with small margin
-        const margin = 3;
+        // Camera bounds - generous margin for zoom out
+        const margin = 6;
         const top = this.toScreen(-margin, -margin);
         const right = this.toScreen(-margin, GRID_SIZE + margin);
         const bottom = this.toScreen(GRID_SIZE + margin, GRID_SIZE + margin);
         const left = this.toScreen(GRID_SIZE + margin, -margin);
 
-        const boundsX = left.x - TILE_W;
-        const boundsY = top.y - TILE_H * 2;
-        const boundsW = (right.x - left.x) + TILE_W * 2;
-        const boundsH = (bottom.y - top.y) + TILE_H * 4;
+        const boundsX = left.x - TILE_W * 3;
+        const boundsY = top.y - TILE_H * 4;
+        const boundsW = (right.x - left.x) + TILE_W * 6;
+        const boundsH = (bottom.y - top.y) + TILE_H * 8;
         this.cameras.main.setBounds(boundsX, boundsY, boundsW, boundsH);
     }
 
@@ -721,8 +721,8 @@ export class GameScene extends Scene {
         canvas.addEventListener('touchcancel', (e) => { this.activeTouchCount = e.touches.length; }, { passive: true });
         let velocityY = 0;
 
-        const MIN_ZOOM = 0.5;
-        const MAX_ZOOM = 1.2;
+        const MIN_ZOOM = 0.4;
+        const MAX_ZOOM = 1.3;
 
         cam.setZoom(0.65);
         this.updateLabels(0.65);
