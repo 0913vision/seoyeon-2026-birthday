@@ -19,53 +19,33 @@
         .tab { display: inline-block; padding: 6px 14px; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: bold; font-size: 13px; }
         .tab.active { background: #f59e0b; color: #000; }
         .tab:not(.active) { background: #333; color: #aaa; }
-        .val { color: #4ade80; font-family: monospace; font-size: 13px; }
         .row { display: flex; gap: 4px; align-items: center; margin: 4px 0; }
-        .label { min-width: 60px; color: #aaa; font-size: 11px; }
+        .label { min-width: 75px; color: #aaa; font-size: 11px; }
         input[type=range] { flex: 1; }
         .pm { width: 28px; height: 28px; background: #444; color: #fff; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .pm:active { background: #666; }
-        .num-input { width: 50px; background: #222; color: #4ade80; border: 1px solid #555; border-radius: 4px; padding: 3px 4px; font-size: 12px; font-family: monospace; text-align: center; }
-        select { padding: 4px; font-size: 12px; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+        .num-input { width: 55px; background: #222; color: #4ade80; border: 1px solid #555; border-radius: 4px; padding: 3px 4px; font-size: 12px; font-family: monospace; text-align: center; }
+        select { padding: 4px 8px; font-size: 12px; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
         button { background: #3b82f6; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; margin: 6px 2px; font-size: 13px; }
-        #output { margin-top: 6px; padding: 8px; background: rgba(255,255,255,0.08); border-radius: 6px; font-family: monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; max-height: 100px; overflow-y: auto; }
+        #output { margin-top: 6px; padding: 8px; background: rgba(255,255,255,0.08); border-radius: 6px; font-family: monospace; font-size: 10px; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow-y: auto; }
+        .section-title { color: #f59e0b; font-size: 12px; font-weight: bold; margin: 10px 0 4px; border-bottom: 1px solid #333; padding-bottom: 4px; }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
     <div id="panel">
-        <div>
-            <span class="tab active" id="tabBuilding" onclick="setTab('building')">건물 캘리브레이션</span>
-            <span class="tab" id="tabTile" onclick="setTab('tile')">타일 캘리브레이션</span>
-        </div>
+        <div class="section-title">🌿 타일 전체 Y 오프셋</div>
+        <div id="tileYControls"></div>
 
-        <!-- Building tab -->
-        <div id="buildingPanel">
-            <div class="row">
-                <span class="label">건물:</span>
-                <select id="buildingSelect"></select>
-            </div>
-            <div class="row">
-                <span class="label">Origin Y:</span>
-                <input type="range" id="bOriginY" min="0.50" max="1.00" step="0.01" value="0.85">
-                <span class="val" id="bOriginYVal">0.85</span>
-            </div>
-            <div class="row">
-                <span class="label">Scale:</span>
-                <input type="range" id="bScale" min="0.3" max="2.5" step="0.05" value="1.0">
-                <span class="val" id="bScaleVal">1.0</span>
-            </div>
-            <div id="output"></div>
-            <button onclick="copyAll()">전체 값 복사</button>
+        <div class="section-title">🏗 건물별 세팅</div>
+        <div class="row">
+            <span class="label">건물 선택:</span>
+            <select id="buildingSelect"></select>
         </div>
+        <div id="buildingControls"></div>
 
-        <!-- Tile tab -->
-        <div id="tilePanel" style="display:none">
-            <p style="color:#aaa; font-size:11px; margin:6px 0;">위쪽 타일 고정(기준). 좌/우/아래 3개를 위 타일에 맞닿게 조절하세요.<br>z-order: 위 → 좌/우 → 아래(가장 앞)</p>
-            <div id="tileControls"></div>
-            <div id="tileOutput" style="margin-top:6px; padding:8px; background:rgba(255,255,255,0.08); border-radius:6px; font-family:monospace; font-size:11px; white-space:pre-wrap;"></div>
-            <button onclick="copyTile()">타일 값 복사</button>
-        </div>
+        <div id="output"></div>
+        <button onclick="copyAll()">전체 값 복사</button>
     </div>
 
     <script>
@@ -74,9 +54,11 @@
         const dpr = window.devicePixelRatio || 1;
         const TILE_W = 110, TILE_H = 55;
 
-        let tab = 'building';
+        // Tile settings
+        let tileOffY = 0;
+        let tileSideH = 6;
 
-        // Building data - per-building settings
+        // Building data
         const buildings = [
             { id: 'woodfarm', name: '나무밭', path: 'assets/generated/buildings/wood_farm.png', originY: 0.85, scale: 1.0 },
             { id: 'flowerfarm', name: '꽃밭', path: 'assets/generated/buildings/flower_farm.png', originY: 0.85, scale: 1.0 },
@@ -94,20 +76,66 @@
         const select = document.getElementById('buildingSelect');
         buildings.forEach((b, i) => {
             const opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = b.name;
+            opt.value = i; opt.textContent = b.name;
             select.appendChild(opt);
             const img = new Image();
             img.onload = () => { imgs[b.id] = img; draw(); };
             img.src = b.path;
         });
 
-        // Tile image
-        let tileImg = null;
-        const ti = new Image();
-        ti.onload = () => { tileImg = ti; draw(); };
-        ti.src = 'assets/generated/terrain/simple_grass.png';
+        // Generate controls
+        function makeControl(container, id, label, min, max, step, value) {
+            const html = `
+                <div class="row">
+                    <span class="label">${label}:</span>
+                    <button class="pm" onclick="adj('${id}', -${step})">−</button>
+                    <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${value}">
+                    <button class="pm" onclick="adj('${id}', ${step})">+</button>
+                    <input type="number" class="num-input" id="${id}Num" value="${value}" step="${step}" onchange="syncFromNum('${id}')">
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+            document.getElementById(id).addEventListener('input', (e) => {
+                document.getElementById(id + 'Num').value = e.target.value;
+                draw();
+            });
+        }
 
+        // Tile controls
+        const tileYContainer = document.getElementById('tileYControls');
+        makeControl(tileYContainer, 'tileOffY', '타일 Y 오프셋', -20, 20, 0.5, 0);
+        makeControl(tileYContainer, 'tileSideH', '옆면 높이', 0, 20, 0.5, 6);
+
+        // Building controls
+        const buildingContainer = document.getElementById('buildingControls');
+        makeControl(buildingContainer, 'bOriginY', 'Origin Y', 0.5, 1.0, 0.01, 0.85);
+        makeControl(buildingContainer, 'bScale', 'Scale', 0.3, 2.5, 0.05, 1.0);
+
+        function adj(id, delta) {
+            const el = document.getElementById(id);
+            const v = Math.round((parseFloat(el.value) + delta) * 100) / 100;
+            el.value = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+            document.getElementById(id + 'Num').value = el.value;
+            draw();
+        }
+
+        function syncFromNum(id) {
+            document.getElementById(id).value = document.getElementById(id + 'Num').value;
+            draw();
+        }
+
+        // Building select
+        select.addEventListener('change', (e) => {
+            buildings[currentBuilding].originY = parseFloat(document.getElementById('bOriginY').value);
+            buildings[currentBuilding].scale = parseFloat(document.getElementById('bScale').value);
+            currentBuilding = parseInt(e.target.value);
+            document.getElementById('bOriginY').value = buildings[currentBuilding].originY;
+            document.getElementById('bOriginYNum').value = buildings[currentBuilding].originY;
+            document.getElementById('bScale').value = buildings[currentBuilding].scale;
+            document.getElementById('bScaleNum').value = buildings[currentBuilding].scale;
+            draw();
+        });
+
+        // Resize
         function resize() {
             const h = window.innerHeight * 0.45;
             canvas.width = window.innerWidth * dpr;
@@ -122,243 +150,105 @@
 
         function toScreen(row, col) {
             const cx = window.innerWidth / 2;
-            const cy = canvas.height / dpr * 0.5;
+            const cy = canvas.height / dpr * 0.45;
             return { x: (col - row) * (TILE_W / 2) + cx, y: (col + row) * (TILE_H / 2) + cy };
         }
 
-        function drawDiamond(x, y, color) {
-            ctx.fillStyle = color;
+        function drawTile(x, y, isLight, offY, sideH) {
+            const GREEN_L = '#5cb85c', GREEN_D = '#4ea84e';
+            const SIDE_L = '#4a8a3a', SIDE_R = '#3d7530';
+            const ty = y + offY;
+
+            // Top face
+            ctx.fillStyle = isLight ? GREEN_L : GREEN_D;
             ctx.beginPath();
-            ctx.moveTo(x, y - TILE_H / 2);
-            ctx.lineTo(x + TILE_W / 2, y);
-            ctx.lineTo(x, y + TILE_H / 2);
-            ctx.lineTo(x - TILE_W / 2, y);
+            ctx.moveTo(x, ty - TILE_H / 2);
+            ctx.lineTo(x + TILE_W / 2, ty);
+            ctx.lineTo(x, ty + TILE_H / 2);
+            ctx.lineTo(x - TILE_W / 2, ty);
             ctx.closePath();
             ctx.fill();
-            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
+
+            // Left side
+            if (sideH > 0) {
+                ctx.fillStyle = SIDE_L;
+                ctx.beginPath();
+                ctx.moveTo(x - TILE_W / 2, ty);
+                ctx.lineTo(x, ty + TILE_H / 2);
+                ctx.lineTo(x, ty + TILE_H / 2 + sideH);
+                ctx.lineTo(x - TILE_W / 2, ty + sideH);
+                ctx.closePath();
+                ctx.fill();
+
+                // Right side
+                ctx.fillStyle = SIDE_R;
+                ctx.beginPath();
+                ctx.moveTo(x + TILE_W / 2, ty);
+                ctx.lineTo(x, ty + TILE_H / 2);
+                ctx.lineTo(x, ty + TILE_H / 2 + sideH);
+                ctx.lineTo(x + TILE_W / 2, ty + sideH);
+                ctx.closePath();
+                ctx.fill();
+            }
         }
 
         function draw() {
             const ch = canvas.height / dpr;
             ctx.clearRect(0, 0, window.innerWidth, ch);
 
-            if (tab === 'building') drawBuilding();
-            else drawTiles();
-        }
-
-        function drawBuilding() {
+            const offY = parseFloat(document.getElementById('tileOffY').value);
+            const sideH = parseFloat(document.getElementById('tileSideH').value);
             const b = buildings[currentBuilding];
-            // Draw 3x3 grid
-            for (let r = -1; r <= 1; r++) {
-                for (let c = -1; c <= 1; c++) {
+            b.originY = parseFloat(document.getElementById('bOriginY').value);
+            b.scale = parseFloat(document.getElementById('bScale').value);
+
+            // Draw 5x5 grid of tiles
+            for (let r = -2; r <= 2; r++) {
+                for (let c = -2; c <= 2; c++) {
                     const { x, y } = toScreen(r, c);
-                    drawDiamond(x, y, (r === 0 && c === 0) ? '#7acc8e' : '#6dbe82');
+                    const isLight = (r + c) % 2 === 0;
+                    drawTile(x, y, isLight, offY, sideH);
                 }
             }
-            // Draw building
+
+            // Draw building on center tile
             const img = imgs[b.id];
             if (img) {
                 const { x, y } = toScreen(0, 0);
+                const ty = y + offY;
                 const w = TILE_W * b.scale;
                 const h = w * (img.height / img.width);
-                ctx.drawImage(img, x - w / 2, y - h * b.originY, w, h);
-                // Crosshair
-                ctx.strokeStyle = 'rgba(255,0,0,0.5)';
+                ctx.drawImage(img, x - w / 2, ty - h * b.originY, w, h);
+
+                // Crosshair at tile center
+                ctx.strokeStyle = 'rgba(255,0,0,0.4)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(x - 30, y); ctx.lineTo(x + 30, y);
-                ctx.moveTo(x, y - 30); ctx.lineTo(x, y + 30);
+                ctx.moveTo(x - 20, ty); ctx.lineTo(x + 20, ty);
+                ctx.moveTo(x, ty - 20); ctx.lineTo(x, ty + 20);
                 ctx.stroke();
             }
-            updateBuildingOutput();
+
+            updateOutput();
         }
 
-        function drawTiles() {
-            const s = parseFloat(document.getElementById('tScale').value);
-            const oy = parseFloat(document.getElementById('tOriginY').value);
-            const offsets = {
-                right: { x: parseInt(document.getElementById('tRightX').value), y: parseInt(document.getElementById('tRightY').value) },
-                bottom: { x: parseInt(document.getElementById('tBottomX').value), y: parseInt(document.getElementById('tBottomY').value) },
-                left: { x: parseInt(document.getElementById('tLeftX').value), y: parseInt(document.getElementById('tLeftY').value) },
-            };
+        function updateOutput() {
+            // Save current building
+            buildings[currentBuilding].originY = parseFloat(document.getElementById('bOriginY').value);
+            buildings[currentBuilding].scale = parseFloat(document.getElementById('bScale').value);
 
-            // 4 tiles forming a diamond, meeting at a center point
-            // Isometric positions relative to center point:
-            const cx = window.innerWidth / 2;
-            const cy = canvas.height / dpr * 0.5;
-
-            // Top tile position: center point is at its bottom vertex
-            const topPos = { x: cx, y: cy - TILE_H / 2 };
-            // Right: center point is at its left vertex
-            const rightPos = { x: cx + TILE_W / 2 + offsets.right.x, y: cy + offsets.right.y };
-            // Bottom: center point is at its top vertex
-            const bottomPos = { x: cx + offsets.bottom.x, y: cy + TILE_H / 2 + offsets.bottom.y };
-            // Left: center point is at its right vertex
-            const leftPos = { x: cx - TILE_W / 2 + offsets.left.x, y: cy + offsets.left.y };
-
-            function drawTileAt(px, py, label, color) {
-                if (tileImg) {
-                    const tw = TILE_W * s;
-                    ctx.drawImage(tileImg, px - tw / 2, py - tw * oy, tw, tw);
-                } else {
-                    drawDiamond(px, py, '#6dbe82');
-                }
-                ctx.fillStyle = color;
-                ctx.font = 'bold 11px system-ui';
-                ctx.textAlign = 'center';
-                ctx.fillText(label, px, py - TILE_H * 0.7);
-            }
-
-            // Draw in z-order: top (back) → left/right (middle) → bottom (front)
-            drawTileAt(topPos.x, topPos.y, '⬆ 위 (고정)', '#ff6b6b');
-            drawTileAt(leftPos.x, leftPos.y, '⬅ 좌', '#a29bfe');
-            drawTileAt(rightPos.x, rightPos.y, '➡ 우', '#4ecdc4');
-            drawTileAt(bottomPos.x, bottomPos.y, '⬇ 아래', '#ffe66d');
-
-            // Center point marker
-            ctx.fillStyle = 'rgba(255,255,255,0.8)';
-            ctx.beginPath();
-            ctx.arc(cx, cy, 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,0,0,0.6)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(cx - 10, cy); ctx.lineTo(cx + 10, cy);
-            ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy + 10);
-            ctx.stroke();
-
-            updateTileOutput();
-        }
-
-        function updateBuildingOutput() {
-            let text = '';
+            let text = `tileOffY: ${document.getElementById('tileOffY').value}\n`;
+            text += `tileSideH: ${document.getElementById('tileSideH').value}\n\n`;
             buildings.forEach(b => {
                 text += `${b.id}: { originY: ${b.originY}, scale: ${b.scale} }\n`;
             });
             document.getElementById('output').textContent = text;
         }
 
-        function updateTileOutput() {
-            const vals = {
-                rightX: document.getElementById('tRightX').value,
-                rightY: document.getElementById('tRightY').value,
-                bottomX: document.getElementById('tBottomX').value,
-                bottomY: document.getElementById('tBottomY').value,
-                leftX: document.getElementById('tLeftX').value,
-                leftY: document.getElementById('tLeftY').value,
-                scale: document.getElementById('tScale').value,
-                originY: document.getElementById('tOriginY').value,
-            };
-            document.getElementById('tileOutput').textContent = JSON.stringify(vals, null, 2);
-        }
-
-        function setTab(t) {
-            tab = t;
-            document.getElementById('tabBuilding').className = 'tab' + (t === 'building' ? ' active' : '');
-            document.getElementById('tabTile').className = 'tab' + (t === 'tile' ? ' active' : '');
-            document.getElementById('buildingPanel').style.display = t === 'building' ? 'block' : 'none';
-            document.getElementById('tilePanel').style.display = t === 'tile' ? 'block' : 'none';
-            draw();
-        }
-
-        // Building controls
-        select.addEventListener('change', (e) => {
-            // Save current values
-            buildings[currentBuilding].originY = parseFloat(document.getElementById('bOriginY').value);
-            buildings[currentBuilding].scale = parseFloat(document.getElementById('bScale').value);
-            // Switch
-            currentBuilding = parseInt(e.target.value);
-            document.getElementById('bOriginY').value = buildings[currentBuilding].originY;
-            document.getElementById('bScale').value = buildings[currentBuilding].scale;
-            document.getElementById('bOriginYVal').textContent = buildings[currentBuilding].originY;
-            document.getElementById('bScaleVal').textContent = buildings[currentBuilding].scale;
-            draw();
-        });
-
-        document.getElementById('bOriginY').addEventListener('input', (e) => {
-            buildings[currentBuilding].originY = parseFloat(e.target.value);
-            document.getElementById('bOriginYVal').textContent = e.target.value;
-            draw();
-        });
-
-        document.getElementById('bScale').addEventListener('input', (e) => {
-            buildings[currentBuilding].scale = parseFloat(e.target.value);
-            document.getElementById('bScaleVal').textContent = e.target.value;
-            draw();
-        });
-
-        // Generate tile controls with +/- buttons and number input
-        const tileControlDefs = [
-            { header: '➡ 우측', color: '#4ecdc4', controls: [
-                { id: 'tRightX', label: 'OffX', min: -30, max: 30, step: 0.5, value: 7 },
-                { id: 'tRightY', label: 'OffY', min: -30, max: 30, step: 0.5, value: 8 },
-            ]},
-            { header: '⬇ 아래', color: '#ffe66d', controls: [
-                { id: 'tBottomX', label: 'OffX', min: -30, max: 30, step: 0.5, value: 0 },
-                { id: 'tBottomY', label: 'OffY', min: -30, max: 30, step: 0.5, value: 16 },
-            ]},
-            { header: '⬅ 좌측', color: '#a29bfe', controls: [
-                { id: 'tLeftX', label: 'OffX', min: -30, max: 30, step: 0.5, value: -7 },
-                { id: 'tLeftY', label: 'OffY', min: -30, max: 30, step: 0.5, value: 8 },
-            ]},
-            { header: '공통', color: '#aaa', controls: [
-                { id: 'tScale', label: 'Scale', min: 0.5, max: 2.5, step: 0.01, value: 1.2 },
-                { id: 'tOriginY', label: 'OriginY', min: 0.3, max: 0.8, step: 0.01, value: 0.7 },
-            ]},
-        ];
-
-        const tileContainer = document.getElementById('tileControls');
-        const allTileIds = [];
-
-        tileControlDefs.forEach(group => {
-            tileContainer.innerHTML += `<div style="color:${group.color}; font-size:11px; font-weight:bold; margin:6px 0;">${group.header}</div>`;
-            group.controls.forEach(c => {
-                allTileIds.push(c.id);
-                tileContainer.innerHTML += `
-                    <div class="row">
-                        <span class="label">${c.label}:</span>
-                        <button class="pm" onclick="adj('${c.id}', -${c.step})">−</button>
-                        <input type="range" id="${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.value}">
-                        <button class="pm" onclick="adj('${c.id}', ${c.step})">+</button>
-                        <input type="number" class="num-input" id="${c.id}Num" value="${c.value}" step="${c.step}" onchange="syncFromNum('${c.id}')">
-                    </div>`;
-            });
-        });
-
-        function adj(id, delta) {
-            const el = document.getElementById(id);
-            const v = parseFloat(el.value) + delta;
-            el.value = Math.max(el.min, Math.min(el.max, v));
-            document.getElementById(id + 'Num').value = el.value;
-            draw();
-        }
-
-        function syncFromNum(id) {
-            const numEl = document.getElementById(id + 'Num');
-            const rangeEl = document.getElementById(id);
-            rangeEl.value = numEl.value;
-            draw();
-        }
-
-        allTileIds.forEach(id => {
-            document.getElementById(id).addEventListener('input', (e) => {
-                document.getElementById(id + 'Num').value = e.target.value;
-                draw();
-            });
-        });
-
         function copyAll() {
-            // Save current
             buildings[currentBuilding].originY = parseFloat(document.getElementById('bOriginY').value);
             buildings[currentBuilding].scale = parseFloat(document.getElementById('bScale').value);
             const text = document.getElementById('output').textContent;
-            navigator.clipboard.writeText(text).then(() => alert('복사됨!'));
-        }
-
-        function copyTile() {
-            const text = document.getElementById('tileOutput').textContent;
             navigator.clipboard.writeText(text).then(() => alert('복사됨!'));
         }
     </script>
