@@ -354,11 +354,11 @@ export class GameScene extends Scene {
         let velocityX = 0;
         let velocityY = 0;
 
-        const MIN_ZOOM = 0.4;
+        const MIN_ZOOM = 0.5;
         const MAX_ZOOM = 1.2;
 
-        cam.setZoom(0.4);
-        this.updateLabels(0.4);
+        cam.setZoom(0.65);
+        this.updateLabels(0.65);
 
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             this.isDragging = false;
