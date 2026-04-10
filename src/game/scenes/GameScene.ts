@@ -2,6 +2,7 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 import { useGameStore } from '../../store/useGameStore';
 import { BUILDINGS as DATA_BUILDINGS } from '../../data/buildings';
+import { TERRAIN, BUILDING_TERRAIN_REQUIRE, isAdjacentToTerrain } from '../../data/terrain';
 
 const DPR = window.devicePixelRatio || 1;
 const TILE_W = 110 * DPR;
@@ -114,6 +115,7 @@ export class GameScene extends Scene {
 
         this.drawGround();
         this.initOccupiedTiles();
+        this.placeTerrain();
         this.placeBuildings();
         this.setupCameraDrag();
         this.setupBuildMode();
@@ -227,6 +229,31 @@ export class GameScene extends Scene {
         ctx.fillRect(0, 0, size, size);
 
         this.textures.addCanvas('shadow_gradient', canvas);
+    }
+
+    private placeTerrain() {
+        if (!this.textures.exists('shadow_gradient')) {
+            this.createShadowTexture();
+        }
+        for (const t of TERRAIN) {
+            const { x, y } = this.toScreen(t.row, t.col);
+            const depth = (t.row + t.col) * 10;
+
+            // Shadow
+            const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
+            shadow.setDisplaySize(TILE_W * 1.1, TILE_H * 0.7);
+            shadow.setDepth(depth);
+
+            if (this.textures.exists(t.spriteKey)) {
+                const tx = x + (t.offX || 0) * DPR;
+                const ty = y + (t.offY || 0) * DPR;
+                const sprite = this.add.image(tx, ty, t.spriteKey);
+                const scale = TILE_W * t.scale / sprite.width;
+                sprite.setScale(scale);
+                sprite.setOrigin(0.5, t.originY);
+                sprite.setDepth(depth + 2);
+            }
+        }
     }
 
     private placeBuildings() {
@@ -419,7 +446,7 @@ export class GameScene extends Scene {
 
     private initOccupiedTiles() {
         this.occupiedTiles.clear();
-        // Mark only built buildings from store as occupied
+        // Mark built buildings from store as occupied
         const storeBuildings = useGameStore.getState().buildings;
         for (const [, bs] of Object.entries(storeBuildings)) {
             if (bs.built && bs.position) {
@@ -431,6 +458,10 @@ export class GameScene extends Scene {
             if (bs.position && bs.constructionStartedAt) {
                 this.occupiedTiles.add(`${bs.position.row},${bs.position.col}`);
             }
+        }
+        // Mark pre-placed terrain tiles as occupied
+        for (const t of TERRAIN) {
+            this.occupiedTiles.add(`${t.row},${t.col}`);
         }
     }
 
@@ -468,16 +499,32 @@ export class GameScene extends Scene {
         // Above everything in build mode so building tiles also show red
         this.buildHighlights.setDepth(9999);
 
-        // Highlight tiles: bright green = buildable, bright red = occupied
+        // Determine adjacency requirement for current build target
+        const bm = useGameStore.getState().buildMode;
+        const requiredTerrain = bm ? BUILDING_TERRAIN_REQUIRE[bm.buildingId] : undefined;
+
+        // Highlight tiles
         for (let row = 0; row < GRID_SIZE; row++) {
             for (let col = 0; col < GRID_SIZE; col++) {
                 const key = `${row},${col}`;
                 const occupied = this.occupiedTiles.has(key);
                 const { x, y } = this.toScreen(row, col);
 
-                // Solid fill - more vivid
-                const fillColor = occupied ? 0xff2030 : 0x40ff60;
-                const fillAlpha = occupied ? 0.45 : 0.55;
+                // Determine state: occupied (red), empty + invalid adjacency (yellow), empty + valid (green)
+                let fillColor: number, fillAlpha: number, borderColor: number, innerColor: number;
+                if (occupied) {
+                    fillColor = 0xff2030; fillAlpha = 0.45;
+                    borderColor = 0xff5060; innerColor = 0x880010;
+                } else if (requiredTerrain && !isAdjacentToTerrain(row, col, requiredTerrain)) {
+                    // Empty but doesn't meet adjacency requirement
+                    fillColor = 0xffcc20; fillAlpha = 0.35;
+                    borderColor = 0xffe060; innerColor = 0x886010;
+                } else {
+                    // Buildable
+                    fillColor = 0x40ff60; fillAlpha = 0.55;
+                    borderColor = 0x80ff90; innerColor = 0x108030;
+                }
+
                 this.buildHighlights.fillStyle(fillColor, fillAlpha);
                 this.buildHighlights.beginPath();
                 this.buildHighlights.moveTo(x, y - TILE_H / 2);
@@ -487,8 +534,6 @@ export class GameScene extends Scene {
                 this.buildHighlights.closePath();
                 this.buildHighlights.fillPath();
 
-                // Thick bright border for clear tile boundary
-                const borderColor = occupied ? 0xff5060 : 0x80ff90;
                 this.buildHighlights.lineStyle(3 * DPR, borderColor, 1);
                 this.buildHighlights.beginPath();
                 this.buildHighlights.moveTo(x, y - TILE_H / 2);
@@ -498,8 +543,6 @@ export class GameScene extends Scene {
                 this.buildHighlights.closePath();
                 this.buildHighlights.strokePath();
 
-                // Inner darker outline for depth/contrast
-                const innerColor = occupied ? 0x880010 : 0x108030;
                 this.buildHighlights.lineStyle(1 * DPR, innerColor, 0.8);
                 const inset = 2 * DPR;
                 this.buildHighlights.beginPath();
@@ -531,6 +574,10 @@ export class GameScene extends Scene {
         // Validate: not occupied
         const key = `${row},${col}`;
         if (this.occupiedTiles.has(key)) return;
+
+        // Validate: adjacency requirement (if any)
+        const requiredTerrain = BUILDING_TERRAIN_REQUIRE[state.buildMode.buildingId];
+        if (requiredTerrain && !isAdjacentToTerrain(row, col, requiredTerrain)) return;
 
         // Emit event to React to handle construction
         EventBus.emit('tile-tapped', { buildingId: state.buildMode.buildingId, row, col });

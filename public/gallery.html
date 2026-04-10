@@ -36,7 +36,7 @@
     <h2>🔧 파츠 (24종)</h2>
     <div class="grid" id="parts"></div>
 
-    <h2>🌿 지형 타일 (4종)</h2>
+    <h2>🪨 사전배치 지형 (4종)</h2>
     <div class="grid" id="terrain"></div>
 
     <script>
@@ -48,7 +48,7 @@
                 const names = ['base','body','front','back','lid','flower_a','wreath','number2','number4','pedestal','handle','buckle','trim','crystal_star','gem_deco','metal_frame','flower_crown','gem_ribbon','carved_plate','crystal_crown','main_ribbon','happy24_banner','firework','final_knot'];
                 return 'part_' + String(i+1).padStart(2,'0') + '_' + names[i];
             }),
-            terrain: ['grass_light','grass_dark','dirt_path','stone_path'],
+            terrain: ['rock_outcrop','crystal_cluster','flower_patch','cave_entrance'],
         };
 
         const labels = {
@@ -56,7 +56,7 @@
             mine:'광산', jewelshop:'세공소', gem_cave:'수정동굴',
             box_stage1_base:'1.바닥판', box_stage2_frame:'2.골격', box_stage3_flowers:'3.꽃장식', box_stage4_numbers:'4.숫자24', box_stage5_metal:'5.금속장식', box_stage6_complete:'6.완성', box_stage7_wrapped:'7.포장',
             wood:'나무', flower:'꽃', stone:'돌', metal:'금속', gem:'보석',
-            grass_light:'밝은 잔디', grass_dark:'어두운 잔디', dirt_path:'흙길', stone_path:'돌길',
+            rock_outcrop:'바위(채석장)', crystal_cluster:'수정(수정동굴)', flower_patch:'꽃밭(꽃밭)', cave_entrance:'동굴(광산)',
         };
 
         const partLabels = ['바닥판','몸통','앞면판','뒷면판','뚜껑','꽃 장식','꽃 화환','숫자2','숫자4','받침대','손잡이','버클','테두리','크리스탈 별','보석 장식','금속 프레임','꽃 왕관','보석 리본','장식판','크리스탈 왕관','메인 리본','HAPPY24','불꽃 장식','뚜껑 매듭'];
