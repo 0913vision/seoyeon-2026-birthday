@@ -88,15 +88,16 @@ function App() {
                 {buildMode && (
                     <div className="pointer-events-auto" style={{
                         position: 'absolute', top: '80px', left: '50%', transform: 'translateX(-50%)',
-                        background: 'rgba(34,197,94,0.92)', color: '#fff', padding: '10px 24px',
+                        background: 'rgba(30,30,60,0.92)', color: '#fff', padding: '10px 24px',
                         borderRadius: '16px', fontSize: '15px', fontFamily: 'Fredoka, sans-serif',
                         fontWeight: 700, whiteSpace: 'nowrap', zIndex: 10,
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                        border: '2px solid rgba(255,255,255,0.2)',
                         display: 'flex', alignItems: 'center', gap: '12px',
                     }}>
                         <span>{'\uD83D\uDCCD'} {'\uBE48 \uD0C0\uC77C\uC744 \uD0ED\uD558\uC5EC \uAC74\uBB3C\uC744 \uBC30\uCE58\uD558\uC138\uC694'}</span>
                         <button onClick={exitBuildMode} style={{
-                            background: 'rgba(255,255,255,0.25)', border: '2px solid rgba(255,255,255,0.5)',
+                            background: 'rgba(239,68,68,0.85)', border: '2px solid rgba(255,255,255,0.5)',
                             borderRadius: '10px', color: '#fff', padding: '4px 12px', fontSize: '13px',
                             fontWeight: 700, cursor: 'pointer',
                         }}>{'\uCDE8\uC18C'}</button>

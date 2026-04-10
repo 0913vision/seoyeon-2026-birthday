@@ -9,18 +9,18 @@ export const RESOURCE_DEFS = [
 ];
 
 export const INITIAL_RESOURCES: ResourceState = {
-    wood: { amount: 2000, unlocked: true },
+    wood: { amount: 2500, unlocked: true },
     flower: { amount: 0, unlocked: false },
     stone: { amount: 0, unlocked: false },
     metal: { amount: 0, unlocked: false },
     gem: { amount: 0, unlocked: false },
 };
 
-// Production rates (from game_design_v6)
+// Production rates (model B++: tap harvest + 200% accumulation)
 export const PRODUCTION = {
-    wood:   { cycle: 90, perCycle: 120, cap: 960 },   // 1.5h
-    flower: { cycle: 120, perCycle: 80, cap: 640 },    // 2h
-    stone:  { cycle: 90, perCycle: 150, cap: 1200 },   // 1.5h
-    metal:  { cycle: 180, perCycle: 300, cap: 1200 },   // 3h
-    gem:    { cycle: 180, perCycle: 250, cap: 1000 },   // 3h
+    wood:   { cycle: 60, perCycle: 250, cap: 500 },   // 1h
+    flower: { cycle: 60, perCycle: 200, cap: 400 },   // 1h
+    stone:  { cycle: 60, perCycle: 350, cap: 700 },   // 1h
+    metal:  { cycle: 90, perCycle: 350, cap: 700 },   // 1.5h
+    gem:    { cycle: 90, perCycle: 300, cap: 600 },   // 1.5h
 };

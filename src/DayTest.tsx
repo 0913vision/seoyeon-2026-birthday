@@ -183,12 +183,39 @@ function DayTest() {
     );
 }
 
-// --- Resource Simulation ---
+// --- Resource Simulation (Model B++: manual harvest + interval-based accumulation) ---
 
 const RES_IDS = ['wood', 'flower', 'stone', 'metal', 'gem'] as const;
 const RES_NAMES: Record<string, string> = { wood: '나무', flower: '꽃', stone: '돌', metal: '금속', gem: '보석' };
 const UNLOCK_DAY: Record<string, number> = { wood: 1, flower: 2, stone: 2, metal: 3, gem: 4 };
-const STARTER: Record<string, number> = { wood: 2000 };
+const STARTER: Record<string, number> = { wood: 2500 };
+
+// Accumulation rate by interval (hours) and cycle time
+// cycle 60min: 3h→150%, 4h→175%, 6h+→200%
+// cycle 90min: 3h→125%, 4h→142%, 6h→175%, 10h+→200%
+function accumRate(cycleMin: number, intervalHours: number): number {
+    if (cycleMin <= 60) {
+        if (intervalHours >= 6) return 2.0;
+        if (intervalHours >= 4) return 1.75;
+        if (intervalHours >= 3) return 1.5;
+        return 1.0;
+    }
+    // cycle 90min
+    if (intervalHours >= 10) return 2.0;
+    if (intervalHours >= 6) return 1.75;
+    if (intervalHours >= 4) return 1.42;
+    if (intervalHours >= 3) return 1.25;
+    return 1.0;
+}
+
+// Access schedule: times (24h) per day
+const SCHEDULE: Record<number, number[]> = {
+    1: [12, 15, 18, 22],       // 토: buf→3h→3h→4h
+    2: [8, 12, 15, 18, 22],    // 일: 10h→4h→3h→3h→4h
+    3: [8, 12, 18, 22],        // 월: 10h→4h→6h→4h
+    4: [8, 12, 18, 22],        // 화: 10h→4h→6h→4h
+    5: [8, 12, 15, 18],        // 수: 10h→4h→3h→3h
+};
 
 type DayRow = {
     carryover: number;
@@ -197,62 +224,97 @@ type DayRow = {
     totalSupply: number;
     demand: number;
     remaining: number;
-    surplusRate: number; // percentage
-    // Production detail
-    harvests: number;        // 수확 횟수 (0, 1, 2)
-    cyclesPerHarvest: number; // 12h 내 사이클 수
-    perCycle: number;         // 사이클당 생산량
-    cycleMin: number;         // 사이클 주기(분)
-    prodHours: number;        // 총 생산 소요시간(h)
+    surplusRate: number;
+    detail: string;
 };
 
+function calcHarvest(rid: string, day: number): { buffer: number; prod: number; total: number; detail: string } {
+    const p = PRODUCTION[rid as keyof typeof PRODUCTION];
+    const unlock = UNLOCK_DAY[rid];
+
+    if (day < unlock) return { buffer: 0, prod: 0, total: 0, detail: '-' };
+
+    const pc = p.perCycle;
+    const cycle = p.cycle;
+    const times = SCHEDULE[day];
+
+    if (day === unlock) {
+        // Unlock day: build → instant 200% buffer
+        const buf = pc * 2;
+
+        // stone Day 2: staggered (afternoon ~15:00), only 18/22 after unlock
+        if (rid === 'stone' && day === 2) {
+            const afterTimes = [18, 22];
+            const intervals = afterTimes.map((t, i) => i === 0 ? (t - 15) : (t - afterTimes[i - 1]));
+            let prod = 0;
+            const parts: string[] = [];
+            for (const intv of intervals) {
+                const rate = accumRate(cycle, intv);
+                const amt = Math.round(pc * rate);
+                prod += amt;
+                parts.push(`${Math.round(rate * 100)}%`);
+            }
+            return { buffer: buf, prod, total: buf + prod, detail: `200%buf+${parts.join('+')} (=${(buf + prod).toLocaleString()})` };
+        }
+
+        // Normal unlock: first visit = 200% buffer, subsequent = interval-based
+        if (times.length <= 1) {
+            return { buffer: buf, prod: 0, total: buf, detail: `200%buf (=${buf.toLocaleString()})` };
+        }
+        const afterTimes = times.slice(1);
+        const intervals = afterTimes.map((t, i) => i === 0 ? (t - times[0]) : (t - afterTimes[i - 1]));
+        let prod = 0;
+        const parts: string[] = [];
+        for (const intv of intervals) {
+            const rate = accumRate(cycle, intv);
+            const amt = Math.round(pc * rate);
+            prod += amt;
+            parts.push(`${Math.round(rate * 100)}%`);
+        }
+        return { buffer: buf, prod, total: buf + prod, detail: `200%buf+${parts.join('+')} (=${(buf + prod).toLocaleString()})` };
+    }
+
+    // After unlock day: first visit has overnight accumulation
+    const prevDay = SCHEDULE[day - 1];
+    const lastPrevTime = prevDay[prevDay.length - 1];
+    const overnightHours = times[0] + (24 - lastPrevTime);
+    const overnightRate = accumRate(cycle, overnightHours);
+    const overnightAmt = Math.round(pc * overnightRate);
+
+    let total = overnightAmt;
+    const parts: string[] = [`${Math.round(overnightRate * 100)}%`];
+
+    for (let i = 1; i < times.length; i++) {
+        const intv = times[i] - times[i - 1];
+        const rate = accumRate(cycle, intv);
+        const amt = Math.round(pc * rate);
+        total += amt;
+        parts.push(`${Math.round(rate * 100)}%`);
+    }
+
+    return { buffer: overnightAmt, prod: total - overnightAmt, total, detail: `${parts.join('+')} (=${total.toLocaleString()})` };
+}
+
 function simulateDays(): Record<number, Record<string, DayRow>> {
-    // Compute 12h harvest per resource
-    const harvest12h: Record<string, number> = {};
-    const cyclesPer12h: Record<string, number> = {};
-    for (const rid of RES_IDS) {
-        const p = PRODUCTION[rid];
-        cyclesPer12h[rid] = (12 * 60) / p.cycle;
-        harvest12h[rid] = Math.min(p.perCycle * cyclesPer12h[rid], p.cap);
-    }
-
-    // Daily production (2 harvests) — but on unlock day: buffer + 1 extra harvest
-    // After unlock day: 2 full harvests
-    const dailyProd: Record<string, number> = {};
-    for (const rid of RES_IDS) {
-        dailyProd[rid] = harvest12h[rid] * 2;
-    }
-
-    // Compute demand per day: building costs + parts costs
+    // Compute demand per day
     const demandByDay: Record<number, Record<string, number>> = {};
     for (let d = 1; d <= 5; d++) {
         const dem: Record<string, number> = {};
         for (const rid of RES_IDS) dem[rid] = 0;
 
-        // Building costs for this day
         for (const b of BUILDINGS) {
             if (b.unlockDay === d) {
-                for (const c of b.cost) {
-                    dem[c.res] = (dem[c.res] || 0) + c.amount;
-                }
+                for (const c of b.cost) dem[c.res] = (dem[c.res] || 0) + c.amount;
             }
         }
-
-        // Parts costs for this day
-        const dayParts = PARTS_PER_DAY[d] ?? [];
-        for (const pid of dayParts) {
+        for (const pid of (PARTS_PER_DAY[d] ?? [])) {
             const part = PARTS.find(p => p.id === pid);
-            if (part) {
-                for (const c of part.cost) {
-                    dem[c.res] = (dem[c.res] || 0) + c.amount;
-                }
-            }
+            if (part) for (const c of part.cost) dem[c.res] = (dem[c.res] || 0) + c.amount;
         }
-
         demandByDay[d] = dem;
     }
 
-    // Simulate day by day
+    // Simulate
     const result: Record<number, Record<string, DayRow>> = {};
     const carry: Record<string, number> = {};
     for (const rid of RES_IDS) carry[rid] = 0;
@@ -260,54 +322,28 @@ function simulateDays(): Record<number, Record<string, DayRow>> {
     for (let d = 1; d <= 5; d++) {
         result[d] = {};
         for (const rid of RES_IDS) {
-            const unlock = UNLOCK_DAY[rid];
             const carryover = carry[rid];
             const starter = d === 1 ? (STARTER[rid] ?? 0) : 0;
+            const h = calcHarvest(rid, d);
 
-            let buffer = 0;
-            let production = 0;
-            let harvests = 0;
-
-            const p = PRODUCTION[rid];
-            const cph = cyclesPer12h[rid];
-
-            if (d === unlock) {
-                // Unlock day: buffer (cap) + 1 extra harvest
-                buffer = p.cap;
-                production = harvest12h[rid];
-                harvests = 1;
-            } else if (d > unlock) {
-                // After unlock: 2 full harvests
-                buffer = 0;
-                production = dailyProd[rid];
-                harvests = 2;
-            }
-            // Before unlock: nothing
-
-            const totalSupply = carryover + starter + buffer + production;
+            const totalSupply = carryover + starter + h.buffer + h.prod;
             const demand = demandByDay[d][rid] || 0;
             const remaining = totalSupply - demand;
             const surplusRate = demand > 0 ? ((remaining / demand) * 100) : (totalSupply > 0 ? 999 : 0);
 
             result[d][rid] = {
                 carryover: carryover + starter,
-                buffer,
-                production,
+                buffer: h.buffer,
+                production: h.prod,
                 totalSupply,
                 demand,
                 remaining,
                 surplusRate,
-                harvests,
-                cyclesPerHarvest: cph,
-                perCycle: p.perCycle,
-                cycleMin: p.cycle,
-                prodHours: harvests * 12,
+                detail: h.detail,
             };
-
             carry[rid] = remaining;
         }
     }
-
     return result;
 }
 
@@ -322,7 +358,7 @@ function ResourceSimulation({ currentDay }: { currentDay: number }) {
     const sim = useMemo(() => simulateDays(), []);
 
     return (
-        <Section title="자원 시뮬레이션 (Day 1~5 누적)">
+        <Section title="자원 시뮬레이션 B++ (수동 수확 + 200% 누적)">
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 <table style={{ width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', fontSize: '11px', fontFamily: 'monospace' }}>
                     <thead>
@@ -332,11 +368,11 @@ function ResourceSimulation({ currentDay }: { currentDay: number }) {
                             <th style={{ ...thStyle, textAlign: 'right' }}>이월</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>버퍼</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>생산</th>
-                            <th style={{ ...thStyle, textAlign: 'left' }}>상세</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>총공급</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>수요</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>잔여</th>
                             <th style={{ ...thStyle, textAlign: 'right' }}>잉여율</th>
+                            <th style={thStyle}>상세</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -378,15 +414,6 @@ function ResourceSimulation({ currentDay }: { currentDay: number }) {
                                             {r.buffer > 0 ? r.buffer.toLocaleString() : '-'}
                                         </td>
                                         <td style={numStyle}>{r.production.toLocaleString()}</td>
-                                        <td style={{ ...tdStyle, color: '#777', fontSize: '10px' }}>
-                                            {r.harvests > 0 ? (
-                                                <span>
-                                                    {r.perCycle}×{r.cyclesPerHarvest}회
-                                                    {r.harvests > 1 ? ` ×${r.harvests}수확` : ' ×1수확'}
-                                                    {' '}({r.prodHours}h)
-                                                </span>
-                                            ) : '-'}
-                                        </td>
                                         <td style={{ ...numStyle, fontWeight: 700, color: '#4ade80' }}>
                                             {r.totalSupply.toLocaleString()}
                                         </td>
@@ -394,18 +421,19 @@ function ResourceSimulation({ currentDay }: { currentDay: number }) {
                                             {r.demand > 0 ? r.demand.toLocaleString() : '-'}
                                         </td>
                                         <td style={{
-                                            ...numStyle,
-                                            fontWeight: 700,
+                                            ...numStyle, fontWeight: 700,
                                             color: r.remaining < 0 ? '#ef4444' : '#4ade80',
                                         }}>
                                             {r.remaining.toLocaleString()}
                                         </td>
                                         <td style={{
-                                            ...numStyle,
-                                            fontWeight: 700,
+                                            ...numStyle, fontWeight: 700,
                                             color: surplusColor(r.surplusRate, r.demand),
                                         }}>
                                             {r.demand > 0 ? `${Math.round(r.surplusRate)}%` : '-'}
+                                        </td>
+                                        <td style={{ ...tdStyle, color: '#888', fontSize: '10px', fontFamily: 'system-ui, sans-serif' }}>
+                                            {r.detail}
                                         </td>
                                     </tr>
                                 );

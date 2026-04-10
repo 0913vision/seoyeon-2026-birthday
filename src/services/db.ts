@@ -44,7 +44,7 @@ const MOCK_SAVE: SaveData = {
     packagingStartedAt: null,
     boxHarvested: false,
     resources: {
-        wood: { amount: 5000, unlocked: true },
+        wood: { amount: 3000, unlocked: true },
         flower: { amount: 2000, unlocked: true },
         stone: { amount: 3000, unlocked: true },
         metal: { amount: 2000, unlocked: true },
