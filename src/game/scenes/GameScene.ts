@@ -99,6 +99,7 @@ export class GameScene extends Scene {
     private constructionSprites: Map<string, Phaser.GameObjects.Container> = new Map();
     private storeUnsub: (() => void) | null = null;
     private occupiedTiles: Set<string> = new Set();
+    private buildModeAtPointerDown = false; // was build mode active when pointer went down?
 
     constructor() {
         super('GameScene');
@@ -736,6 +737,8 @@ export class GameScene extends Scene {
             this.dragStartY = pointer.y;
             velocityX = 0;
             velocityY = 0;
+            // Record if build mode was active BEFORE this touch started
+            this.buildModeAtPointerDown = !!useGameStore.getState().buildMode;
         });
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -766,9 +769,6 @@ export class GameScene extends Scene {
             const dx = pointer.x - pointer.prevPosition.x;
             const dy = pointer.y - pointer.prevPosition.y;
 
-            // In build mode: no camera dragging, all touches are tile taps
-            if (useGameStore.getState().buildMode) return;
-
             if (Math.abs(pointer.x - this.dragStartX) > 5 || Math.abs(pointer.y - this.dragStartY) > 5) {
                 this.isDragging = true;
             }
@@ -786,8 +786,9 @@ export class GameScene extends Scene {
         this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             lastPinchDist = 0;
 
-            // In build mode: always treat as a tap (camera drag is disabled)
-            if (useGameStore.getState().buildMode) {
+            // In build mode: treat as tap only if build mode was active at pointerdown
+            // (prevents card tap from immediately placing a building)
+            if (this.buildModeAtPointerDown && !this.isDragging && useGameStore.getState().buildMode) {
                 const worldPoint = cam.getWorldPoint(pointer.x, pointer.y);
                 this.handleTileTap(worldPoint.x, worldPoint.y);
             }
