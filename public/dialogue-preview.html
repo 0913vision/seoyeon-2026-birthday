@@ -3,353 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>대화 프리뷰</title>
+    <title>대화 스크립트 프리뷰</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #1e2a1e; font-family: system-ui, sans-serif; color: #fff; height: 100dvh; display: flex; flex-direction: column; }
+        body { background: #111; font-family: system-ui, sans-serif; color: #fff; padding: 16px; padding-bottom: 60px; }
+        h1 { text-align: center; font-size: 16px; color: #8ab4d8; margin-bottom: 16px; }
 
-        /* Top: context/notes area */
-        #context-area {
-            background: #111; padding: 12px 16px; border-bottom: 1px solid #333;
-            font-size: 12px; min-height: 80px; max-height: 30%; overflow-y: auto;
-        }
-        #context-area .scene-id { color: #8ab4d8; font-weight: bold; font-size: 14px; }
-        #context-area .scene-desc { color: #6a7a6a; margin-top: 4px; font-size: 11px; line-height: 1.5; }
-        #context-area .progress { color: #5a6a5a; margin-top: 6px; font-size: 11px; }
+        .day-divider { text-align: center; margin: 28px 0 12px; padding: 6px; background: linear-gradient(90deg, transparent, #3a5060, transparent); color: #8ab4d8; font-weight: bold; font-size: 13px; border-radius: 4px; }
 
-        /* Middle: game view placeholder */
-        #game-area {
-            flex: 1; background: #2d5a3f; display: flex; align-items: center; justify-content: center;
-            font-size: 12px; color: #4a7a5a;
-        }
+        .scene-block { margin-bottom: 20px; }
+        .scene-header { padding: 6px 10px; font-size: 11px; color: #5a7a6a; border-left: 3px solid #3a5a4a; margin-bottom: 6px; background: #1a1a1a; border-radius: 4px; }
+        .scene-header .id { color: #8ab4d8; font-weight: bold; }
 
-        /* Bottom: actual dialog box */
-        #dialog-area {
-            padding: 8px 12px 16px; background: #1a1a1a;
-        }
-        #dialog-box {
+        .chat-box {
             background: linear-gradient(180deg, #2a3540 0%, #1a252e 100%);
             border: 2px solid #3a5060;
             border-radius: 14px;
-            padding: 14px 16px;
-            height: 140px;
-            display: flex;
-            flex-direction: column;
+            padding: 12px 14px;
+            min-height: 90px;
+            margin-bottom: 4px;
             position: relative;
             cursor: pointer;
             user-select: none;
         }
-        #dialog-box .name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
-        #dialog-box .icon { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(180deg, #607080, #404850); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #506070; }
-        #dialog-box .name { font-family: 'Fredoka', sans-serif; font-size: 13px; color: #8ab4d8; font-weight: 700; }
-        #dialog-box .text-area { flex: 1; font-size: 14px; color: #e8dcc8; line-height: 1.6; overflow: hidden; white-space: pre-wrap; }
-        #dialog-box .action-text { color: #fbbf24; font-size: 12px; }
-        #dialog-box .indicator { position: absolute; bottom: 8px; right: 14px; font-size: 11px; color: #5a6a7a; font-family: 'Fredoka', sans-serif; }
-        #dialog-box .end-notice { position: absolute; bottom: 8px; left: 14px; font-size: 10px; color: #ef4444; }
+        .chat-box .name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .chat-box .icon { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(180deg, #607080, #404850); display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid #506070; }
+        .chat-box .name { font-family: 'Fredoka', sans-serif; font-size: 12px; color: #8ab4d8; font-weight: 700; }
+        .chat-box .text { font-size: 13px; color: #e8dcc8; line-height: 1.6; white-space: pre-wrap; }
+        .chat-box .text .action { color: #fbbf24; font-size: 12px; }
+        .chat-box .tap-hint { position: absolute; bottom: 6px; right: 12px; font-size: 10px; color: #4a5a6a; }
+        .chat-box.collapsed .text { display: none; }
+        .chat-box.collapsed { min-height: auto; padding: 10px 14px; opacity: 0.5; }
+        .chat-box.collapsed .tap-hint { display: none; }
+        .chat-box.collapsed::after { content: '(탭하여 보기)'; font-size: 10px; color: #4a5a6a; }
 
-        /* Hidden state */
-        #dialog-box.hidden { display: none; }
-        #user-action {
-            text-align: center; padding: 14px;
-            font-size: 13px; color: #fbbf24; cursor: pointer;
-            background: rgba(251, 191, 36, 0.08); border-radius: 10px; margin: 8px 12px;
-            border: 1px dashed #fbbf2466;
-            display: none;
-        }
+        .user-action { text-align: center; padding: 10px; font-size: 12px; color: #fbbf24; background: rgba(251,191,36,0.06); border: 1px dashed #fbbf2444; border-radius: 8px; margin: 6px 0; }
+        .choice-btn { text-align: right; margin: 4px 0 8px; }
+        .choice-btn span { display: inline-block; border: 2px solid #fbbf24; color: #fbbf24; padding: 3px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div id="context-area">
-        <div class="scene-id" id="sceneId">-</div>
-        <div class="scene-desc" id="sceneDesc">대화창을 터치하여 시작하세요</div>
-        <div class="progress" id="progressText"></div>
-    </div>
-    <div id="game-area">(게임 화면 영역)</div>
-    <div id="user-action" onclick="handleUserAction()"></div>
-    <div id="dialog-area">
-        <div id="dialog-box" onclick="handleTap()">
-            <div class="name-row">
-                <span class="icon">🤖</span>
-                <span class="name">콜드유</span>
-            </div>
-            <div class="text-area" id="textArea"></div>
-            <div class="indicator" id="indicator"></div>
-            <div class="end-notice" id="endNotice"></div>
-        </div>
-    </div>
+    <h1>🤖 콜드유 대화 스크립트</h1>
+    <div id="content"></div>
 
     <script>
-        // All scenes in order, grouped by user actions
-        const SCENES = [
-            // === DAY 1 ===
-            { id: 'day1_intro', desc: 'Day 1 (토) — 최초 앱 실행, 콜드유 등장', lines: [
-                '안녕하세요.',
-                '저는 김유찬님의 비서 로봇 콜드유입니다.',
-                '김유찬님의 지시를 받고 왔습니다.',
-                '5일 후 특별한 날을 위해, 선물 하나를 준비해야 합니다.',
-                '수령인 정보는 제게 전달되지 않았습니다.',
-                '선물 제작을 도와드리겠습니다. 협조 부탁드립니다.',
-            ]},
-            { id: 'day1_intro_confirm', desc: '유저가 [확인] 터치 후', lines: [
-                '감사합니다.',
-                '선물의 정체는 제작 과정에서 확인하실 수 있습니다.',
-                '그럼 작업을 시작하겠습니다.',
-            ]},
-            { id: 'day1_map_guide', desc: '맵 드래그 안내 → 유저가 스와이프', userAction: '화면을 드래그하세요', lines: [
-                '이곳이 작업장입니다.',
-                '화면을 드래그하시면 주변을 둘러보실 수 있습니다.',
-                '중앙에 보이는 것이 선물상자입니다.',
-            ]},
-            { id: 'day1_box_intro', desc: '카메라가 상자로 줌인', lines: [
-                '이 상자에 파츠를 부착하여 선물을 완성합니다.',
-                '총 24개의 파츠가 필요합니다. 기간은 5일입니다.',
-            ]},
-            { id: 'day1_harvest_guide', desc: '카메라 나무밭 이동', userAction: '나무밭을 터치하세요', lines: [
-                '이것은 나무밭입니다. 자원을 생산하는 시설입니다.',
-                { text: '터치하시면 자원을 수확할 수 있습니다.', action: '나무밭을 터치하세요' },
-            ]},
-            { id: 'day1_harvest_done', desc: '나무밭 터치 → 수확 완료', lines: [
-                '자원 수확이 완료되었습니다.',
-                '상단 인벤토리에서 보유 자원량을 확인하실 수 있습니다.',
-            ]},
-            { id: 'day1_waiting_explained', desc: '대기 시간 설명', lines: [
-                '자원은 일정 주기마다 자동으로 생산됩니다.',
-                '나무의 경우 1시간 30분마다 생산됩니다.',
-                '접속하지 않아도 생산은 계속 진행됩니다.',
-            ]},
-            { id: 'day1_build_guide', desc: '건설 버튼 안내', userAction: 'BUILD 버튼을 터치하세요', lines: [
-                '파츠 제작을 위해 공방이 필요합니다.',
-                { text: '하단의 건설 버튼을 터치해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-            ]},
-            { id: 'day1_woodshop_intro', desc: '건설 메뉴 열림 → 목공방 선택', userAction: '빈 타일을 터치하여 건설하세요', lines: [
-                '목공방은 파츠를 제작하는 시설입니다.',
-                { text: '건설 위치를 지정해 주세요.', action: '빈 타일을 터치하여 건설하세요' },
-            ]},
-            { id: 'day1_woodshop_built', desc: '목공방 건설 완료', lines: [
-                '건설이 완료되었습니다.',
-            ]},
-            { id: 'day1_craft_guide', desc: '첫 파츠 제작 안내', userAction: '목공방을 터치하여 제작을 시작하세요', lines: [
-                '목공방을 터치하시면 제작 메뉴가 열립니다.',
-                '첫 번째 파츠는 상자 바닥판입니다.',
-                { text: '제작 시간은 10분 소요됩니다.', action: '목공방을 터치하여 제작을 시작하세요' },
-            ]},
-            { id: 'day1_tutorial_end', desc: '튜토리얼 종료 → 자유 모드', lines: [
-                '기본 안내가 완료되었습니다.',
-                '자원이 생산되면 수확 후 파츠 제작을 계속해 주세요.',
-                '오늘 만들어야 할 파츠는 4개입니다.',
-            ]},
-            { id: 'day1_first_part_done', desc: '첫 파츠(바닥판) 부착 완료 시', lines: [
-                '첫 번째 파츠가 부착되었습니다.',
-                '진행도: 1/24. 나머지는 23개입니다.',
-            ]},
-            { id: 'day1_complete', desc: 'Day 1 파츠 4개 완료', lines: [
-                '오늘 작업이 완료되었습니다.',
-                '수고하셨습니다. 내일 다시 진행하겠습니다.',
-            ]},
+        const SCRIPT = [
+            { type: 'day', text: 'Day 1 (토요일)' },
 
-            // === DAY 2 ===
-            { id: 'day2_start', desc: 'Day 2 (일) — 꽃밭 건설 가능', userAction: 'BUILD 버튼을 터치하세요', lines: [
-                '좋은 아침입니다. 오늘은 꽃밭을 만들어 보겠습니다.',
-                { text: '건설 메뉴에서 꽃밭을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-                '오늘 만들어야 할 파츠는 5개입니다.',
-            ]},
-            { id: 'day2_quarry_unlock', desc: '접속 후 2~3시간 경과 → 채석장 알림', userAction: 'BUILD 버튼을 터치하세요', lines: [
-                '채석장을 만들 수 있게 되었습니다.',
-                { text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-            ]},
+            { type: 'scene', id: 'day1_intro', desc: '최초 앱 실행 → 페이드인 → 콜드유 등장' },
+            { type: 'chat', lines: ['안녕하세요.', '저는 김유찬님의 비서 로봇 콜드유입니다.', '김유찬님의 지시를 받고 왔습니다.', '5일 후 특별한 날을 위해, 선물 하나를 준비해야 합니다.', '수령인 정보는 제게 전달되지 않았습니다.', '선물 제작을 도와드리겠습니다. 협조 부탁드립니다.'] },
+            { type: 'choice', text: '확인' },
+            { type: 'chat', lines: ['감사합니다.', '선물의 정체는 제작 과정에서 확인하실 수 있습니다.', '그럼 작업을 시작하겠습니다.'] },
 
-            // === DAY 3 ===
-            { id: 'day3_start', desc: 'Day 3 (월) — 광산 건설 가능', userAction: 'BUILD 버튼을 터치하세요', lines: [
-                '좋은 아침입니다. 오늘은 광산을 만들어 보겠습니다.',
-                { text: '건설 메뉴에서 광산을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-                '오늘 만들어야 할 파츠는 5개입니다.',
-            ]},
-            { id: 'day3_jewelshop_unlock', desc: '접속 후 2~3시간 경과 → 세공소 알림', userAction: 'BUILD 버튼을 터치하세요', lines: [
-                '세공소를 만들 수 있게 되었습니다.',
-                '두 번째 공방이 추가됩니다.',
-                { text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-            ]},
+            { type: 'scene', id: 'day1_map_guide', desc: '맵 드래그 안내' },
+            { type: 'chat', lines: ['이곳이 작업장입니다.', '화면을 드래그하시면 주변을 둘러보실 수 있습니다.', '중앙에 보이는 것이 선물상자입니다.'] },
+            { type: 'action', text: '유저가 화면을 스와이프' },
 
-            // === DAY 4 ===
-            { id: 'day4_start', desc: 'Day 4 (화) — 수정동굴 건설 가능', userAction: 'BUILD 버튼을 터치하세요', lines: [
-                '좋은 아침입니다. 오늘은 수정동굴을 만들어 보겠습니다.',
-                { text: '건설 메뉴에서 수정동굴을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-                '오늘 만들어야 할 파츠는 5개입니다.',
-            ]},
+            { type: 'scene', id: 'day1_box_intro', desc: '카메라 상자로 줌인' },
+            { type: 'chat', lines: ['이 상자에 파츠를 부착하여 선물을 완성합니다.', '총 24개의 파츠가 필요합니다. 기간은 5일입니다.'] },
 
-            // === DAY 5 ===
-            { id: 'day5_start', desc: 'Day 5 (수/생일) — 마지막 날', lines: [
-                '좋은 아침입니다. 오늘이 마지막 날입니다.',
-                '남은 파츠 5개를 완성하면 포장이 시작됩니다.',
-                '오늘 안에 모든 작업을 완료해 주세요.',
-            ]},
-            { id: 'day5_packaging_start', desc: '24번째 파츠 부착 완료 → 포장 시작', lines: [
-                '모든 파츠가 완성되었습니다.',
-                '포장을 시작합니다. 약 1시간 30분 정도 소요됩니다.',
-                '완료되면 다시 안내드리겠습니다.',
-            ]},
-            { id: 'day5_waiting', desc: '포장 중 접속 시 (선택적)', lines: [
-                '포장이 진행 중입니다.',
-                '남은 시간을 상자 상단에서 확인하실 수 있습니다.',
-                '완료되면 다시 안내드리겠습니다.',
-            ]},
-            { id: 'day5_complete_report', desc: '포장 완료 → 엔딩 시퀀스', lines: [
-                '선물 준비가 완료되었습니다.',
-                '5일간의 작업이 모두 마무리되었습니다.',
-                '상자를 열어 주세요.',
-            ]},
-            { id: 'day5_open_box', desc: '상자에 [열기] 버튼 표시', userAction: '상자의 열기 버튼을 터치하세요', lines: [
-                { text: '열기 버튼을 터치해 주세요.', action: '상자의 열기 버튼을 터치하세요' },
-            ]},
-            { id: 'day5_certificate', desc: '개봉 연출 → 증명서 등장 → 종료', lines: [
-                '선물 준비가 완료되었습니다.',
-                '이 증명서를 김유찬님께 제시해 주세요.',
-            ]},
+            { type: 'scene', id: 'day1_harvest_guide', desc: '카메라 나무밭 이동 → 수확 가능 표시' },
+            { type: 'chat', lines: ['이것은 나무밭입니다. 자원을 생산하는 시설입니다.', {text: '터치하시면 자원을 수확할 수 있습니다.', action: '나무밭을 터치하세요'}] },
+            { type: 'action', text: '유저가 나무밭 터치 → 수확' },
+
+            { type: 'scene', id: 'day1_harvest_done', desc: '수확 완료' },
+            { type: 'chat', lines: ['자원 수확이 완료되었습니다.', '상단 인벤토리에서 보유 자원량을 확인하실 수 있습니다.'] },
+
+            { type: 'scene', id: 'day1_waiting_explained', desc: '대기 시간 설명' },
+            { type: 'chat', lines: ['자원은 일정 주기마다 자동으로 생산됩니다.', '나무의 경우 1시간 30분마다 생산됩니다.', '접속하지 않아도 생산은 계속 진행됩니다.'] },
+
+            { type: 'scene', id: 'day1_build_guide', desc: '건설 버튼 안내' },
+            { type: 'chat', lines: ['파츠 제작을 위해 공방이 필요합니다.', {text: '하단의 건설 버튼을 터치해 주세요.', action: 'BUILD 버튼을 터치하세요'}] },
+            { type: 'action', text: '유저가 BUILD 터치 → 건설 메뉴' },
+
+            { type: 'scene', id: 'day1_woodshop_intro', desc: '목공방 건설' },
+            { type: 'chat', lines: ['목공방은 파츠를 제작하는 시설입니다.', {text: '건설 위치를 지정해 주세요.', action: '빈 타일을 터치하여 건설하세요'}] },
+            { type: 'action', text: '유저가 위치 선택 → 건설 완료' },
+            { type: 'chat', lines: ['건설이 완료되었습니다.'] },
+
+            { type: 'scene', id: 'day1_craft_guide', desc: '첫 파츠 제작 안내' },
+            { type: 'chat', lines: ['목공방을 터치하시면 제작 메뉴가 열립니다.', '첫 번째 파츠는 상자 바닥판입니다.', {text: '제작 시간은 10분 소요됩니다.', action: '목공방을 터치하여 제작 시작'}] },
+            { type: 'action', text: '유저가 제작 시작' },
+
+            { type: 'scene', id: 'day1_tutorial_end', desc: '튜토리얼 종료 → 자유 모드' },
+            { type: 'chat', lines: ['기본 안내가 완료되었습니다.', '자원이 생산되면 수확 후 파츠 제작을 계속해 주세요.', '오늘 만들어야 할 파츠는 4개입니다.'] },
+
+            { type: 'scene', id: 'day1_first_part_done', desc: '첫 파츠 부착 완료' },
+            { type: 'chat', lines: ['첫 번째 파츠가 부착되었습니다.', '진행도: 1/24. 나머지는 23개입니다.'] },
+
+            { type: 'scene', id: 'day1_complete', desc: '파츠 4개 완료' },
+            { type: 'chat', lines: ['오늘 작업이 완료되었습니다.', '수고하셨습니다. 내일 다시 진행하겠습니다.'] },
+
+            // DAY 2
+            { type: 'day', text: 'Day 2 (일요일)' },
+
+            { type: 'scene', id: 'day2_start', desc: 'Day 2 접속 → 꽃밭 건설 가능' },
+            { type: 'chat', lines: ['좋은 아침입니다. 오늘은 꽃밭을 만들어 보겠습니다.', {text: '건설 메뉴에서 꽃밭을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}, '오늘 만들어야 할 파츠는 5개입니다.'] },
+
+            { type: 'scene', id: 'day2_quarry_unlock', desc: '2~3시간 후 알림' },
+            { type: 'chat', lines: ['채석장을 만들 수 있게 되었습니다.', {text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}] },
+
+            // DAY 3
+            { type: 'day', text: 'Day 3 (월요일)' },
+
+            { type: 'scene', id: 'day3_start', desc: 'Day 3 접속 → 광산 건설 가능' },
+            { type: 'chat', lines: ['좋은 아침입니다. 오늘은 광산을 만들어 보겠습니다.', {text: '건설 메뉴에서 광산을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}, '오늘 만들어야 할 파츠는 5개입니다.'] },
+
+            { type: 'scene', id: 'day3_jewelshop_unlock', desc: '2~3시간 후 알림' },
+            { type: 'chat', lines: ['세공소를 만들 수 있게 되었습니다.', '두 번째 공방이 추가됩니다.', {text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}] },
+
+            // DAY 4
+            { type: 'day', text: 'Day 4 (화요일)' },
+
+            { type: 'scene', id: 'day4_start', desc: 'Day 4 접속 → 수정동굴 건설 가능' },
+            { type: 'chat', lines: ['좋은 아침입니다. 오늘은 수정동굴을 만들어 보겠습니다.', {text: '건설 메뉴에서 수정동굴을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}, '오늘 만들어야 할 파츠는 5개입니다.'] },
+
+            // DAY 5
+            { type: 'day', text: 'Day 5 (수요일 - 생일 🎂)' },
+
+            { type: 'scene', id: 'day5_start', desc: '마지막 날 접속' },
+            { type: 'chat', lines: ['좋은 아침입니다. 오늘이 마지막 날입니다.', '남은 파츠 5개를 완성하면 포장이 시작됩니다.', '오늘 안에 모든 작업을 완료해 주세요.'] },
+
+            { type: 'scene', id: 'day5_packaging_start', desc: '24번째 파츠 부착 → 포장 시작' },
+            { type: 'chat', lines: ['모든 파츠가 완성되었습니다.', '포장을 시작합니다. 약 1시간 30분 정도 소요됩니다.', '완료되면 다시 안내드리겠습니다.'] },
+
+            { type: 'scene', id: 'day5_waiting', desc: '포장 중 접속 시 (선택적)' },
+            { type: 'chat', lines: ['포장이 진행 중입니다.', '남은 시간을 상자 상단에서 확인하실 수 있습니다.', '완료되면 다시 안내드리겠습니다.'] },
+
+            { type: 'scene', id: 'day5_complete_report', desc: '포장 완료 → 엔딩' },
+            { type: 'chat', lines: ['선물 준비가 완료되었습니다.', '5일간의 작업이 모두 마무리되었습니다.', '상자를 열어 주세요.'] },
+
+            { type: 'scene', id: 'day5_open_box', desc: '[열기] 버튼 표시' },
+            { type: 'chat', lines: [{text: '열기 버튼을 터치해 주세요.', action: '상자의 열기 버튼을 터치하세요'}] },
+            { type: 'action', text: '유저가 열기 → 개봉 연출 → 증명서 등장' },
+
+            { type: 'scene', id: 'day5_certificate', desc: '증명서 표시 → 게임 종료' },
+            { type: 'chat', lines: ['선물 준비가 완료되었습니다.', '이 증명서를 김유찬님께 제시해 주세요.'] },
         ];
 
-        let sceneIndex = 0;
-        let lineIndex = 0;
-        let displayedText = '';
-        let animDone = false;
-        let charIndex = 0;
-        let timer = null;
-        let waitingForAction = false;
+        function render() {
+            const el = document.getElementById('content');
+            let html = '';
 
-        const textArea = document.getElementById('textArea');
-        const indicator = document.getElementById('indicator');
-        const endNotice = document.getElementById('endNotice');
-        const sceneIdEl = document.getElementById('sceneId');
-        const sceneDescEl = document.getElementById('sceneDesc');
-        const progressEl = document.getElementById('progressText');
-        const userActionEl = document.getElementById('user-action');
-        const dialogBox = document.getElementById('dialog-box');
-
-        function getLineText(line) {
-            return typeof line === 'string' ? line : line.text;
-        }
-        function getLineAction(line) {
-            return typeof line === 'object' ? line.action : null;
-        }
-
-        function updateContext() {
-            const scene = SCENES[sceneIndex];
-            sceneIdEl.textContent = scene.id;
-            sceneDescEl.textContent = scene.desc;
-            progressEl.textContent = `씬 ${sceneIndex + 1}/${SCENES.length} | 대사 ${lineIndex + 1}/${scene.lines.length}`;
-        }
-
-        function startTyping() {
-            const scene = SCENES[sceneIndex];
-            const line = scene.lines[lineIndex];
-            const fullText = getLineText(line);
-            const action = getLineAction(line);
-            const fullStr = action ? fullText + '\n(' + action + ')' : fullText;
-
-            displayedText = '';
-            animDone = false;
-            charIndex = 0;
-            indicator.textContent = '';
-            endNotice.textContent = '';
-
-            function tick() {
-                charIndex++;
-                if (charIndex <= fullStr.length) {
-                    displayedText = fullStr.substring(0, charIndex);
-                    renderText(displayedText, fullText.length, action);
-                    timer = setTimeout(tick, 35);
-                } else {
-                    animDone = true;
-                    const isLastLine = lineIndex >= scene.lines.length - 1;
-                    const isLastScene = sceneIndex >= SCENES.length - 1;
-                    if (isLastScene && isLastLine) {
-                        indicator.textContent = '';
-                        endNotice.textContent = '마지막 페이지입니다 (탭 → 처음부터)';
-                    } else if (isLastLine && SCENES[sceneIndex + 1]?.userAction) {
-                        indicator.textContent = '';
-                    } else {
-                        indicator.textContent = '▼';
+            for (const item of SCRIPT) {
+                if (item.type === 'day') {
+                    html += `<div class="day-divider">${item.text}</div>`;
+                } else if (item.type === 'scene') {
+                    html += `<div class="scene-header"><span class="id">${item.id}</span> — ${item.desc}</div>`;
+                } else if (item.type === 'action') {
+                    html += `<div class="user-action">👆 ${item.text}</div>`;
+                } else if (item.type === 'choice') {
+                    html += `<div class="choice-btn"><span>${item.text}</span></div>`;
+                } else if (item.type === 'chat') {
+                    for (const line of item.lines) {
+                        const text = typeof line === 'string' ? line : line.text;
+                        const action = typeof line === 'object' ? line.action : null;
+                        html += `<div class="chat-box" onclick="this.classList.toggle('collapsed')">`;
+                        html += `<div class="name-row"><span class="icon">🤖</span><span class="name">콜드유</span></div>`;
+                        html += `<div class="text">${text}`;
+                        if (action) html += `<br><span class="action">(${action})</span>`;
+                        html += `</div>`;
+                        html += `<div class="tap-hint">탭하여 접기</div>`;
+                        html += `</div>`;
                     }
                 }
             }
-            timer = setTimeout(tick, 35);
-            updateContext();
+
+            el.innerHTML = html;
         }
 
-        function renderText(displayed, mainLen, action) {
-            if (action && displayed.length > mainLen) {
-                const mainPart = displayed.substring(0, mainLen);
-                const actionPart = displayed.substring(mainLen);
-                textArea.innerHTML = '<span style="color:#e8dcc8">' + mainPart + '</span><span style="color:#fbbf24;font-size:12px">' + actionPart + '</span>';
-            } else {
-                textArea.innerHTML = '<span style="color:#e8dcc8">' + displayed + '</span>';
-            }
-        }
-
-        function handleTap() {
-            if (waitingForAction) return;
-
-            const scene = SCENES[sceneIndex];
-            const line = scene.lines[lineIndex];
-            const fullText = getLineText(line);
-            const action = getLineAction(line);
-            const fullStr = action ? fullText + '\n(' + action + ')' : fullText;
-
-            if (!animDone) {
-                if (timer) clearTimeout(timer);
-                displayedText = fullStr;
-                renderText(fullStr, fullText.length, action);
-                animDone = true;
-                const isLastLine = lineIndex >= scene.lines.length - 1;
-                const isLastScene = sceneIndex >= SCENES.length - 1;
-                if (isLastScene && isLastLine) {
-                    endNotice.textContent = '마지막 페이지입니다 (탭 → 처음부터)';
-                } else if (isLastLine && SCENES[sceneIndex + 1]?.userAction) {
-                    indicator.textContent = '';
-                } else {
-                    indicator.textContent = '▼';
-                }
-                return;
-            }
-
-            const isLastLine = lineIndex >= scene.lines.length - 1;
-            const isLastScene = sceneIndex >= SCENES.length - 1;
-
-            if (isLastScene && isLastLine) {
-                sceneIndex = 0;
-                lineIndex = 0;
-                startTyping();
-                return;
-            }
-
-            if (isLastLine) {
-                sceneIndex++;
-                lineIndex = 0;
-                const nextScene = SCENES[sceneIndex];
-                if (nextScene.userAction) {
-                    waitingForAction = true;
-                    dialogBox.style.opacity = '0.4';
-                    userActionEl.style.display = 'block';
-                    userActionEl.textContent = '👆 ' + nextScene.userAction;
-                    updateContext();
-                    return;
-                }
-                startTyping();
-            } else {
-                lineIndex++;
-                startTyping();
-            }
-        }
-
-        function handleUserAction() {
-            waitingForAction = false;
-            dialogBox.style.opacity = '1';
-            userActionEl.style.display = 'none';
-            startTyping();
-        }
-
-        // Init
-        startTyping();
+        render();
     </script>
 </body>
 </html>
