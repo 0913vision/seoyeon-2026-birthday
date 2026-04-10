@@ -160,6 +160,7 @@
             draw();
         }
         window.addEventListener('resize', resize);
+        loadCurrent(); // sync sliders with building data on page load
         resize();
 
         function toScreen(row, col) {
