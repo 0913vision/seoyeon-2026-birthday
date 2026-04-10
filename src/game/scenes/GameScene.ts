@@ -122,10 +122,11 @@ export class GameScene extends Scene {
         gfx.setDepth(0);
 
         // CoC-style colors
-        const GREEN_LIGHT = 0x5cb85c;
-        const GREEN_DARK = 0x4ea84e;
-        const SIDE_TOP = 0x4a8a3a;
-        const SIDE_BOTTOM = 0x3d7530;
+        // Muted green tones to match AI building base colors
+        const GREEN_LIGHT = 0x6aad5a;
+        const GREEN_DARK = 0x5c9e4c;
+        const SIDE_TOP = 0x4d8a3c;
+        const SIDE_BOTTOM = 0x3f7530;
         const SIDE_H = TILE_H * 0.12; // thin side edge
 
         for (let row = -EXT; row < GRID_SIZE + EXT; row++) {
@@ -191,11 +192,15 @@ export class GameScene extends Scene {
             const depth = (b.row + b.col) * 10;
             let topY: number;
 
-            // Shadow under every building
+            // Shadow under building (larger, softer, multiple layers for softness)
             const shadowGfx = this.add.graphics();
             shadowGfx.setDepth(depth);
-            shadowGfx.fillStyle(0x000000, 0.15);
-            shadowGfx.fillEllipse(x + 3 * DPR, y + 5 * DPR, TILE_W * 0.7, TILE_H * 0.4);
+            // Outer soft shadow
+            shadowGfx.fillStyle(0x2a4a2a, 0.12);
+            shadowGfx.fillEllipse(x, y + 4 * DPR, TILE_W * 0.9, TILE_H * 0.55);
+            // Inner darker shadow
+            shadowGfx.fillStyle(0x1a3a1a, 0.15);
+            shadowGfx.fillEllipse(x, y + 3 * DPR, TILE_W * 0.65, TILE_H * 0.4);
 
             if (b.spriteKey) {
                 const bx = x + (b.offX || 0) * DPR;
