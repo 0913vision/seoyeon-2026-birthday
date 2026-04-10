@@ -12,7 +12,7 @@
 
         .day-divider { text-align: center; margin: 28px 0 12px; padding: 6px; background: linear-gradient(90deg, transparent, #3a5060, transparent); color: #8ab4d8; font-weight: bold; font-size: 13px; border-radius: 4px; }
 
-        .scene-block { margin-bottom: 20px; }
+        .scene-block { margin-bottom: 16px; }
         .scene-header { padding: 6px 10px; font-size: 11px; color: #5a7a6a; border-left: 3px solid #3a5a4a; margin-bottom: 6px; background: #1a1a1a; border-radius: 4px; }
         .scene-header .id { color: #8ab4d8; font-weight: bold; }
 
@@ -21,22 +21,19 @@
             border: 2px solid #3a5060;
             border-radius: 14px;
             padding: 12px 14px;
-            min-height: 90px;
-            margin-bottom: 4px;
+            height: 130px;
             position: relative;
             cursor: pointer;
             user-select: none;
+            display: flex;
+            flex-direction: column;
         }
         .chat-box .name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
         .chat-box .icon { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(180deg, #607080, #404850); display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid #506070; }
         .chat-box .name { font-family: 'Fredoka', sans-serif; font-size: 12px; color: #8ab4d8; font-weight: 700; }
-        .chat-box .text { font-size: 13px; color: #e8dcc8; line-height: 1.6; white-space: pre-wrap; }
-        .chat-box .text .action { color: #fbbf24; font-size: 12px; }
-        .chat-box .tap-hint { position: absolute; bottom: 6px; right: 12px; font-size: 10px; color: #4a5a6a; }
-        .chat-box.collapsed .text { display: none; }
-        .chat-box.collapsed { min-height: auto; padding: 10px 14px; opacity: 0.5; }
-        .chat-box.collapsed .tap-hint { display: none; }
-        .chat-box.collapsed::after { content: '(탭하여 보기)'; font-size: 10px; color: #4a5a6a; }
+        .chat-box .text-area { flex: 1; font-size: 13px; color: #e8dcc8; line-height: 1.6; overflow: hidden; white-space: pre-wrap; }
+        .chat-box .indicator { position: absolute; bottom: 6px; right: 12px; font-size: 10px; color: #4a5a6a; }
+        .chat-box .counter { position: absolute; top: 10px; right: 12px; font-size: 9px; color: #3a4a5a; }
 
         .user-action { text-align: center; padding: 10px; font-size: 12px; color: #fbbf24; background: rgba(251,191,36,0.06); border: 1px dashed #fbbf2444; border-radius: 8px; margin: 6px 0; }
         .choice-btn { text-align: right; margin: 4px 0 8px; }
@@ -48,129 +45,219 @@
     <div id="content"></div>
 
     <script>
-        const SCRIPT = [
+        const SCENES = [
             { type: 'day', text: 'Day 1 (토요일)' },
 
-            { type: 'scene', id: 'day1_intro', desc: '최초 앱 실행 → 페이드인 → 콜드유 등장' },
-            { type: 'chat', lines: ['안녕하세요.', '저는 김유찬님의 비서 로봇 콜드유입니다.', '김유찬님의 지시를 받고 왔습니다.', '5일 후 특별한 날을 위해, 선물 하나를 준비해야 합니다.', '수령인 정보는 제게 전달되지 않았습니다.', '선물 제작을 도와드리겠습니다. 협조 부탁드립니다.'] },
+            { id: 'day1_intro', desc: '최초 앱 실행 → 콜드유 등장', lines: [
+                '안녕하세요.',
+                '저는 김유찬님의 비서 로봇 콜드유입니다.',
+                '김유찬님의 지시를 받고 왔습니다.',
+                '5일 후 특별한 날을 위해, 선물 하나를 준비해야 합니다.',
+                '수령인 정보는 제게 전달되지 않았습니다.',
+                '선물 제작을 도와드리겠습니다. 협조 부탁드립니다.',
+            ]},
             { type: 'choice', text: '확인' },
-            { type: 'chat', lines: ['감사합니다.', '선물의 정체는 제작 과정에서 확인하실 수 있습니다.', '그럼 작업을 시작하겠습니다.'] },
+            { id: 'day1_intro_after', desc: '확인 후', lines: [
+                '감사합니다.',
+                '선물의 정체는 제작 과정에서 확인하실 수 있습니다.',
+                '그럼 작업을 시작하겠습니다.',
+            ]},
 
-            { type: 'scene', id: 'day1_map_guide', desc: '맵 드래그 안내' },
-            { type: 'chat', lines: ['이곳이 작업장입니다.', '화면을 드래그하시면 주변을 둘러보실 수 있습니다.', '중앙에 보이는 것이 선물상자입니다.'] },
+            { id: 'day1_map_guide', desc: '맵 드래그 안내', lines: [
+                '이곳이 작업장입니다.',
+                '화면을 드래그하시면 주변을 둘러보실 수 있습니다.',
+                '중앙에 보이는 것이 선물상자입니다.',
+            ]},
             { type: 'action', text: '유저가 화면을 스와이프' },
 
-            { type: 'scene', id: 'day1_box_intro', desc: '카메라 상자로 줌인' },
-            { type: 'chat', lines: ['이 상자에 파츠를 부착하여 선물을 완성합니다.', '총 24개의 파츠가 필요합니다. 기간은 5일입니다.'] },
+            { id: 'day1_box_intro', desc: '카메라 상자로 줌인', lines: [
+                '이 상자에 파츠를 부착하여 선물을 완성합니다.',
+                '총 24개의 파츠가 필요합니다. 기간은 5일입니다.',
+            ]},
 
-            { type: 'scene', id: 'day1_harvest_guide', desc: '카메라 나무밭 이동 → 수확 가능 표시' },
-            { type: 'chat', lines: ['이것은 나무밭입니다. 자원을 생산하는 시설입니다.', {text: '터치하시면 자원을 수확할 수 있습니다.', action: '나무밭을 터치하세요'}] },
+            { id: 'day1_harvest_guide', desc: '나무밭 수확 안내', lines: [
+                '이것은 나무밭입니다. 자원을 생산하는 시설입니다.',
+                {text: '터치하시면 자원을 수확할 수 있습니다.', action: '나무밭을 터치하세요'},
+            ]},
             { type: 'action', text: '유저가 나무밭 터치 → 수확' },
 
-            { type: 'scene', id: 'day1_harvest_done', desc: '수확 완료' },
-            { type: 'chat', lines: ['자원 수확이 완료되었습니다.', '상단 인벤토리에서 보유 자원량을 확인하실 수 있습니다.'] },
+            { id: 'day1_harvest_done', desc: '수확 완료', lines: [
+                '자원 수확이 완료되었습니다.',
+                '상단 인벤토리에서 보유 자원량을 확인하실 수 있습니다.',
+            ]},
 
-            { type: 'scene', id: 'day1_waiting_explained', desc: '대기 시간 설명' },
-            { type: 'chat', lines: ['자원은 일정 주기마다 자동으로 생산됩니다.', '나무의 경우 1시간 30분마다 생산됩니다.', '접속하지 않아도 생산은 계속 진행됩니다.'] },
+            { id: 'day1_waiting', desc: '대기 시간 설명', lines: [
+                '자원은 일정 주기마다 자동으로 생산됩니다.',
+                '나무의 경우 1시간 30분마다 생산됩니다.',
+                '접속하지 않아도 생산은 계속 진행됩니다.',
+            ]},
 
-            { type: 'scene', id: 'day1_build_guide', desc: '건설 버튼 안내' },
-            { type: 'chat', lines: ['파츠 제작을 위해 공방이 필요합니다.', {text: '하단의 건설 버튼을 터치해 주세요.', action: 'BUILD 버튼을 터치하세요'}] },
+            { id: 'day1_build_guide', desc: '건설 버튼 안내', lines: [
+                '파츠 제작을 위해 공방이 필요합니다.',
+                {text: '하단의 건설 버튼을 터치해 주세요.', action: 'BUILD 버튼을 터치하세요'},
+            ]},
             { type: 'action', text: '유저가 BUILD 터치 → 건설 메뉴' },
 
-            { type: 'scene', id: 'day1_woodshop_intro', desc: '목공방 건설' },
-            { type: 'chat', lines: ['목공방은 파츠를 제작하는 시설입니다.', {text: '건설 위치를 지정해 주세요.', action: '빈 타일을 터치하여 건설하세요'}] },
+            { id: 'day1_woodshop', desc: '목공방 건설', lines: [
+                '목공방은 파츠를 제작하는 시설입니다.',
+                {text: '건설 위치를 지정해 주세요.', action: '빈 타일을 터치하여 건설'},
+            ]},
             { type: 'action', text: '유저가 위치 선택 → 건설 완료' },
-            { type: 'chat', lines: ['건설이 완료되었습니다.'] },
+            { id: 'day1_woodshop_done', desc: '건설 완료', lines: ['건설이 완료되었습니다.'] },
 
-            { type: 'scene', id: 'day1_craft_guide', desc: '첫 파츠 제작 안내' },
-            { type: 'chat', lines: ['목공방을 터치하시면 제작 메뉴가 열립니다.', '첫 번째 파츠는 상자 바닥판입니다.', {text: '제작 시간은 10분 소요됩니다.', action: '목공방을 터치하여 제작 시작'}] },
+            { id: 'day1_craft_guide', desc: '첫 파츠 제작', lines: [
+                '목공방을 터치하시면 제작 메뉴가 열립니다.',
+                '첫 번째 파츠는 상자 바닥판입니다.',
+                {text: '제작 시간은 10분 소요됩니다.', action: '목공방을 터치하여 제작 시작'},
+            ]},
             { type: 'action', text: '유저가 제작 시작' },
 
-            { type: 'scene', id: 'day1_tutorial_end', desc: '튜토리얼 종료 → 자유 모드' },
-            { type: 'chat', lines: ['기본 안내가 완료되었습니다.', '자원이 생산되면 수확 후 파츠 제작을 계속해 주세요.', '오늘 만들어야 할 파츠는 4개입니다.'] },
+            { id: 'day1_tutorial_end', desc: '튜토리얼 종료', lines: [
+                '기본 안내가 완료되었습니다.',
+                '자원이 생산되면 수확 후 파츠 제작을 계속해 주세요.',
+                '오늘 만들어야 할 파츠는 4개입니다.',
+            ]},
 
-            { type: 'scene', id: 'day1_first_part_done', desc: '첫 파츠 부착 완료' },
-            { type: 'chat', lines: ['첫 번째 파츠가 부착되었습니다.', '진행도: 1/24. 나머지는 23개입니다.'] },
+            { id: 'day1_first_part', desc: '첫 파츠 부착', lines: [
+                '첫 번째 파츠가 부착되었습니다.',
+                '진행도: 1/24. 나머지는 23개입니다.',
+            ]},
 
-            { type: 'scene', id: 'day1_complete', desc: '파츠 4개 완료' },
-            { type: 'chat', lines: ['오늘 작업이 완료되었습니다.', '수고하셨습니다. 내일 다시 진행하겠습니다.'] },
+            { id: 'day1_complete', desc: 'Day 1 완료', lines: [
+                '오늘 작업이 완료되었습니다.',
+                '수고하셨습니다. 내일 다시 진행하겠습니다.',
+            ]},
 
             // DAY 2
             { type: 'day', text: 'Day 2 (일요일)' },
-
-            { type: 'scene', id: 'day2_start', desc: 'Day 2 접속 → 꽃밭 건설 가능' },
-            { type: 'chat', lines: ['좋은 아침입니다. 오늘은 꽃밭을 만들어 보겠습니다.', {text: '건설 메뉴에서 꽃밭을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}, '오늘 만들어야 할 파츠는 5개입니다.'] },
-
-            { type: 'scene', id: 'day2_quarry_unlock', desc: '2~3시간 후 알림' },
-            { type: 'chat', lines: ['채석장을 만들 수 있게 되었습니다.', {text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}] },
+            { id: 'day2_start', desc: '꽃밭 건설 가능', lines: [
+                '좋은 아침입니다. 오늘은 꽃밭을 만들어 보겠습니다.',
+                {text: '건설 메뉴에서 꽃밭을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'},
+                '오늘 만들어야 할 파츠는 5개입니다.',
+            ]},
+            { id: 'day2_quarry', desc: '2~3시간 후 → 채석장 알림', lines: [
+                '채석장을 만들 수 있게 되었습니다.',
+                {text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'},
+            ]},
 
             // DAY 3
             { type: 'day', text: 'Day 3 (월요일)' },
-
-            { type: 'scene', id: 'day3_start', desc: 'Day 3 접속 → 광산 건설 가능' },
-            { type: 'chat', lines: ['좋은 아침입니다. 오늘은 광산을 만들어 보겠습니다.', {text: '건설 메뉴에서 광산을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}, '오늘 만들어야 할 파츠는 5개입니다.'] },
-
-            { type: 'scene', id: 'day3_jewelshop_unlock', desc: '2~3시간 후 알림' },
-            { type: 'chat', lines: ['세공소를 만들 수 있게 되었습니다.', '두 번째 공방이 추가됩니다.', {text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}] },
+            { id: 'day3_start', desc: '광산 건설 가능', lines: [
+                '좋은 아침입니다. 오늘은 광산을 만들어 보겠습니다.',
+                {text: '건설 메뉴에서 광산을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'},
+                '오늘 만들어야 할 파츠는 5개입니다.',
+            ]},
+            { id: 'day3_jewelshop', desc: '2~3시간 후 → 세공소 알림', lines: [
+                '세공소를 만들 수 있게 되었습니다.',
+                '두 번째 공방이 추가됩니다.',
+                {text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'},
+            ]},
 
             // DAY 4
             { type: 'day', text: 'Day 4 (화요일)' },
-
-            { type: 'scene', id: 'day4_start', desc: 'Day 4 접속 → 수정동굴 건설 가능' },
-            { type: 'chat', lines: ['좋은 아침입니다. 오늘은 수정동굴을 만들어 보겠습니다.', {text: '건설 메뉴에서 수정동굴을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'}, '오늘 만들어야 할 파츠는 5개입니다.'] },
+            { id: 'day4_start', desc: '수정동굴 건설 가능', lines: [
+                '좋은 아침입니다. 오늘은 수정동굴을 만들어 보겠습니다.',
+                {text: '건설 메뉴에서 수정동굴을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요'},
+                '오늘 만들어야 할 파츠는 5개입니다.',
+            ]},
 
             // DAY 5
             { type: 'day', text: 'Day 5 (수요일 - 생일 🎂)' },
-
-            { type: 'scene', id: 'day5_start', desc: '마지막 날 접속' },
-            { type: 'chat', lines: ['좋은 아침입니다. 오늘이 마지막 날입니다.', '남은 파츠 5개를 완성하면 포장이 시작됩니다.', '오늘 안에 모든 작업을 완료해 주세요.'] },
-
-            { type: 'scene', id: 'day5_packaging_start', desc: '24번째 파츠 부착 → 포장 시작' },
-            { type: 'chat', lines: ['모든 파츠가 완성되었습니다.', '포장을 시작합니다. 약 1시간 30분 정도 소요됩니다.', '완료되면 다시 안내드리겠습니다.'] },
-
-            { type: 'scene', id: 'day5_waiting', desc: '포장 중 접속 시 (선택적)' },
-            { type: 'chat', lines: ['포장이 진행 중입니다.', '남은 시간을 상자 상단에서 확인하실 수 있습니다.', '완료되면 다시 안내드리겠습니다.'] },
-
-            { type: 'scene', id: 'day5_complete_report', desc: '포장 완료 → 엔딩' },
-            { type: 'chat', lines: ['선물 준비가 완료되었습니다.', '5일간의 작업이 모두 마무리되었습니다.', '상자를 열어 주세요.'] },
-
-            { type: 'scene', id: 'day5_open_box', desc: '[열기] 버튼 표시' },
-            { type: 'chat', lines: [{text: '열기 버튼을 터치해 주세요.', action: '상자의 열기 버튼을 터치하세요'}] },
+            { id: 'day5_start', desc: '마지막 날', lines: [
+                '좋은 아침입니다. 오늘이 마지막 날입니다.',
+                '남은 파츠 5개를 완성하면 포장이 시작됩니다.',
+                '오늘 안에 모든 작업을 완료해 주세요.',
+            ]},
+            { id: 'day5_packaging', desc: '24번째 파츠 → 포장 시작', lines: [
+                '모든 파츠가 완성되었습니다.',
+                '포장을 시작합니다. 약 1시간 30분 정도 소요됩니다.',
+                '완료되면 다시 안내드리겠습니다.',
+            ]},
+            { id: 'day5_waiting', desc: '포장 중 접속 (선택적)', lines: [
+                '포장이 진행 중입니다.',
+                '남은 시간을 상자 상단에서 확인하실 수 있습니다.',
+                '완료되면 다시 안내드리겠습니다.',
+            ]},
+            { id: 'day5_complete', desc: '포장 완료 → 엔딩', lines: [
+                '선물 준비가 완료되었습니다.',
+                '5일간의 작업이 모두 마무리되었습니다.',
+                '상자를 열어 주세요.',
+            ]},
+            { id: 'day5_open', desc: '열기 안내', lines: [
+                {text: '열기 버튼을 터치해 주세요.', action: '상자의 열기 버튼을 터치하세요'},
+            ]},
             { type: 'action', text: '유저가 열기 → 개봉 연출 → 증명서 등장' },
-
-            { type: 'scene', id: 'day5_certificate', desc: '증명서 표시 → 게임 종료' },
-            { type: 'chat', lines: ['선물 준비가 완료되었습니다.', '이 증명서를 김유찬님께 제시해 주세요.'] },
+            { id: 'day5_certificate', desc: '증명서 → 게임 종료', lines: [
+                '선물 준비가 완료되었습니다.',
+                '이 증명서를 김유찬님께 제시해 주세요.',
+            ]},
         ];
 
         function render() {
             const el = document.getElementById('content');
             let html = '';
 
-            for (const item of SCRIPT) {
+            for (const item of SCENES) {
                 if (item.type === 'day') {
                     html += `<div class="day-divider">${item.text}</div>`;
-                } else if (item.type === 'scene') {
-                    html += `<div class="scene-header"><span class="id">${item.id}</span> — ${item.desc}</div>`;
                 } else if (item.type === 'action') {
                     html += `<div class="user-action">👆 ${item.text}</div>`;
                 } else if (item.type === 'choice') {
                     html += `<div class="choice-btn"><span>${item.text}</span></div>`;
-                } else if (item.type === 'chat') {
-                    for (const line of item.lines) {
-                        const text = typeof line === 'string' ? line : line.text;
-                        const action = typeof line === 'object' ? line.action : null;
-                        html += `<div class="chat-box" onclick="this.classList.toggle('collapsed')">`;
-                        html += `<div class="name-row"><span class="icon">🤖</span><span class="name">콜드유</span></div>`;
-                        html += `<div class="text">${text}`;
-                        if (action) html += `<br><span class="action">(${action})</span>`;
-                        html += `</div>`;
-                        html += `<div class="tap-hint">탭하여 접기</div>`;
-                        html += `</div>`;
-                    }
+                } else if (item.id) {
+                    const sceneIdx = SCENES.indexOf(item);
+                    html += `<div class="scene-block">`;
+                    html += `<div class="scene-header"><span class="id">${item.id}</span> — ${item.desc}</div>`;
+                    html += `<div class="chat-box" data-scene="${sceneIdx}" data-line="0" onclick="advanceChat(this)">`;
+                    html += `<div class="name-row"><span class="icon">🤖</span><span class="name">콜드유</span></div>`;
+                    html += `<div class="text-area"></div>`;
+                    html += `<div class="indicator"></div>`;
+                    html += `<div class="counter">${item.lines.length}줄</div>`;
+                    html += `</div></div>`;
                 }
             }
 
             el.innerHTML = html;
+
+            // Init all chat boxes to first line
+            document.querySelectorAll('.chat-box').forEach(box => {
+                showLine(box, 0);
+            });
+        }
+
+        function getLineText(line) {
+            if (typeof line === 'string') return line;
+            let t = line.text;
+            if (line.action) t += '\n<span style="color:#fbbf24;font-size:12px">(' + line.action + ')</span>';
+            return t;
+        }
+
+        function showLine(box, idx) {
+            const sceneIdx = parseInt(box.dataset.scene);
+            const scene = SCENES[sceneIdx];
+            const line = scene.lines[idx];
+            const total = scene.lines.length;
+
+            box.querySelector('.text-area').innerHTML = getLineText(line);
+            box.dataset.line = idx;
+
+            if (idx >= total - 1) {
+                box.querySelector('.indicator').textContent = '↺ 처음으로';
+            } else {
+                box.querySelector('.indicator').textContent = `▼ ${idx + 1}/${total}`;
+            }
+        }
+
+        function advanceChat(box) {
+            const sceneIdx = parseInt(box.dataset.scene);
+            const scene = SCENES[sceneIdx];
+            const currentLine = parseInt(box.dataset.line);
+
+            if (currentLine >= scene.lines.length - 1) {
+                showLine(box, 0);
+            } else {
+                showLine(box, currentLine + 1);
+            }
         }
 
         render();
