@@ -281,9 +281,9 @@ function DialogBox({ text, action, onTap, isLast }: { text: string; action?: str
         >
             <div
                 style={{
-                    background: 'linear-gradient(180deg, #3a2818 0%, #2a1c10 100%)',
+                    background: 'linear-gradient(180deg, #2a3540 0%, #1a252e 100%)',
                     borderRadius: '14px',
-                    border: '2px solid #5a4530',
+                    border: '2px solid #3a5060',
                     padding: '14px 16px',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
                     height: '145px',
