@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { resolve } from 'path';
 
 const phasermsg = () => {
     return {
@@ -28,6 +29,11 @@ export default defineConfig({
     logLevel: 'warning',
     build: {
         rollupOptions: {
+            input: {
+                main: resolve(__dirname, '../index.html'),
+                resourceTest: resolve(__dirname, '../resource-test.html'),
+                dayTest: resolve(__dirname, '../day-test.html'),
+            },
             output: {
                 manualChunks: {
                     phaser: ['phaser']
