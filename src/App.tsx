@@ -21,6 +21,7 @@ const SAMPLE_DIALOGUE: DialogLine[] = [
     { text: '나 누나한테 특별한 선물 주고 싶어' },
     { text: '근데 나 혼자서는 못 만들겠어...' },
     { text: '그래서 누나, 나랑 같이 만들어줄래? 왈!', action: '도와줄게' },
+    { text: '고마워! 그럼 먼저 나무를 캐보자!', action: '나무숲을 터치하여 나무를 수확해보자' },
 ];
 
 function App() {
@@ -325,38 +326,32 @@ function DialogBox({ text, action, onTap, isLast }: { text: string; action?: str
                     {displayedText}
                 </div>
 
-                {/* Tap indicator or action button */}
+                {/* Action guide or tap indicator */}
                 {!isAnimating && (
-                    action ? (
-                        <div style={{
-                            position: 'absolute',
-                            bottom: '10px',
-                            right: '14px',
-                        }}>
-                            <span style={{
-                                fontFamily: 'Fredoka, sans-serif',
-                                fontSize: '14px',
+                    <>
+                        {action && (
+                            <div style={{
+                                fontSize: '12px',
                                 color: '#fbbf24',
-                                border: '2px solid #fbbf24',
-                                borderRadius: '8px',
-                                padding: '4px 14px',
-                                fontWeight: 700,
+                                fontFamily: 'system-ui, sans-serif',
+                                marginTop: '4px',
                             }}>
-                                {action}
-                            </span>
-                        </div>
-                    ) : (
-                        <div style={{
-                            position: 'absolute',
-                            bottom: '8px',
-                            right: '14px',
-                            fontSize: '11px',
-                            color: '#8a7a60',
-                            fontFamily: 'Fredoka, sans-serif',
-                        }}>
-                            ▼
-                        </div>
-                    )
+                                ({action})
+                            </div>
+                        )}
+                        {!action && (
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                right: '14px',
+                                fontSize: '11px',
+                                color: '#8a7a60',
+                                fontFamily: 'Fredoka, sans-serif',
+                            }}>
+                                ▼
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
