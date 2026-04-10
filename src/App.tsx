@@ -238,17 +238,20 @@ function DialogBox({ text, action, onTap, isLast }: { text: string; action?: str
     const charRef = useRef(0);
     const textRef = useRef(text);
 
+    // Full text includes action
+    const fullText = action ? text + '\n(' + action + ')' : text;
+    const fullRef = useRef(fullText);
+
     useEffect(() => {
-        // Clear previous
         if (timerRef.current) clearTimeout(timerRef.current);
-        textRef.current = text;
+        fullRef.current = action ? text + '\n(' + action + ')' : text;
         charRef.current = 0;
         setDisplayedText('');
         setAnimDone(false);
 
         function tick() {
             charRef.current++;
-            const current = textRef.current;
+            const current = fullRef.current;
             if (charRef.current <= current.length) {
                 setDisplayedText(current.substring(0, charRef.current));
                 timerRef.current = setTimeout(tick, 40);
@@ -259,12 +262,12 @@ function DialogBox({ text, action, onTap, isLast }: { text: string; action?: str
         timerRef.current = setTimeout(tick, 40);
 
         return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-    }, [text]);
+    }, [text, action]);
 
     const handleTap = () => {
         if (!animDone) {
             if (timerRef.current) clearTimeout(timerRef.current);
-            setDisplayedText(textRef.current);
+            setDisplayedText(fullRef.current);
             setAnimDone(true);
         } else {
             onTap();
@@ -320,15 +323,17 @@ function DialogBox({ text, action, onTap, isLast }: { text: string; action?: str
                     flex: 1,
                     fontFamily: 'system-ui, sans-serif',
                     fontSize: '14px',
-                    color: '#e8dcc8',
                     lineHeight: '1.6',
                     overflow: 'hidden',
+                    whiteSpace: 'pre-wrap',
                 }}>
-                    {displayedText}
-                    {animDone && action && (
-                        <span style={{ color: '#fbbf24', fontSize: '12px' }}>
-                            {'\n'}({action})
-                        </span>
+                    {action && displayedText.includes('\n(') ? (
+                        <>
+                            <span style={{ color: '#e8dcc8' }}>{displayedText.split('\n(')[0]}</span>
+                            <span style={{ color: '#fbbf24', fontSize: '12px' }}>{'\n(' + displayedText.split('\n(').slice(1).join('\n(')}</span>
+                        </>
+                    ) : (
+                        <span style={{ color: '#e8dcc8' }}>{displayedText}</span>
                     )}
                 </div>
 
