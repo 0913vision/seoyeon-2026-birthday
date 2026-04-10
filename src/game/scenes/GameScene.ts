@@ -184,7 +184,31 @@ export class GameScene extends Scene {
         this.cameras.main.setBounds(boundsX, boundsY, boundsW, boundsH);
     }
 
+    private createShadowTexture() {
+        const size = 128;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+
+        const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+        gradient.addColorStop(0, 'rgba(0,0,0,0.25)');
+        gradient.addColorStop(0.4, 'rgba(0,0,0,0.15)');
+        gradient.addColorStop(0.7, 'rgba(0,0,0,0.06)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+
+        this.textures.addCanvas('shadow_gradient', canvas);
+    }
+
     private placeBuildings() {
+        // Create shadow texture once
+        if (!this.textures.exists('shadow_gradient')) {
+            this.createShadowTexture();
+        }
+
         const sorted = [...BUILDINGS].sort((a, b) => (a.row + a.col) - (b.row + b.col));
 
         for (const b of sorted) {
@@ -192,18 +216,10 @@ export class GameScene extends Scene {
             const depth = (b.row + b.col) * 10;
             let topY: number;
 
-            // Shadow under building - gradient-like (multiple fading layers)
-            const shadowGfx = this.add.graphics();
-            shadowGfx.setDepth(depth);
-            // Outermost - very faint, largest
-            shadowGfx.fillStyle(0x000000, 0.08);
-            shadowGfx.fillEllipse(x, y + 6 * DPR, TILE_W * 1.2, TILE_H * 0.75);
-            // Middle layer
-            shadowGfx.fillStyle(0x000000, 0.12);
-            shadowGfx.fillEllipse(x, y + 5 * DPR, TILE_W * 0.95, TILE_H * 0.6);
-            // Inner layer - darkest, smallest
-            shadowGfx.fillStyle(0x000000, 0.18);
-            shadowGfx.fillEllipse(x, y + 3 * DPR, TILE_W * 0.65, TILE_H * 0.4);
+            // Shadow - single radial gradient ellipse
+            const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
+            shadow.setDisplaySize(TILE_W * 1.3, TILE_H * 0.8);
+            shadow.setDepth(depth);
 
             if (b.spriteKey) {
                 const bx = x + (b.offX || 0) * DPR;
