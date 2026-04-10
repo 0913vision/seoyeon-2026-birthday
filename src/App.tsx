@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { IRefPhaserGame, PhaserGame } from './PhaserGame';
 
 const RESOURCES = [
@@ -9,8 +9,28 @@ const RESOURCES = [
     { id: 'gem', img: 'assets/generated/resources/gem.png', value: '--', unlocked: false },
 ];
 
+const SAMPLE_DIALOGUE = [
+    '왈왈! 누나 왔다!',
+    '누나, 나 초코야. 오늘 누나한테 할 말 있어!',
+    '8일 뒤에 누나 생일이잖아. 24살 되는 날!',
+    '나 누나한테 특별한 선물 주고 싶어',
+    '근데 나 혼자서는 못 만들겠어...',
+    '그래서 누나, 나랑 같이 만들어줄래? 왈!',
+];
+
 function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
+    const [showDialog, setShowDialog] = useState(false);
+    const [dialogIndex, setDialogIndex] = useState(0);
+
+    const handleDialogTap = () => {
+        if (dialogIndex < SAMPLE_DIALOGUE.length - 1) {
+            setDialogIndex(dialogIndex + 1);
+        } else {
+            setShowDialog(false);
+            setDialogIndex(0);
+        }
+    };
 
     return (
         <div className="relative w-full overflow-hidden" style={{ height: '100dvh' }}>
@@ -20,8 +40,41 @@ function App() {
             <div className="absolute inset-0 pointer-events-none flex flex-col">
                 <TopBar />
                 <div className="flex-1" />
+
+                {/* Dialog */}
+                {showDialog && (
+                    <DialogBox
+                        text={SAMPLE_DIALOGUE[dialogIndex]}
+                        onTap={handleDialogTap}
+                        isLast={dialogIndex === SAMPLE_DIALOGUE.length - 1}
+                    />
+                )}
+
                 <BottomBar />
             </div>
+
+            {/* Debug: toggle dialog floating button */}
+            <button
+                onClick={() => { setShowDialog(!showDialog); setDialogIndex(0); }}
+                className="absolute right-3 pointer-events-auto"
+                style={{
+                    bottom: '100px',
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '22px',
+                    background: showDialog ? '#ef4444' : '#8b5cf6',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    color: '#fff',
+                    fontSize: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    zIndex: 50,
+                }}
+            >
+                {showDialog ? '✕' : '💬'}
+            </button>
         </div>
     );
 }
@@ -167,6 +220,73 @@ function ActionButton({
                     {badge}
                 </span>
             )}
+        </div>
+    );
+}
+
+function DialogBox({ text, onTap, isLast }: { text: string; onTap: () => void; isLast: boolean }) {
+    return (
+        <div
+            className="pointer-events-auto mx-3 mb-2"
+            onClick={onTap}
+            style={{ cursor: 'pointer' }}
+        >
+            <div className="flex items-end gap-2">
+                {/* Choco icon placeholder */}
+                <div
+                    className="shrink-0 flex items-center justify-center"
+                    style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(180deg, #8B6914 0%, #6B4F10 100%)',
+                        border: '3px solid #4a3520',
+                        fontSize: '24px',
+                    }}
+                >
+                    🐶
+                </div>
+
+                {/* Speech bubble */}
+                <div className="flex-1 relative"
+                     style={{
+                         background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(240,235,225,0.95) 100%)',
+                         borderRadius: '16px 16px 16px 4px',
+                         border: '2px solid #c0a878',
+                         padding: '12px 16px',
+                         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                     }}>
+                    {/* Name */}
+                    <div style={{
+                        fontFamily: 'Fredoka, sans-serif',
+                        fontSize: '12px',
+                        color: '#8B6914',
+                        fontWeight: 700,
+                        marginBottom: '4px',
+                    }}>
+                        초코
+                    </div>
+                    {/* Text */}
+                    <div style={{
+                        fontFamily: 'system-ui, sans-serif',
+                        fontSize: '14px',
+                        color: '#2a2015',
+                        lineHeight: '1.5',
+                    }}>
+                        {text}
+                    </div>
+                    {/* Tap indicator */}
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '6px',
+                        right: '10px',
+                        fontSize: '10px',
+                        color: '#a09080',
+                    }}>
+                        {isLast ? '[ 확인 ]' : '▼ 탭'}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
