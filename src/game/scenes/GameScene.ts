@@ -546,6 +546,7 @@ export class GameScene extends Scene {
         }
 
         // Construction scaffolding sprite
+        const scaffoldH = TILE_H * 1.2; // height reference for timer/bar positioning
         if (this.textures.exists('construction')) {
             const scaffold = this.add.image(0, 0, 'construction');
             const scaffoldScale = TILE_W * 1.0 / scaffold.width;
@@ -556,7 +557,7 @@ export class GameScene extends Scene {
         }
 
         // Timer text
-        const timerText = this.add.text(0, -bh - 20 * DPR, '', {
+        const timerText = this.add.text(0, -scaffoldH - 20 * DPR, '', {
             fontSize: `${14 * DPR}px`,
             color: '#ffffff',
             fontFamily: 'Fredoka, system-ui, sans-serif',
@@ -570,7 +571,7 @@ export class GameScene extends Scene {
         // Progress bar background
         const barW = TILE_W * 0.6;
         const barH = 8 * DPR;
-        const barY = -bh - 30 * DPR;
+        const barY = -scaffoldH - 30 * DPR;
         const barBg = this.add.graphics();
         barBg.fillStyle(0x333333, 0.7);
         barBg.fillRoundedRect(-barW / 2, barY, barW, barH, 3 * DPR);
