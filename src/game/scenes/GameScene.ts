@@ -465,8 +465,8 @@ export class GameScene extends Scene {
         if (!this.buildHighlights) return;
         this.buildHighlights.clear();
         this.buildHighlights.setVisible(true);
-        // Above terrain (depth 0) but below buildings
-        this.buildHighlights.setDepth(1);
+        // Above everything in build mode so building tiles also show red
+        this.buildHighlights.setDepth(9999);
 
         // Highlight tiles: bright green = buildable, bright red = occupied
         for (let row = 0; row < GRID_SIZE; row++) {
