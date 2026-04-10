@@ -15,13 +15,12 @@ interface DialogLine {
 }
 
 const SAMPLE_DIALOGUE: DialogLine[] = [
-    { text: '왈왈! 누나 왔다!' },
-    { text: '누나, 나 초코야. 오늘 누나한테 할 말 있어!' },
-    { text: '8일 뒤에 누나 생일이잖아. 24살 되는 날!' },
-    { text: '나 누나한테 특별한 선물 주고 싶어' },
-    { text: '근데 나 혼자서는 못 만들겠어...' },
-    { text: '그래서 누나, 나랑 같이 만들어줄래? 왈!' },
-    { text: '고마워! 그럼 먼저 나무를 캐보자!', action: '나무숲을 터치하여 나무를 수확해보자' },
+    { text: '안녕하세요. 김유찬님의 비서 로봇 콜드유입니다.' },
+    { text: '김유찬님의 요청으로 선물 제작을 도와드리겠습니다.' },
+    { text: '수령인의 생일이 8일 후로 확인됩니다. 24번째 생일입니다.' },
+    { text: '특별한 선물상자를 제작할 예정입니다.' },
+    { text: '제가 안내해 드리겠습니다. 지시에 따라 진행해 주세요.' },
+    { text: '먼저 자원을 수확하겠습니다.', action: '나무밭을 터치하여 나무를 수확하세요' },
 ];
 
 function App() {
@@ -301,20 +300,20 @@ function DialogBox({ text, action, onTap, isLast }: { text: string; action?: str
                             width: '32px',
                             height: '32px',
                             borderRadius: '50%',
-                            background: 'linear-gradient(180deg, #a07820 0%, #7a5a14 100%)',
-                            border: '2px solid #5a4520',
+                            background: 'linear-gradient(180deg, #607080 0%, #404850 100%)',
+                            border: '2px solid #506070',
                             fontSize: '16px',
                         }}
                     >
-                        🐶
+                        🤖
                     </div>
                     <span style={{
                         fontFamily: 'Fredoka, sans-serif',
                         fontSize: '14px',
-                        color: '#e8c878',
+                        color: '#8ab4d8',
                         fontWeight: 700,
                     }}>
-                        초코
+                        콜드유
                     </span>
                 </div>
 
