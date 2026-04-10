@@ -15,6 +15,7 @@ export class Boot extends Scene {
         this.load.image('mine', 'mine.png');
         this.load.image('jewelshop', 'jewelshop.png');
         this.load.image('gemcave', 'gem_cave.png');
+        this.load.image('construction', 'construction.png');
         // Gift box stages
         this.load.setPath('assets/generated/giftbox');
         this.load.image('box_empty', 'box_stage1_base.png');

@@ -466,14 +466,15 @@ export class GameScene extends Scene {
         this.buildHighlights.clear();
         this.buildHighlights.setVisible(true);
 
-        // Highlight empty tiles within the grid
+        // Highlight tiles: green = buildable, red = occupied
         for (let row = 0; row < GRID_SIZE; row++) {
             for (let col = 0; col < GRID_SIZE; col++) {
                 const key = `${row},${col}`;
-                if (this.occupiedTiles.has(key)) continue;
-
+                const occupied = this.occupiedTiles.has(key);
                 const { x, y } = this.toScreen(row, col);
-                this.buildHighlights.fillStyle(0x44ff88, 0.3);
+
+                // Fill
+                this.buildHighlights.fillStyle(occupied ? 0xff4444 : 0x44ff88, occupied ? 0.2 : 0.3);
                 this.buildHighlights.beginPath();
                 this.buildHighlights.moveTo(x, y - TILE_H / 2);
                 this.buildHighlights.lineTo(x + TILE_W / 2, y);
@@ -482,7 +483,8 @@ export class GameScene extends Scene {
                 this.buildHighlights.closePath();
                 this.buildHighlights.fillPath();
 
-                this.buildHighlights.lineStyle(2 * DPR, 0x22cc66, 0.6);
+                // Border
+                this.buildHighlights.lineStyle(2 * DPR, occupied ? 0xcc2222 : 0x22cc66, occupied ? 0.4 : 0.6);
                 this.buildHighlights.beginPath();
                 this.buildHighlights.moveTo(x, y - TILE_H / 2);
                 this.buildHighlights.lineTo(x + TILE_W / 2, y);
@@ -543,17 +545,15 @@ export class GameScene extends Scene {
             container.add(preview);
         }
 
-        // Construction scaffolding graphic
-        const scaffoldGfx = this.add.graphics();
-        scaffoldGfx.fillStyle(0xc8a050, 0.6);
-        const bw = TILE_W * 0.4;
-        const bh = TILE_H * 0.8;
-        scaffoldGfx.fillRect(-bw / 2, -bh - 10 * DPR, bw, bh);
-        // Cross beams
-        scaffoldGfx.lineStyle(2 * DPR, 0x8a6020, 0.8);
-        scaffoldGfx.lineBetween(-bw / 2, -bh - 10 * DPR, bw / 2, -10 * DPR);
-        scaffoldGfx.lineBetween(bw / 2, -bh - 10 * DPR, -bw / 2, -10 * DPR);
-        container.add(scaffoldGfx);
+        // Construction scaffolding sprite
+        if (this.textures.exists('construction')) {
+            const scaffold = this.add.image(0, 0, 'construction');
+            const scaffoldScale = TILE_W * 1.0 / scaffold.width;
+            scaffold.setScale(scaffoldScale);
+            scaffold.setOrigin(0.5, 0.75);
+            scaffold.setAlpha(0.9);
+            container.add(scaffold);
+        }
 
         // Timer text
         const timerText = this.add.text(0, -bh - 20 * DPR, '', {
@@ -768,7 +768,7 @@ export class GameScene extends Scene {
             // In build mode: no camera dragging, all touches are tile taps
             if (useGameStore.getState().buildMode) return;
 
-            if (Math.abs(pointer.x - this.dragStartX) > 15 || Math.abs(pointer.y - this.dragStartY) > 15) {
+            if (Math.abs(pointer.x - this.dragStartX) > 5 || Math.abs(pointer.y - this.dragStartY) > 5) {
                 this.isDragging = true;
             }
 
