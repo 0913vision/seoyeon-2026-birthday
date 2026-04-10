@@ -4,7 +4,7 @@ import { Scene } from 'phaser';
 const DPR = window.devicePixelRatio || 1;
 const TILE_W = 110 * DPR;
 const TILE_H = Math.round(110 * 0.58) * DPR; // calibrated ratio 0.58
-const GRID_SIZE = 22;
+const GRID_SIZE = 16;
 
 const GRASS_LIGHT = [0x6dbe82, 0x70c386, 0x6bba7e, 0x75c88a, 0x68b67a];
 const GRASS_DARK = [0x5aaa6e, 0x5dae72, 0x58a66a, 0x62b276, 0x56a266];
@@ -13,42 +13,34 @@ const STONE_COLORS = { fill: 0xb0aaa5, highlight: 0xc8c2bd, shadow: 0x908a85 };
 
 // Tile layout: 'sp' = stone path, 'dp' = dirt path, 'gd' = dark grass
 const TILE_MAP: Record<string, string> = {
-    // Stone ring around Gift Box (10,10)
-    '9,9': 'sp', '9,10': 'sp', '9,11': 'sp',
-    '10,9': 'sp', '10,11': 'sp',
-    '11,9': 'sp', '11,10': 'sp', '11,11': 'sp',
+    // Stone ring around Gift Box (8,8)
+    '7,7': 'sp', '7,8': 'sp', '7,9': 'sp',
+    '8,7': 'sp', '8,9': 'sp',
+    '9,7': 'sp', '9,8': 'sp', '9,9': 'sp',
 
-    // Wood Farm (4,5) -> center
-    '4,6': 'dp', '4,7': 'dp', '4,8': 'dp', '4,9': 'dp',
-    '5,9': 'dp', '6,9': 'dp', '7,9': 'dp', '8,9': 'dp',
+    // Wood Farm (3,4) -> center via col 7
+    '3,5': 'dp', '3,6': 'dp', '3,7': 'dp',
+    '4,7': 'dp', '5,7': 'dp', '6,7': 'dp',
 
-    // Flower Farm (5,15) -> center
-    '5,14': 'dp', '5,13': 'dp', '5,12': 'dp', '5,11': 'dp',
-    '6,11': 'dp', '7,11': 'dp', '8,11': 'dp',
+    // Flower Farm (4,12) -> center via col 9
+    '4,11': 'dp', '4,10': 'dp', '4,9': 'dp',
+    '5,9': 'dp', '6,9': 'dp',
 
-    // Quarry (15,4) -> center + Gem Cave (14,8) joins
-    '15,5': 'dp', '15,6': 'dp', '15,7': 'dp', '15,8': 'dp', '15,9': 'dp',
-    '14,9': 'dp', '13,9': 'dp', '12,9': 'dp',
+    // Quarry (12,3) -> center via col 7
+    '12,4': 'dp', '12,5': 'dp', '12,6': 'dp', '12,7': 'dp',
+    '11,7': 'dp', '10,7': 'dp',
 
-    // Mine (15,14) -> center
-    '15,13': 'dp', '15,12': 'dp', '15,11': 'dp',
-    '14,11': 'dp', '13,11': 'dp', '12,11': 'dp',
+    // Mine (12,11) -> center via col 9
+    '12,10': 'dp', '12,9': 'dp',
+    '11,9': 'dp', '10,9': 'dp',
 
-    // Jewelshop (8,15) -> center
-    '8,14': 'dp', '8,13': 'dp', '8,12': 'dp',
-    '9,12': 'dp',
+    // Woodshop (5,9) -> already on path
 
-    // Dark grass clusters (corners + near buildings)
-    '0,0': 'gd', '0,1': 'gd', '1,0': 'gd',
-    '0,20': 'gd', '0,21': 'gd', '1,21': 'gd',
-    '20,0': 'gd', '21,0': 'gd', '21,1': 'gd',
-    '20,21': 'gd', '21,20': 'gd', '21,21': 'gd',
-    '3,4': 'gd', '3,5': 'gd',
-    '4,14': 'gd', '4,16': 'gd',
-    '16,3': 'gd', '16,5': 'gd',
-    '16,13': 'gd', '16,15': 'gd',
-    '13,7': 'gd', '13,8': 'gd',
-    '7,14': 'gd', '7,16': 'gd',
+    // Jewelshop (6,13) -> center
+    '6,12': 'dp', '6,11': 'dp', '6,10': 'dp', '6,9': 'dp',
+
+    // Gem Cave (11,6) -> center
+    '11,7': 'dp', '10,7': 'dp',
 };
 
 interface BuildingDef {
@@ -65,21 +57,21 @@ interface BuildingDef {
 }
 
 const BUILDINGS: BuildingDef[] = [
-    { row: 10, col: 10, label: '선물상자', spriteKey: 'box_empty', isGiftBox: true,
+    { row: 8, col: 8, label: '선물상자', spriteKey: 'box_empty', isGiftBox: true,
       originY: 0.62, scale: 1.25, offX: 0, offY: -4 },
-    { row: 4, col: 5, label: '나무밭', spriteKey: 'woodfarm', showExclaim: true,
+    { row: 3, col: 4, label: '나무밭', spriteKey: 'woodfarm', showExclaim: true,
       originY: 0.71, scale: 1.2, offX: 0, offY: 0 },
-    { row: 5, col: 15, label: '꽃밭', spriteKey: 'flowerfarm',
+    { row: 4, col: 12, label: '꽃밭', spriteKey: 'flowerfarm',
       originY: 0.56, scale: 1.1, offX: 0, offY: -2 },
-    { row: 15, col: 4, label: '채석장', spriteKey: 'quarry',
+    { row: 12, col: 3, label: '채석장', spriteKey: 'quarry',
       originY: 0.62, scale: 1.05, offX: 0, offY: -2 },
-    { row: 6, col: 11, label: '목공방', spriteKey: 'woodshop',
+    { row: 5, col: 9, label: '목공방', spriteKey: 'woodshop',
       originY: 0.63, scale: 1.25, offX: 0.5, offY: -3 },
-    { row: 15, col: 14, label: '광산', spriteKey: 'mine',
+    { row: 12, col: 11, label: '광산', spriteKey: 'mine',
       originY: 0.59, scale: 1.1, offX: 3, offY: -3.5 },
-    { row: 8, col: 15, label: '세공소', spriteKey: 'jewelshop',
+    { row: 6, col: 13, label: '세공소', spriteKey: 'jewelshop',
       originY: 0.69, scale: 1.1, offX: -0.5, offY: -2 },
-    { row: 14, col: 8, label: '수정동굴', spriteKey: 'gemcave',
+    { row: 11, col: 6, label: '수정동굴', spriteKey: 'gemcave',
       originY: 0.64, scale: 1.1, offX: 0, offY: -3 },
 ];
 
@@ -176,8 +168,6 @@ export class GameScene extends Scene {
             }
         }
 
-        // Decorative elements on empty tiles
-        this.addDecorations();
 
         // Camera bounds - tight around the building area with small margin
         const margin = 3;
@@ -191,72 +181,6 @@ export class GameScene extends Scene {
         const boundsW = (right.x - left.x) + TILE_W * 2;
         const boundsH = (bottom.y - top.y) + TILE_H * 4;
         this.cameras.main.setBounds(boundsX, boundsY, boundsW, boundsH);
-    }
-
-    private addDecorations() {
-        const rng = new Phaser.Math.RandomDataGenerator(['deco42']);
-        const occupiedTiles = new Set(BUILDINGS.map(b => `${b.row},${b.col}`));
-        // Also block neighbors of buildings
-        for (const b of BUILDINGS) {
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    occupiedTiles.add(`${b.row + dr},${b.col + dc}`);
-                }
-            }
-        }
-
-        const decoKeys = [
-            'deco_corn', 'deco_cornDouble', 'deco_hay', 'deco_hayBales',
-            'deco_hayStacked', 'deco_planks', 'deco_planksHigh',
-            'deco_sack', 'deco_sacksCrate',
-        ];
-
-        // Place sprite decorations on random tiles
-        const placed = new Set<string>();
-        for (let i = 0; i < 30; i++) {
-            const row = rng.between(-2, GRID_SIZE + 1);
-            const col = rng.between(-2, GRID_SIZE + 1);
-            const key = `${row},${col}`;
-            if (occupiedTiles.has(key) || placed.has(key)) continue;
-            placed.add(key);
-
-            const { x, y } = this.toScreen(row, col);
-            const depth = (row + col) * 10;
-            const decoKey = decoKeys[rng.between(0, decoKeys.length - 1)];
-
-            const sprite = this.add.image(x, y, decoKey);
-            // Farm sprites are 256x512 with content at bottom — scale to fit ~0.5 tile width
-            const targetW = TILE_W * 0.45;
-            sprite.setScale(targetW / sprite.width);
-            sprite.setOrigin(0.5, 0.85);
-            sprite.setDepth(depth + 1);
-            sprite.setAlpha(0.9);
-        }
-
-        // Also add small programmatic dots (grass, flowers) for variety
-        const decoGfx = this.add.graphics();
-        decoGfx.setDepth(1);
-
-        for (let i = 0; i < 60; i++) {
-            const row = rng.between(-3, GRID_SIZE + 2);
-            const col = rng.between(-3, GRID_SIZE + 2);
-            if (occupiedTiles.has(`${row},${col}`)) continue;
-
-            const { x, y } = this.toScreen(row, col);
-            const type = rng.between(0, 2);
-
-            if (type === 0) {
-                decoGfx.fillStyle(0x3aaa55, 0.4);
-                decoGfx.fillCircle(x + rng.between(-15, 15) * DPR, y + rng.between(-5, 5) * DPR, 3 * DPR);
-            } else if (type === 1) {
-                const colors = [0xff6b9d, 0xffd93d, 0xff8a5c, 0xc77dff];
-                decoGfx.fillStyle(colors[rng.between(0, 3)], 0.5);
-                decoGfx.fillCircle(x + rng.between(-20, 20) * DPR, y + rng.between(-8, 8) * DPR, 2.5 * DPR);
-            } else {
-                decoGfx.fillStyle(0x8a8a7a, 0.25);
-                decoGfx.fillEllipse(x + rng.between(-15, 15) * DPR, y + rng.between(-5, 5) * DPR, 5 * DPR, 3 * DPR);
-            }
-        }
     }
 
     private placeBuildings() {
@@ -433,8 +357,8 @@ export class GameScene extends Scene {
         const MIN_ZOOM = 0.4;
         const MAX_ZOOM = 1.2;
 
-        cam.setZoom(0.55);
-        this.updateLabels(0.55);
+        cam.setZoom(0.4);
+        this.updateLabels(0.4);
 
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             this.isDragging = false;

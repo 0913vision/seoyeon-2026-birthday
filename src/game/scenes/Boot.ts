@@ -15,23 +15,9 @@ export class Boot extends Scene {
         this.load.image('mine', 'mine.png');
         this.load.image('jewelshop', 'jewelshop.png');
         this.load.image('gemcave', 'gem_cave.png');
-        // Gift box stages
+        // Gift box
         this.load.setPath('assets/generated/giftbox');
         this.load.image('box_empty', 'box_empty.png');
-        // Terrain tile
-        this.load.setPath('assets/generated/terrain');
-        this.load.image('tile_grass', 'simple_grass.png');
-        // Decorative items
-        this.load.setPath('assets/iso');
-        this.load.image('deco_corn', 'corn_s.png');
-        this.load.image('deco_cornDouble', 'corndouble_s.png');
-        this.load.image('deco_hay', 'hay.png');
-        this.load.image('deco_hayBales', 'hayBales.png');
-        this.load.image('deco_hayStacked', 'hayBalesStacked.png');
-        this.load.image('deco_planks', 'planks.png');
-        this.load.image('deco_planksHigh', 'planksHigh.png');
-        this.load.image('deco_sack', 'sack.png');
-        this.load.image('deco_sacksCrate', 'sacksCrate.png');
     }
 
     create() {
