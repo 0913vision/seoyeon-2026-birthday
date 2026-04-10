@@ -192,13 +192,18 @@ export class GameScene extends Scene {
             const depth = (b.row + b.col) * 10;
             let topY: number;
 
-            // Shadow under building
+            // Shadow under building - gradient-like (multiple fading layers)
             const shadowGfx = this.add.graphics();
             shadowGfx.setDepth(depth);
-            shadowGfx.fillStyle(0x000000, 0.25);
+            // Outermost - very faint, largest
+            shadowGfx.fillStyle(0x000000, 0.08);
+            shadowGfx.fillEllipse(x, y + 6 * DPR, TILE_W * 1.2, TILE_H * 0.75);
+            // Middle layer
+            shadowGfx.fillStyle(0x000000, 0.12);
             shadowGfx.fillEllipse(x, y + 5 * DPR, TILE_W * 0.95, TILE_H * 0.6);
-            shadowGfx.fillStyle(0x000000, 0.2);
-            shadowGfx.fillEllipse(x, y + 3 * DPR, TILE_W * 0.7, TILE_H * 0.45);
+            // Inner layer - darkest, smallest
+            shadowGfx.fillStyle(0x000000, 0.18);
+            shadowGfx.fillEllipse(x, y + 3 * DPR, TILE_W * 0.65, TILE_H * 0.4);
 
             if (b.spriteKey) {
                 const bx = x + (b.offX || 0) * DPR;
