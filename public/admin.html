@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 - DB 관리</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #111; color: #fff; font-family: system-ui; padding: 20px; max-width: 500px; margin: 0 auto; }
+        h1 { font-size: 18px; color: #f87171; margin-bottom: 8px; }
+        .subtitle { font-size: 12px; color: #666; margin-bottom: 24px; }
+        .section { background: #1a1a1a; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .section h2 { font-size: 14px; color: #8ab4d8; margin-bottom: 12px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #000; }
+        .btn-info { background: #3b82f6; color: #fff; }
+        .btn-success { background: #22c55e; color: #fff; }
+        .log { background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 11px; color: #4ade80; max-height: 200px; overflow-y: auto; white-space: pre-wrap; margin-top: 12px; }
+        .status { font-size: 12px; color: #888; margin-top: 8px; }
+        input { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 13px; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 관리자 도구</h1>
+    <p class="subtitle">DB 관리 및 게임 상태 제어. Supabase 연동 전에는 mock으로 동작합니다.</p>
+
+    <div class="section">
+        <h2>🗄️ 데이터베이스</h2>
+        <div>
+            <label style="font-size:12px;color:#888;">Player ID:</label>
+            <input type="text" id="playerId" value="test_player_001" placeholder="player ID">
+        </div>
+        <button class="btn-info" onclick="loadSave()">저장 데이터 조회</button>
+        <button class="btn-warning" onclick="deleteSave()">이 플레이어 저장 삭제</button>
+        <button class="btn-danger" onclick="resetAll()">⚠️ 전체 DB 초기화</button>
+        <p class="status" id="dbStatus">대기 중...</p>
+    </div>
+
+    <div class="section">
+        <h2>📋 Supabase 스키마</h2>
+        <button class="btn-success" onclick="showSchema()">스키마 SQL 보기</button>
+        <button class="btn-info" onclick="copySchema()">스키마 SQL 복사</button>
+        <div class="log" id="schemaLog" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+        <h2>📊 현재 게임 상태 (스토어)</h2>
+        <button class="btn-info" onclick="showState()">상태 조회</button>
+        <button class="btn-warning" onclick="resetState()">스토어 초기화 (새 게임)</button>
+        <div class="log" id="stateLog"></div>
+    </div>
+
+    <div class="section">
+        <h2>🔗 Supabase 연결 (준비용)</h2>
+        <div>
+            <label style="font-size:12px;color:#888;">Supabase URL:</label>
+            <input type="text" id="supaUrl" placeholder="https://xxx.supabase.co">
+        </div>
+        <div>
+            <label style="font-size:12px;color:#888;">Anon Key:</label>
+            <input type="text" id="supaKey" placeholder="eyJ...">
+        </div>
+        <button class="btn-success" onclick="testConnection()">연결 테스트</button>
+        <p class="status" id="connStatus">미연결</p>
+    </div>
+
+    <script>
+        const schemaSQL = `-- Supabase schema for Birthday Gift Box Game
+CREATE TABLE IF NOT EXISTS game_saves (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    player_id TEXT NOT NULL UNIQUE,
+    current_day INTEGER NOT NULL DEFAULT 1,
+    tutorial_step INTEGER NOT NULL DEFAULT 0,
+    box_stage INTEGER NOT NULL DEFAULT 1,
+    packaging_started_at BIGINT,
+    box_harvested BOOLEAN NOT NULL DEFAULT FALSE,
+    resources JSONB NOT NULL DEFAULT '{"wood":{"amount":2000,"unlocked":true},"flower":{"amount":0,"unlocked":false},"stone":{"amount":0,"unlocked":false},"metal":{"amount":0,"unlocked":false},"gem":{"amount":0,"unlocked":false}}'::jsonb,
+    buildings JSONB NOT NULL DEFAULT '{"box":{"built":true,"position":{"row":8,"col":8}},"wood_farm":{"built":true,"position":{"row":3,"col":4}},"woodshop":{"built":false},"flower_farm":{"built":false},"quarry":{"built":false},"mine":{"built":false},"jewelshop":{"built":false},"gem_cave":{"built":false}}'::jsonb,
+    parts_completed INTEGER[] NOT NULL DEFAULT '{}',
+    parts_attached INTEGER[] NOT NULL DEFAULT '{}',
+    woodshop_crafting JSONB NOT NULL DEFAULT '{"partId":null,"startedAt":null}'::jsonb,
+    jewelshop_crafting JSONB NOT NULL DEFAULT '{"partId":null,"startedAt":null}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION update_updated_at() RETURNS TRIGGER AS $$
+BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER game_saves_updated_at BEFORE UPDATE ON game_saves
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE INDEX IF NOT EXISTS idx_game_saves_player_id ON game_saves(player_id);
+ALTER TABLE game_saves ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_read" ON game_saves FOR SELECT USING (true);
+CREATE POLICY "public_insert" ON game_saves FOR INSERT WITH CHECK (true);
+CREATE POLICY "public_update" ON game_saves FOR UPDATE USING (true);`;
+
+        function log(elementId, msg) {
+            document.getElementById(elementId).textContent = msg;
+        }
+
+        async function loadSave() {
+            const pid = document.getElementById('playerId').value;
+            log('dbStatus', '[MOCK] loadGame("' + pid + '") → null (목업: 저장 데이터 없음)');
+        }
+
+        async function deleteSave() {
+            const pid = document.getElementById('playerId').value;
+            if (!confirm(pid + '의 저장 데이터를 삭제할까요?')) return;
+            log('dbStatus', '[MOCK] deleteSave("' + pid + '") → 완료 (목업)');
+        }
+
+        async function resetAll() {
+            if (!confirm('⚠️ 전체 DB를 초기화합니다. 모든 플레이어 데이터가 삭제됩니다.')) return;
+            if (!confirm('정말 삭제하시겠습니까? 되돌릴 수 없습니다.')) return;
+            log('dbStatus', '[MOCK] resetAllSaves() → 완료 (목업)');
+        }
+
+        function showSchema() {
+            const el = document.getElementById('schemaLog');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            el.textContent = schemaSQL;
+        }
+
+        function copySchema() {
+            navigator.clipboard.writeText(schemaSQL).then(() => alert('스키마 SQL 복사됨!'));
+        }
+
+        function showState() {
+            log('stateLog', '(게임 페이지에서 window.__getResources() 등으로 확인)\n\n이 페이지는 독립적이라 게임 스토어에 직접 접근 불가.\n게임 페이지 콘솔에서 확인하세요.');
+        }
+
+        function resetState() {
+            log('stateLog', '[MOCK] 스토어 초기화 → 게임 페이지 새로고침 필요');
+        }
+
+        async function testConnection() {
+            const url = document.getElementById('supaUrl').value;
+            const key = document.getElementById('supaKey').value;
+            if (!url || !key) {
+                log('connStatus', '❌ URL과 Key를 입력하세요');
+                return;
+            }
+            log('connStatus', '연결 테스트 중...');
+            try {
+                const resp = await fetch(url + '/rest/v1/', {
+                    headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+                });
+                if (resp.ok) {
+                    log('connStatus', '✅ 연결 성공! (HTTP ' + resp.status + ')');
+                } else {
+                    log('connStatus', '❌ 연결 실패 (HTTP ' + resp.status + ')');
+                }
+            } catch (e) {
+                log('connStatus', '❌ 연결 오류: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
