@@ -170,7 +170,7 @@ function BottomBar({ onGoToBox }: { onGoToBox: () => void }) {
             className="pointer-events-auto pb-2 px-4"
             style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
         >
-            <div className="flex justify-start gap-3">
+            <div className="flex justify-between">
                 <ActionButton icon="🏗️" label="BUILD" badge="NEW" badgeColor="#ef4444" bgColor="linear-gradient(180deg, #22c55e 0%, #16a34a 100%)" />
                 <ActionButton icon="🎁" label="BOX" bgColor="linear-gradient(180deg, #f59e0b 0%, #d97706 100%)" onClick={onGoToBox} />
             </div>
