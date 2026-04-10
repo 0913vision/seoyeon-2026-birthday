@@ -141,14 +141,12 @@
 
         function loadCurrent() {
             const b = buildings[currentBuilding];
-            const defaults = { originY: 0.85, scale: 1.0, offX: 0, offY: 0 };
-            ['bOriginY', 'bScale', 'bOffX', 'bOffY'].forEach(id => {
-                const key = id.substring(1);
-                const keyLower = key.charAt(0).toLowerCase() + key.slice(1);
-                const val = b[keyLower] !== undefined ? b[keyLower] : (defaults[keyLower] || 0);
-                document.getElementById(id).value = val;
-                document.getElementById(id + 'Num').value = val;
-            });
+            const map = { bOriginY: 'originY', bScale: 'scale', bOffX: 'offX', bOffY: 'offY' };
+            for (const [elId, key] of Object.entries(map)) {
+                const val = b[key] !== undefined ? b[key] : 0;
+                document.getElementById(elId).value = val;
+                document.getElementById(elId + 'Num').value = val;
+            }
         }
 
         // Resize
