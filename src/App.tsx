@@ -54,9 +54,13 @@ function App() {
                 <TopBar />
                 <div className="flex-1" />
 
-                {/* Build Menu */}
+                {/* Build Menu backdrop + panel */}
                 {showBuildMenu && (
-                    <BuildMenu onClose={() => setShowBuildMenu(false)} />
+                    <>
+                        <div className="pointer-events-auto" onClick={() => setShowBuildMenu(false)}
+                             style={{ position: 'absolute', inset: 0 }} />
+                        <BuildMenu onClose={() => setShowBuildMenu(false)} />
+                    </>
                 )}
 
                 {/* Dialog */}
@@ -270,17 +274,6 @@ function BuildMenu({ onClose }: { onClose: () => void }) {
 
     return (
         <div className="pointer-events-auto" style={{ marginBottom: '6px', position: 'relative' }}>
-            {/* Close button at top of panel */}
-            <div onClick={onClose} style={{
-                textAlign: 'center', padding: '4px', cursor: 'pointer',
-            }}>
-                <span style={{
-                    background: 'rgba(0,0,0,0.5)', color: '#aaa', fontSize: '11px',
-                    padding: '3px 16px', borderRadius: '10px',
-                    fontFamily: 'Fredoka, sans-serif',
-                }}>▼ 닫기</span>
-            </div>
-
             {/* Toast */}
             {toast && (
                 <div style={{
