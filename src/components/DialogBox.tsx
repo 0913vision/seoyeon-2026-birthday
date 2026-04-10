@@ -50,11 +50,12 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
         >
             <div
                 style={{
-                    background: 'linear-gradient(180deg, #2a3540 0%, #1a252e 100%)',
-                    borderRadius: '14px',
-                    border: '2px solid #3a5060',
+                    background: 'linear-gradient(180deg, #384858 0%, #283848 100%)',
+                    borderRadius: '16px',
+                    border: '3px solid #4a6878',
+                    borderBottom: '4px solid #1a2838',
                     padding: '14px 16px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(140,200,255,0.1)',
                     height: '145px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -66,42 +67,45 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
                     <div
                         className="shrink-0 flex items-center justify-center"
                         style={{
-                            width: '32px',
-                            height: '32px',
+                            width: '34px',
+                            height: '34px',
                             borderRadius: '50%',
-                            background: 'linear-gradient(180deg, #607080 0%, #404850 100%)',
-                            border: '2px solid #506070',
-                            fontSize: '16px',
+                            background: 'linear-gradient(180deg, #6a8898 0%, #4a6070 100%)',
+                            border: '2px solid #8ab0c8',
+                            boxShadow: '0 0 8px rgba(100,180,240,0.2)',
+                            fontSize: '17px',
                         }}
                     >
-                        {'\uD83E\uDD16'}
+                        🤖
                     </div>
                     <span style={{
                         fontFamily: 'Fredoka, sans-serif',
-                        fontSize: '14px',
-                        color: '#8ab4d8',
+                        fontSize: '15px',
+                        color: '#a0d4f0',
                         fontWeight: 700,
+                        textShadow: '0 0 6px rgba(100,180,240,0.3)',
                     }}>
-                        {'\uCF5C\uB4DC\uC720'}
+                        콜드유
                     </span>
                 </div>
 
                 {/* Text area - fixed height */}
                 <div style={{
                     flex: 1,
-                    fontFamily: 'system-ui, sans-serif',
+                    fontFamily: 'Fredoka, sans-serif',
                     fontSize: '14px',
-                    lineHeight: '1.6',
+                    fontWeight: 600,
+                    lineHeight: '1.7',
                     overflow: 'hidden',
                     whiteSpace: 'pre-wrap',
                 }}>
                     {action && displayedText.includes('\n(') ? (
                         <>
-                            <span style={{ color: '#e8dcc8' }}>{displayedText.split('\n(')[0]}</span>
+                            <span style={{ color: '#e0eaf0' }}>{displayedText.split('\n(')[0]}</span>
                             <span style={{ color: '#fbbf24', fontSize: '12px' }}>{'\n(' + displayedText.split('\n(').slice(1).join('\n(')}</span>
                         </>
                     ) : (
-                        <span style={{ color: '#e8dcc8' }}>{displayedText}</span>
+                        <span style={{ color: '#e0eaf0' }}>{displayedText}</span>
                     )}
                 </div>
 
@@ -111,11 +115,11 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
                         position: 'absolute',
                         bottom: '8px',
                         right: '14px',
-                        fontSize: '11px',
-                        color: '#8a7a60',
+                        fontSize: '12px',
+                        color: '#6a8898',
                         fontFamily: 'Fredoka, sans-serif',
                     }}>
-                        {'\u25BC'}
+                        ▼
                     </div>
                 )}
             </div>
