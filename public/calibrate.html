@@ -34,7 +34,10 @@
 <body>
     <canvas id="canvas"></canvas>
     <div id="panel">
-        <div class="section-title">🏗 건물별 세팅 (타일 위에 맞추기)</div>
+        <div class="section-title">🌿 타일 기울기 (전체)</div>
+        <div id="tileControls"></div>
+
+        <div class="section-title">🏗 건물별 세팅 (빨간 점 = 타일 중앙, 건물 바닥을 맞추세요)</div>
         <div class="row">
             <span class="label">건물 선택:</span>
             <select id="buildingSelect"></select>
@@ -96,6 +99,10 @@
                 draw();
             });
         }
+
+        // Tile global controls
+        const tileContainer = document.getElementById('tileControls');
+        makeControl(tileContainer, 'gTileRatio', '타일 비율 (높이)', 0.3, 0.7, 0.01, 0.5);
 
         // Building controls
         const buildingContainer = document.getElementById('buildingControls');
@@ -163,18 +170,17 @@
             return { x: (col - row) * (TILE_W / 2) + cx, y: (col + row) * (TILE_H / 2) + cy };
         }
 
-        function drawTile(x, y, isLight, offY, sideH) {
+        function drawTile(x, y, isLight, tileH, sideH) {
             const GREEN_L = '#5cb85c', GREEN_D = '#4ea84e';
             const SIDE_L = '#4a8a3a', SIDE_R = '#3d7530';
-            const ty = y + offY;
 
             // Top face
             ctx.fillStyle = isLight ? GREEN_L : GREEN_D;
             ctx.beginPath();
-            ctx.moveTo(x, ty - TILE_H / 2);
-            ctx.lineTo(x + TILE_W / 2, ty);
-            ctx.lineTo(x, ty + TILE_H / 2);
-            ctx.lineTo(x - TILE_W / 2, ty);
+            ctx.moveTo(x, y - tileH / 2);
+            ctx.lineTo(x + TILE_W / 2, y);
+            ctx.lineTo(x, y + tileH / 2);
+            ctx.lineTo(x - TILE_W / 2, y);
             ctx.closePath();
             ctx.fill();
 
@@ -182,20 +188,19 @@
             if (sideH > 0) {
                 ctx.fillStyle = SIDE_L;
                 ctx.beginPath();
-                ctx.moveTo(x - TILE_W / 2, ty);
-                ctx.lineTo(x, ty + TILE_H / 2);
-                ctx.lineTo(x, ty + TILE_H / 2 + sideH);
-                ctx.lineTo(x - TILE_W / 2, ty + sideH);
+                ctx.moveTo(x - TILE_W / 2, y);
+                ctx.lineTo(x, y + tileH / 2);
+                ctx.lineTo(x, y + tileH / 2 + sideH);
+                ctx.lineTo(x - TILE_W / 2, y + sideH);
                 ctx.closePath();
                 ctx.fill();
 
-                // Right side
                 ctx.fillStyle = SIDE_R;
                 ctx.beginPath();
-                ctx.moveTo(x + TILE_W / 2, ty);
-                ctx.lineTo(x, ty + TILE_H / 2);
-                ctx.lineTo(x, ty + TILE_H / 2 + sideH);
-                ctx.lineTo(x + TILE_W / 2, ty + sideH);
+                ctx.moveTo(x + TILE_W / 2, y);
+                ctx.lineTo(x, y + tileH / 2);
+                ctx.lineTo(x, y + tileH / 2 + sideH);
+                ctx.lineTo(x + TILE_W / 2, y + sideH);
                 ctx.closePath();
                 ctx.fill();
             }
@@ -205,37 +210,43 @@
             const ch = canvas.height / dpr;
             ctx.clearRect(0, 0, window.innerWidth, ch);
 
-            const offY = 0;
-            const sideH = 6;
+            const tileRatio = parseFloat(document.getElementById('gTileRatio').value);
+            const actualTileH = TILE_W * tileRatio;
+            const sideH = actualTileH * 0.1;
             const b = buildings[currentBuilding];
             b.originY = parseFloat(document.getElementById('bOriginY').value);
             b.scale = parseFloat(document.getElementById('bScale').value);
 
-            // Draw 5x5 grid of tiles
+            // Draw 5x5 grid of tiles with adjusted height
             for (let r = -2; r <= 2; r++) {
                 for (let c = -2; c <= 2; c++) {
-                    const { x, y } = toScreen(r, c);
+                    // Use adjusted tile height for screen position
+                    const cx = window.innerWidth / 2;
+                    const cy = canvas.height / dpr * 0.5;
+                    const x = (c - r) * (TILE_W / 2) + cx;
+                    const y = (c + r) * (actualTileH / 2) + cy;
                     const isLight = (r + c) % 2 === 0;
-                    drawTile(x, y, isLight, offY, sideH);
+                    drawTile(x, y, isLight, actualTileH, sideH);
                 }
             }
 
             // Draw building on center tile
             const img = imgs[b.id];
             if (img) {
-                const { x, y } = toScreen(0, 0);
+                const cx2 = window.innerWidth / 2;
+                const cy2 = canvas.height / dpr * 0.5;
+                const bx = cx2 + (b.offX || 0);
+                const by = cy2 + (b.offY || 0);
                 const w = TILE_W * b.scale;
                 const h = w * (img.height / img.width);
-                const dx = x + (b.offX || 0);
-                const dy = y + (b.offY || 0);
-                ctx.drawImage(img, dx - w / 2, dy - h * b.originY, w, h);
+                ctx.drawImage(img, bx - w / 2, by - h * b.originY, w, h);
 
                 // Crosshair at tile center
                 ctx.strokeStyle = 'rgba(255,0,0,0.4)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(x - 20, y); ctx.lineTo(x + 20, y);
-                ctx.moveTo(x, y - 20); ctx.lineTo(x, y + 20);
+                ctx.moveTo(cx2 - 20, cy2); ctx.lineTo(cx2 + 20, cy2);
+                ctx.moveTo(cx2, cy2 - 20); ctx.lineTo(cx2, cy2 + 20);
                 ctx.stroke();
             }
 
@@ -245,7 +256,7 @@
         function updateOutput() {
             saveCurrent();
 
-            let text = '';
+            let text = `tileRatio: ${document.getElementById('gTileRatio').value} (TILE_H = TILE_W * ${document.getElementById('gTileRatio').value})\n\n`;
             buildings.forEach(b => {
                 text += `${b.id}: { originY: ${b.originY}, scale: ${b.scale}, offX: ${b.offX}, offY: ${b.offY} }\n`;
             });
