@@ -2,10 +2,8 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 
 const DPR = window.devicePixelRatio || 1;
-// Grid spacing calibrated from user's tile calibration tool
-// Original: 110/55, adjusted by offsets: right(+7,+8) → effective 124/71
-const TILE_W = 124 * DPR;
-const TILE_H = 71 * DPR;
+const TILE_W = 110 * DPR;
+const TILE_H = 55 * DPR;
 const GRID_SIZE = 22;
 
 const GRASS_LIGHT = [0x6dbe82, 0x70c386, 0x6bba7e, 0x75c88a, 0x68b67a];
@@ -142,21 +140,54 @@ export class GameScene extends Scene {
     }
 
     private drawGround() {
-        // Calibrated tile values from user
-        const TILE_SCALE = 1.2;
-        const TILE_ORIGIN_Y = 0.7;
-        const tileSize = TILE_W * TILE_SCALE;
         const EXT = 25;
+        const gfx = this.add.graphics();
+        gfx.setDepth(0);
+
+        // CoC-style colors
+        const GREEN_LIGHT = 0x5cb85c;
+        const GREEN_DARK = 0x4ea84e;
+        const SIDE_TOP = 0x4a8a3a;
+        const SIDE_BOTTOM = 0x3d7530;
+        const SIDE_H = TILE_H * 0.12; // thin side edge
 
         for (let row = -EXT; row < GRID_SIZE + EXT; row++) {
             for (let col = -EXT; col < GRID_SIZE + EXT; col++) {
                 const { x, y } = this.toScreen(row, col);
-                const depth = (row + col) * 10 - 5;
 
-                const tile = this.add.image(x, y, 'tile_grass');
-                tile.setDisplaySize(tileSize, tileSize);
-                tile.setOrigin(0.5, TILE_ORIGIN_Y);
-                tile.setDepth(depth);
+                // 2x2 checker: use (row+col) % 2 for subtle variation
+                const isLight = (row + col) % 2 === 0;
+                const topColor = isLight ? GREEN_LIGHT : GREEN_DARK;
+
+                // Top face (flat diamond)
+                gfx.fillStyle(topColor, 1);
+                gfx.beginPath();
+                gfx.moveTo(x, y - TILE_H / 2);
+                gfx.lineTo(x + TILE_W / 2, y);
+                gfx.lineTo(x, y + TILE_H / 2);
+                gfx.lineTo(x - TILE_W / 2, y);
+                gfx.closePath();
+                gfx.fillPath();
+
+                // Thin side edge (left face)
+                gfx.fillStyle(SIDE_TOP, 1);
+                gfx.beginPath();
+                gfx.moveTo(x - TILE_W / 2, y);
+                gfx.lineTo(x, y + TILE_H / 2);
+                gfx.lineTo(x, y + TILE_H / 2 + SIDE_H);
+                gfx.lineTo(x - TILE_W / 2, y + SIDE_H);
+                gfx.closePath();
+                gfx.fillPath();
+
+                // Thin side edge (right face)
+                gfx.fillStyle(SIDE_BOTTOM, 1);
+                gfx.beginPath();
+                gfx.moveTo(x + TILE_W / 2, y);
+                gfx.lineTo(x, y + TILE_H / 2);
+                gfx.lineTo(x, y + TILE_H / 2 + SIDE_H);
+                gfx.lineTo(x + TILE_W / 2, y + SIDE_H);
+                gfx.closePath();
+                gfx.fillPath();
             }
         }
 
