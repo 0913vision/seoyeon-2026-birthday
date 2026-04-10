@@ -36,31 +36,32 @@ export async function saveGame(): Promise<void> {
 }
 
 // Mock data: simulates what would come back from DB
+// Change this to test different game states
 const MOCK_SAVE: SaveData = {
-    currentDay: 3,
-    tutorialStep: 99, // tutorial complete
-    boxStage: 3,
+    currentDay: 1,
+    tutorialStep: 99, // tutorial complete (skip tutorial)
+    boxStage: 1,
     packagingStartedAt: null,
     boxHarvested: false,
     resources: {
-        wood: { amount: 1200, unlocked: true },
-        flower: { amount: 400, unlocked: true },
-        stone: { amount: 600, unlocked: true },
-        metal: { amount: 0, unlocked: false },
-        gem: { amount: 0, unlocked: false },
+        wood: { amount: 5000, unlocked: true },
+        flower: { amount: 2000, unlocked: true },
+        stone: { amount: 3000, unlocked: true },
+        metal: { amount: 2000, unlocked: true },
+        gem: { amount: 1000, unlocked: true },
     },
     buildings: {
         box: { built: true, position: { row: 8, col: 8 } },
         wood_farm: { built: true, position: { row: 3, col: 4 } },
-        woodshop: { built: true, position: { row: 5, col: 9 } },
-        flower_farm: { built: true, position: { row: 4, col: 12 } },
-        quarry: { built: true, position: { row: 12, col: 3 } },
+        woodshop: { built: false },
+        flower_farm: { built: false },
+        quarry: { built: false },
         mine: { built: false },
         jewelshop: { built: false },
         gem_cave: { built: false },
     },
-    partsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    partsAttached: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    partsCompleted: [],
+    partsAttached: [],
     woodshopCrafting: { partId: null, startedAt: null },
     jewelshopCrafting: { partId: null, startedAt: null },
     savedAt: Date.now(),
