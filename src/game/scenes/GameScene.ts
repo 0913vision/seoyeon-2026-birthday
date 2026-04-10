@@ -234,13 +234,23 @@ export class GameScene extends Scene {
         }
 
         const storeBuildings = useGameStore.getState().buildings;
-        // Only place buildings that are marked as built in the store
+        // Build the list using store positions (user-placed) over hardcoded defaults
         const sorted = [...BUILDINGS]
             .filter(b => {
                 const dataDef = DATA_BUILDINGS.find(d => d.spriteKey === b.spriteKey);
-                if (!dataDef) return true; // unknown buildings: show anyway
+                if (!dataDef) return true;
                 const bs = storeBuildings[dataDef.id];
                 return bs?.built ?? false;
+            })
+            .map(b => {
+                const dataDef = DATA_BUILDINGS.find(d => d.spriteKey === b.spriteKey);
+                if (dataDef) {
+                    const bs = storeBuildings[dataDef.id];
+                    if (bs?.position) {
+                        return { ...b, row: bs.position.row, col: bs.position.col };
+                    }
+                }
+                return b;
             })
             .sort((a, b) => (a.row + a.col) - (b.row + b.col));
 
@@ -755,7 +765,10 @@ export class GameScene extends Scene {
             const dx = pointer.x - pointer.prevPosition.x;
             const dy = pointer.y - pointer.prevPosition.y;
 
-            if (Math.abs(pointer.x - this.dragStartX) > 5 || Math.abs(pointer.y - this.dragStartY) > 5) {
+            // In build mode: no camera dragging, all touches are tile taps
+            if (useGameStore.getState().buildMode) return;
+
+            if (Math.abs(pointer.x - this.dragStartX) > 15 || Math.abs(pointer.y - this.dragStartY) > 15) {
                 this.isDragging = true;
             }
 
@@ -772,8 +785,8 @@ export class GameScene extends Scene {
         this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             lastPinchDist = 0;
 
-            // If we didn't drag, treat as a tap for build mode
-            if (!this.isDragging && useGameStore.getState().buildMode) {
+            // In build mode: always treat as a tap (camera drag is disabled)
+            if (useGameStore.getState().buildMode) {
                 const worldPoint = cam.getWorldPoint(pointer.x, pointer.y);
                 this.handleTileTap(worldPoint.x, worldPoint.y);
             }
