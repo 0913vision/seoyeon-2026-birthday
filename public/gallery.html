@@ -27,7 +27,7 @@
     <h2>🏗 건물 (7종)</h2>
     <div class="grid" id="buildings"></div>
 
-    <h2>🎁 선물상자 (4단계)</h2>
+    <h2>🎁 선물상자 (7단계)</h2>
     <div class="grid" id="giftbox"></div>
 
     <h2>💎 자원 아이콘 (5종)</h2>
@@ -42,7 +42,7 @@
     <script>
         const assets = {
             buildings: ['wood_farm','flower_farm','quarry','woodshop','mine','jewelshop','gem_cave'],
-            giftbox: ['box_empty','box_half','box_complete','box_wrapped'],
+            giftbox: ['box_stage1_base','box_stage2_frame','box_stage3_flowers','box_stage4_numbers','box_stage5_metal','box_stage6_complete','box_stage7_wrapped'],
             resources: ['wood','flower','stone','metal','gem'],
             parts: Array.from({length:24}, (_,i) => {
                 const names = ['base','body','front','back','lid','flower_a','wreath','number2','number4','pedestal','handle','buckle','trim','crystal_star','gem_deco','metal_frame','flower_crown','gem_ribbon','carved_plate','crystal_crown','main_ribbon','happy24_banner','firework','final_knot'];
@@ -54,7 +54,7 @@
         const labels = {
             wood_farm:'나무밭', flower_farm:'꽃밭', quarry:'채석장', woodshop:'목공방',
             mine:'광산', jewelshop:'세공소', gem_cave:'수정동굴',
-            box_empty:'빈 상자', box_half:'반완성', box_complete:'완성', box_wrapped:'포장',
+            box_stage1_base:'1.바닥판', box_stage2_frame:'2.골격', box_stage3_flowers:'3.꽃장식', box_stage4_numbers:'4.숫자24', box_stage5_metal:'5.금속장식', box_stage6_complete:'6.완성', box_stage7_wrapped:'7.포장',
             wood:'나무', flower:'꽃', stone:'돌', metal:'금속', gem:'보석',
             grass_light:'밝은 잔디', grass_dark:'어두운 잔디', dirt_path:'흙길', stone_path:'돌길',
         };
