@@ -233,42 +233,43 @@ function ActionButton({
 
 function DialogBox({ text, action, onTap, isLast }: { text: string; action?: string; onTap: () => void; isLast: boolean }) {
     const [displayedText, setDisplayedText] = useState('');
-    const [isAnimating, setIsAnimating] = useState(true);
-    const animRef = useRef<number | null>(null);
-    const indexRef = useRef(0);
+    const [animDone, setAnimDone] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const charRef = useRef(0);
+    const textRef = useRef(text);
 
-    // Reset animation when text changes
     useEffect(() => {
+        // Clear previous
+        if (timerRef.current) clearTimeout(timerRef.current);
+        textRef.current = text;
+        charRef.current = 0;
         setDisplayedText('');
-        setIsAnimating(true);
-        indexRef.current = 0;
+        setAnimDone(false);
 
-        const animate = () => {
-            indexRef.current++;
-            if (indexRef.current <= text.length) {
-                setDisplayedText(text.substring(0, indexRef.current));
-                animRef.current = window.setTimeout(animate, 40);
+        function tick() {
+            charRef.current++;
+            const current = textRef.current;
+            if (charRef.current <= current.length) {
+                setDisplayedText(current.substring(0, charRef.current));
+                timerRef.current = setTimeout(tick, 40);
             } else {
-                setIsAnimating(false);
+                setAnimDone(true);
             }
-        };
-        animRef.current = window.setTimeout(animate, 40);
+        }
+        timerRef.current = setTimeout(tick, 40);
 
-        return () => {
-            if (animRef.current) clearTimeout(animRef.current);
-        };
+        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     }, [text]);
 
-    const handleTap = useCallback(() => {
-        if (isAnimating) {
-            // Skip animation - show full text
-            if (animRef.current) clearTimeout(animRef.current);
-            setDisplayedText(text);
-            setIsAnimating(false);
+    const handleTap = () => {
+        if (!animDone) {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            setDisplayedText(textRef.current);
+            setAnimDone(true);
         } else {
             onTap();
         }
-    }, [isAnimating, text, onTap]);
+    };
 
     return (
         <div
@@ -327,7 +328,7 @@ function DialogBox({ text, action, onTap, isLast }: { text: string; action?: str
                 </div>
 
                 {/* Action guide or tap indicator */}
-                {!isAnimating && (
+                {animDone && (
                     <>
                         {action && (
                             <div style={{
