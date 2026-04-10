@@ -2,8 +2,10 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 
 const DPR = window.devicePixelRatio || 1;
-const TILE_W = 110 * DPR;
-const TILE_H = 55 * DPR;
+// Grid spacing calibrated from user's tile calibration tool
+// Original: 110/55, adjusted by offsets: right(+7,+8) → effective 124/71
+const TILE_W = 124 * DPR;
+const TILE_H = 71 * DPR;
 const GRID_SIZE = 22;
 
 const GRASS_LIGHT = [0x6dbe82, 0x70c386, 0x6bba7e, 0x75c88a, 0x68b67a];
