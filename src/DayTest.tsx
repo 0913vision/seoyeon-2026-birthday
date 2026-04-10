@@ -1,7 +1,8 @@
+import { useMemo } from 'react';
 import { useGameStore, calcDayFromDate } from './store/useGameStore';
 import { BUILDINGS, BUILDABLE } from './data/buildings';
 import { PARTS, PARTS_PER_DAY } from './data/parts';
-import { RESOURCE_DEFS } from './data/resources';
+import { RESOURCE_DEFS, PRODUCTION } from './data/resources';
 import { DIALOGUES } from './data/dialogues';
 import './index.css';
 
@@ -174,10 +175,241 @@ function DayTest() {
                         </span>
                     </Row>
                 </Section>
+
+                {/* Resource Simulation */}
+                <ResourceSimulation currentDay={currentDay} />
             </div>
         </div>
     );
 }
+
+// --- Resource Simulation ---
+
+const RES_IDS = ['wood', 'flower', 'stone', 'metal', 'gem'] as const;
+const RES_NAMES: Record<string, string> = { wood: '나무', flower: '꽃', stone: '돌', metal: '금속', gem: '보석' };
+const UNLOCK_DAY: Record<string, number> = { wood: 1, flower: 2, stone: 2, metal: 3, gem: 4 };
+const STARTER: Record<string, number> = { wood: 2000 };
+
+type DayRow = {
+    carryover: number;
+    buffer: number;
+    production: number;
+    totalSupply: number;
+    demand: number;
+    remaining: number;
+    surplusRate: number; // percentage
+};
+
+function simulateDays(): Record<number, Record<string, DayRow>> {
+    // Compute 12h harvest per resource
+    const harvest12h: Record<string, number> = {};
+    for (const rid of RES_IDS) {
+        const p = PRODUCTION[rid];
+        const cyclesIn12h = (12 * 60) / p.cycle;
+        harvest12h[rid] = Math.min(p.perCycle * cyclesIn12h, p.cap);
+    }
+
+    // Daily production (2 harvests) — but on unlock day: buffer + 1 extra harvest
+    // After unlock day: 2 full harvests
+    const dailyProd: Record<string, number> = {};
+    for (const rid of RES_IDS) {
+        dailyProd[rid] = harvest12h[rid] * 2;
+    }
+
+    // Compute demand per day: building costs + parts costs
+    const demandByDay: Record<number, Record<string, number>> = {};
+    for (let d = 1; d <= 5; d++) {
+        const dem: Record<string, number> = {};
+        for (const rid of RES_IDS) dem[rid] = 0;
+
+        // Building costs for this day
+        for (const b of BUILDINGS) {
+            if (b.unlockDay === d) {
+                for (const c of b.cost) {
+                    dem[c.res] = (dem[c.res] || 0) + c.amount;
+                }
+            }
+        }
+
+        // Parts costs for this day
+        const dayParts = PARTS_PER_DAY[d] ?? [];
+        for (const pid of dayParts) {
+            const part = PARTS.find(p => p.id === pid);
+            if (part) {
+                for (const c of part.cost) {
+                    dem[c.res] = (dem[c.res] || 0) + c.amount;
+                }
+            }
+        }
+
+        demandByDay[d] = dem;
+    }
+
+    // Simulate day by day
+    const result: Record<number, Record<string, DayRow>> = {};
+    const carry: Record<string, number> = {};
+    for (const rid of RES_IDS) carry[rid] = 0;
+
+    for (let d = 1; d <= 5; d++) {
+        result[d] = {};
+        for (const rid of RES_IDS) {
+            const unlock = UNLOCK_DAY[rid];
+            const carryover = carry[rid];
+            const starter = d === 1 ? (STARTER[rid] ?? 0) : 0;
+
+            let buffer = 0;
+            let production = 0;
+
+            if (d === unlock) {
+                // Unlock day: buffer (cap) + 1 extra harvest
+                buffer = PRODUCTION[rid].cap;
+                production = harvest12h[rid];
+            } else if (d > unlock) {
+                // After unlock: 2 full harvests
+                buffer = 0;
+                production = dailyProd[rid];
+            }
+            // Before unlock: nothing
+
+            const totalSupply = carryover + starter + buffer + production;
+            const demand = demandByDay[d][rid] || 0;
+            const remaining = totalSupply - demand;
+            const surplusRate = demand > 0 ? ((remaining / demand) * 100) : (totalSupply > 0 ? 999 : 0);
+
+            result[d][rid] = {
+                carryover: carryover + starter,
+                buffer,
+                production,
+                totalSupply,
+                demand,
+                remaining,
+                surplusRate,
+            };
+
+            carry[rid] = remaining;
+        }
+    }
+
+    return result;
+}
+
+function surplusColor(rate: number, demand: number): string {
+    if (demand === 0) return '#666';
+    if (rate >= 30) return '#22c55e';
+    if (rate >= 20) return '#eab308';
+    return '#ef4444';
+}
+
+function ResourceSimulation({ currentDay }: { currentDay: number }) {
+    const sim = useMemo(() => simulateDays(), []);
+
+    return (
+        <Section title="자원 시뮬레이션 (Day 1~5 누적)">
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <table style={{ width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', fontSize: '11px', fontFamily: 'monospace' }}>
+                    <thead>
+                        <tr style={{ borderBottom: '2px solid #444' }}>
+                            <th style={thStyle}>Day</th>
+                            <th style={thStyle}>자원</th>
+                            <th style={{ ...thStyle, textAlign: 'right' }}>이월</th>
+                            <th style={{ ...thStyle, textAlign: 'right' }}>버퍼</th>
+                            <th style={{ ...thStyle, textAlign: 'right' }}>생산</th>
+                            <th style={{ ...thStyle, textAlign: 'right' }}>총공급</th>
+                            <th style={{ ...thStyle, textAlign: 'right' }}>수요</th>
+                            <th style={{ ...thStyle, textAlign: 'right' }}>잔여</th>
+                            <th style={{ ...thStyle, textAlign: 'right' }}>잉여율</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {[1, 2, 3, 4, 5].map(d => {
+                            const dimmed = d > currentDay;
+                            const rows = RES_IDS.filter(rid => {
+                                const row = sim[d][rid];
+                                return row.totalSupply > 0 || row.demand > 0;
+                            });
+                            if (rows.length === 0) return null;
+                            return rows.map((rid, i) => {
+                                const r = sim[d][rid];
+                                const opacity = dimmed ? 0.35 : 1;
+                                const isFirst = i === 0;
+                                return (
+                                    <tr key={`${d}-${rid}`} style={{
+                                        opacity,
+                                        borderTop: isFirst ? '1px solid #444' : undefined,
+                                        background: d === currentDay ? 'rgba(232,160,32,0.08)' : undefined,
+                                    }}>
+                                        {isFirst && (
+                                            <td rowSpan={rows.length} style={{
+                                                ...tdStyle,
+                                                fontWeight: 700,
+                                                fontSize: '13px',
+                                                color: d === currentDay ? '#e8a020' : '#888',
+                                                verticalAlign: 'middle',
+                                                textAlign: 'center',
+                                                borderRight: '1px solid #333',
+                                            }}>
+                                                {d}
+                                            </td>
+                                        )}
+                                        <td style={{ ...tdStyle, color: '#ccc', fontWeight: 600, fontFamily: 'system-ui, sans-serif' }}>
+                                            {RES_NAMES[rid]}
+                                        </td>
+                                        <td style={numStyle}>{r.carryover.toLocaleString()}</td>
+                                        <td style={{ ...numStyle, color: r.buffer > 0 ? '#60a5fa' : '#555' }}>
+                                            {r.buffer > 0 ? r.buffer.toLocaleString() : '-'}
+                                        </td>
+                                        <td style={numStyle}>{r.production.toLocaleString()}</td>
+                                        <td style={{ ...numStyle, fontWeight: 700, color: '#4ade80' }}>
+                                            {r.totalSupply.toLocaleString()}
+                                        </td>
+                                        <td style={{ ...numStyle, color: r.demand > 0 ? '#f87171' : '#555' }}>
+                                            {r.demand > 0 ? r.demand.toLocaleString() : '-'}
+                                        </td>
+                                        <td style={{
+                                            ...numStyle,
+                                            fontWeight: 700,
+                                            color: r.remaining < 0 ? '#ef4444' : '#4ade80',
+                                        }}>
+                                            {r.remaining.toLocaleString()}
+                                        </td>
+                                        <td style={{
+                                            ...numStyle,
+                                            fontWeight: 700,
+                                            color: surplusColor(r.surplusRate, r.demand),
+                                        }}>
+                                            {r.demand > 0 ? `${Math.round(r.surplusRate)}%` : '-'}
+                                        </td>
+                                    </tr>
+                                );
+                            });
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </Section>
+    );
+}
+
+const thStyle: React.CSSProperties = {
+    padding: '6px 8px',
+    color: '#aaa',
+    fontWeight: 700,
+    textAlign: 'left',
+    whiteSpace: 'nowrap',
+    fontSize: '10px',
+    textTransform: 'uppercase',
+};
+
+const tdStyle: React.CSSProperties = {
+    padding: '4px 8px',
+    whiteSpace: 'nowrap',
+};
+
+const numStyle: React.CSSProperties = {
+    ...tdStyle,
+    textAlign: 'right',
+    color: '#ccc',
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
