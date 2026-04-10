@@ -69,7 +69,7 @@ function App() {
                     />
                 )}
 
-                <BottomBar onGoToBox={goToBox} onBuild={() => setShowBuildMenu(!showBuildMenu)} />
+                <BottomBar onGoToBox={goToBox} onBuild={() => setShowBuildMenu(prev => !prev)} buildOpen={showBuildMenu} />
             </div>
 
             {/* Debug: toggle dialog floating button */}
@@ -170,7 +170,7 @@ function TopBar() {
     );
 }
 
-function BottomBar({ onGoToBox, onBuild }: { onGoToBox: () => void; onBuild: () => void }) {
+function BottomBar({ onGoToBox, onBuild, buildOpen }: { onGoToBox: () => void; onBuild: () => void; buildOpen: boolean }) {
     return (
         <div
             className="pointer-events-auto pb-2 px-4"
@@ -270,8 +270,16 @@ function BuildMenu({ onClose }: { onClose: () => void }) {
 
     return (
         <div className="pointer-events-auto" style={{ marginBottom: '6px', position: 'relative' }}>
-            {/* Backdrop */}
-            <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: -1 }} />
+            {/* Close button at top of panel */}
+            <div onClick={onClose} style={{
+                textAlign: 'center', padding: '4px', cursor: 'pointer',
+            }}>
+                <span style={{
+                    background: 'rgba(0,0,0,0.5)', color: '#aaa', fontSize: '11px',
+                    padding: '3px 16px', borderRadius: '10px',
+                    fontFamily: 'Fredoka, sans-serif',
+                }}>▼ 닫기</span>
+            </div>
 
             {/* Toast */}
             {toast && (
