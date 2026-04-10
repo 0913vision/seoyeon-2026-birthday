@@ -6,6 +6,7 @@ import { BottomBar } from './components/BottomBar';
 import { BuildMenu } from './components/BuildMenu';
 import { DialogBox } from './components/DialogBox';
 import { DIALOGUES } from './data/dialogues';
+import { loadGame, applyLoadedData } from './services/db';
 
 function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
@@ -15,6 +16,16 @@ function App() {
 
     const addResource = useGameStore(s => s.addResource);
     const resources = useGameStore(s => s.resources);
+
+    // Load from DB on mount
+    useEffect(() => {
+        loadGame('default_player').then(data => {
+            if (data) {
+                applyLoadedData(data);
+                console.log('[App] Loaded game state from DB');
+            }
+        });
+    }, []);
 
     // Expose for console/test
     useEffect(() => {
