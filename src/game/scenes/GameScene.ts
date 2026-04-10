@@ -192,15 +192,13 @@ export class GameScene extends Scene {
             const depth = (b.row + b.col) * 10;
             let topY: number;
 
-            // Shadow under building (larger, softer, multiple layers for softness)
+            // Shadow under building
             const shadowGfx = this.add.graphics();
             shadowGfx.setDepth(depth);
-            // Outer soft shadow
-            shadowGfx.fillStyle(0x2a4a2a, 0.12);
-            shadowGfx.fillEllipse(x, y + 4 * DPR, TILE_W * 0.9, TILE_H * 0.55);
-            // Inner darker shadow
-            shadowGfx.fillStyle(0x1a3a1a, 0.15);
-            shadowGfx.fillEllipse(x, y + 3 * DPR, TILE_W * 0.65, TILE_H * 0.4);
+            shadowGfx.fillStyle(0x000000, 0.25);
+            shadowGfx.fillEllipse(x, y + 5 * DPR, TILE_W * 0.95, TILE_H * 0.6);
+            shadowGfx.fillStyle(0x000000, 0.2);
+            shadowGfx.fillEllipse(x, y + 3 * DPR, TILE_W * 0.7, TILE_H * 0.45);
 
             if (b.spriteKey) {
                 const bx = x + (b.offX || 0) * DPR;
