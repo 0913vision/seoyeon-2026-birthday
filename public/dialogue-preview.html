@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대화 스크립트 프리뷰</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #1a1a2e; color: #e0e0e0; font-family: system-ui, sans-serif; padding: 16px; max-width: 420px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 18px; margin-bottom: 16px; color: #8ab4d8; }
+        .scene { margin-bottom: 24px; }
+        .scene-header { background: #2a3540; padding: 8px 12px; border-radius: 8px 8px 0 0; border-left: 3px solid #8ab4d8; font-size: 12px; color: #8ab4d8; font-weight: bold; }
+        .scene-context { background: #222830; padding: 6px 12px; font-size: 11px; color: #6a7a8a; border-left: 3px solid #3a4a5a; }
+        .bubble-wrap { padding: 8px 12px; }
+        .bubble {
+            background: linear-gradient(180deg, #2a3540 0%, #1a252e 100%);
+            border: 2px solid #3a5060;
+            border-radius: 14px;
+            padding: 10px 14px;
+            margin-bottom: 6px;
+        }
+        .bubble .name { font-family: 'Fredoka', sans-serif; font-size: 12px; color: #8ab4d8; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+        .bubble .name .icon { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(180deg, #607080, #404850); display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .bubble .text { font-size: 13px; color: #e8dcc8; line-height: 1.6; }
+        .bubble .action { color: #fbbf24; font-size: 12px; margin-top: 4px; }
+        .choice { text-align: right; padding: 4px 12px; }
+        .choice span { display: inline-block; border: 2px solid #fbbf24; color: #fbbf24; padding: 4px 14px; border-radius: 8px; font-size: 13px; font-weight: bold; }
+        .day-divider { text-align: center; margin: 32px 0 16px; padding: 8px; background: linear-gradient(90deg, transparent, #3a5060, transparent); color: #8ab4d8; font-weight: bold; font-size: 14px; }
+        .note { font-size: 11px; color: #5a6a7a; padding: 4px 12px; font-style: italic; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>🤖 콜드유 대화 스크립트 프리뷰</h1>
+    <div id="content"></div>
+
+    <script>
+        const SCRIPT = [
+            // === DAY 1 ===
+            { type: 'day', text: 'Day 1 (토요일)' },
+
+            { type: 'scene', id: 'day1_intro', context: '최초 앱 실행 → 페이드인 → 콜드유 등장' },
+            { lines: [
+                '안녕하세요.',
+                '저는 김유찬님의 비서 로봇 콜드유입니다.',
+                '김유찬님의 지시를 받고 왔습니다.',
+                '5일 후 특별한 날을 위해, 선물 하나를 준비해야 합니다.',
+                '수령인 정보는 제게 전달되지 않았습니다.',
+                '선물 제작을 도와드리겠습니다. 협조 부탁드립니다.',
+            ]},
+            { type: 'choice', text: '확인' },
+            { lines: [
+                '감사합니다.',
+                '선물의 정체는 제작 과정에서 확인하실 수 있습니다.',
+                '그럼 작업을 시작하겠습니다.',
+            ]},
+
+            { type: 'scene', id: 'day1_map_guide', context: '맵 스와이프 가이드 → 드래그 안내' },
+            { lines: [
+                '이곳이 작업장입니다.',
+                '화면을 드래그하시면 주변을 둘러보실 수 있습니다.',
+                '중앙에 보이는 것이 선물상자입니다.',
+            ]},
+
+            { type: 'scene', id: 'day1_box_intro', context: '카메라 상자로 줌인' },
+            { lines: [
+                '이 상자에 파츠를 부착하여 선물을 완성합니다.',
+                '총 24개의 파츠가 필요합니다. 기간은 5일입니다.',
+            ]},
+
+            { type: 'scene', id: 'day1_harvest_guide', context: '카메라 나무밭 이동 → 수확 가능 표시' },
+            { lines: [
+                '이것은 나무밭입니다. 자원을 생산하는 시설입니다.',
+                { text: '터치하시면 자원을 수확할 수 있습니다.', action: '나무밭을 터치하세요' },
+            ]},
+            { type: 'note', text: '(플레이어가 나무밭 터치 → 수확)' },
+            { lines: [
+                '자원 수확이 완료되었습니다.',
+                '상단 인벤토리에서 보유 자원량을 확인하실 수 있습니다.',
+            ]},
+
+            { type: 'scene', id: 'day1_waiting_explained', context: '대기 시간 설명' },
+            { lines: [
+                '자원은 일정 주기마다 자동으로 생산됩니다.',
+                '나무의 경우 1시간 30분마다 생산됩니다.',
+                '접속하지 않아도 생산은 계속 진행됩니다.',
+            ]},
+
+            { type: 'scene', id: 'day1_build_guide', context: '하단 건설 버튼 깜빡임' },
+            { lines: [
+                '파츠 제작을 위해 공방이 필요합니다.',
+                { text: '하단의 건설 버튼을 터치해 주세요.', action: 'BUILD 버튼을 터치하세요' },
+            ]},
+
+            { type: 'scene', id: 'day1_woodshop_intro', context: '건설 메뉴 열림 → 목공방 선택' },
+            { lines: [
+                '목공방은 파츠를 제작하는 시설입니다.',
+                { text: '건설 위치를 지정해 주세요.', action: '빈 타일을 터치하여 건설하세요' },
+            ]},
+            { type: 'note', text: '(플레이어가 위치 선택 → 목공방 건설 완료)' },
+            { lines: ['건설이 완료되었습니다.'] },
+
+            { type: 'scene', id: 'day1_craft_guide', context: '목공방 탭 가이드' },
+            { lines: [
+                '목공방을 터치하시면 제작 메뉴가 열립니다.',
+                '첫 번째 파츠는 상자 바닥판입니다.',
+                { text: '제작 시간은 10분 소요됩니다.', action: '목공방을 터치하여 제작을 시작하세요' },
+            ]},
+
+            { type: 'scene', id: 'day1_tutorial_end', context: '튜토리얼 종료 → 자유 모드' },
+            { lines: [
+                '기본 안내가 완료되었습니다.',
+                '자원이 생산되면 수확 후 파츠 제작을 계속해 주세요.',
+                '오늘 만들어야 할 파츠는 4개입니다.',
+            ]},
+
+            { type: 'scene', id: 'day1_first_part_done', context: '첫 파츠(바닥판) 부착 완료 시' },
+            { lines: [
+                '첫 번째 파츠가 부착되었습니다.',
+                '진행도: 1/24. 나머지는 23개입니다.',
+            ]},
+
+            { type: 'scene', id: 'day1_complete', context: '파츠 4개 부착 완료' },
+            { lines: [
+                '오늘 작업이 완료되었습니다.',
+                '수고하셨습니다. 내일 다시 진행하겠습니다.',
+            ]},
+
+            // === DAY 2 ===
+            { type: 'day', text: 'Day 2 (일요일)' },
+
+            { type: 'scene', id: 'day2_start', context: 'Day 2 진입 (Day 1 완료 + 날짜 변경)' },
+            { lines: [
+                '좋은 아침입니다. 오늘은 꽃밭을 만들어 보겠습니다.',
+                { text: '건설 메뉴에서 꽃밭을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
+                '오늘 만들어야 할 파츠는 5개입니다.',
+            ]},
+
+            { type: 'scene', id: 'day2_quarry_unlock', context: '접속 후 2~3시간 경과 시 알림' },
+            { lines: [
+                '채석장을 만들 수 있게 되었습니다.',
+                { text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
+            ]},
+
+            // === DAY 3 ===
+            { type: 'day', text: 'Day 3 (월요일)' },
+
+            { type: 'scene', id: 'day3_start', context: 'Day 3 진입' },
+            { lines: [
+                '좋은 아침입니다. 오늘은 광산을 만들어 보겠습니다.',
+                { text: '건설 메뉴에서 광산을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
+                '오늘 만들어야 할 파츠는 5개입니다.',
+            ]},
+
+            { type: 'scene', id: 'day3_jewelshop_unlock', context: '접속 후 2~3시간 경과 시 알림' },
+            { lines: [
+                '세공소를 만들 수 있게 되었습니다.',
+                '두 번째 공방이 추가됩니다.',
+                { text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
+            ]},
+
+            // === DAY 4 ===
+            { type: 'day', text: 'Day 4 (화요일)' },
+
+            { type: 'scene', id: 'day4_start', context: 'Day 4 진입' },
+            { lines: [
+                '좋은 아침입니다. 오늘은 수정동굴을 만들어 보겠습니다.',
+                { text: '건설 메뉴에서 수정동굴을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
+                '오늘 만들어야 할 파츠는 5개입니다.',
+            ]},
+
+            // === DAY 5 ===
+            { type: 'day', text: 'Day 5 (수요일 - 생일)' },
+
+            { type: 'scene', id: 'day5_start', context: 'Day 5 진입 (마지막 날)' },
+            { lines: [
+                '좋은 아침입니다. 오늘이 마지막 날입니다.',
+                '남은 파츠 5개를 완성하면 포장이 시작됩니다.',
+                '오늘 안에 모든 작업을 완료해 주세요.',
+            ]},
+
+            { type: 'scene', id: 'day5_packaging_start', context: '24번째 파츠(최종 뚜껑 매듭) 부착 완료' },
+            { lines: [
+                '모든 파츠가 완성되었습니다.',
+                '포장을 시작합니다. 약 1시간 30분 정도 소요됩니다.',
+                '완료되면 다시 안내드리겠습니다.',
+            ]},
+
+            { type: 'scene', id: 'day5_waiting', context: '포장 타이머 진행 중 접속 시 (선택적)' },
+            { lines: [
+                '포장이 진행 중입니다.',
+                '남은 시간을 상자 상단에서 확인하실 수 있습니다.',
+                '완료되면 다시 안내드리겠습니다.',
+            ]},
+
+            { type: 'scene', id: 'day5_complete_report', context: '포장 완료 → 엔딩 시퀀스 시작' },
+            { lines: [
+                '선물 준비가 완료되었습니다.',
+                '5일간의 작업이 모두 마무리되었습니다.',
+                '상자를 열어 주세요.',
+            ]},
+
+            { type: 'scene', id: 'day5_open_box', context: '상자에 [열기] 버튼 표시' },
+            { lines: [
+                { text: '열기 버튼을 터치해 주세요.', action: '상자의 열기 버튼을 터치하세요' },
+            ]},
+            { type: 'note', text: '(플레이어가 열기 → 개봉 연출 → 증명서 등장)' },
+
+            { type: 'scene', id: 'day5_certificate', context: '증명서 표시 후 마무리' },
+            { lines: [
+                '선물 준비가 완료되었습니다.',
+                '이 증명서를 김유찬님께 제시해 주세요.',
+            ]},
+            { type: 'note', text: '(게임 종료)' },
+        ];
+
+        function render() {
+            const container = document.getElementById('content');
+            let html = '';
+
+            for (const item of SCRIPT) {
+                if (item.type === 'day') {
+                    html += `<div class="day-divider">${item.text}</div>`;
+                } else if (item.type === 'scene') {
+                    html += `<div class="scene"><div class="scene-header">${item.id}</div><div class="scene-context">${item.context}</div>`;
+                } else if (item.type === 'choice') {
+                    html += `<div class="choice"><span>${item.text}</span></div>`;
+                } else if (item.type === 'note') {
+                    html += `<div class="note">${item.text}</div>`;
+                } else if (item.lines) {
+                    html += '<div class="bubble-wrap">';
+                    for (const line of item.lines) {
+                        const text = typeof line === 'string' ? line : line.text;
+                        const action = typeof line === 'object' ? line.action : null;
+                        html += `<div class="bubble"><div class="name"><span class="icon">🤖</span>콜드유</div><div class="text">${text}</div>`;
+                        if (action) html += `<div class="action">(${action})</div>`;
+                        html += '</div>';
+                    }
+                    html += '</div></div>';
+                }
+            }
+
+            container.innerHTML = html;
+        }
+
+        render();
+    </script>
+</body>
+</html>
