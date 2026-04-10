@@ -241,8 +241,10 @@
             box.querySelector('.text-area').innerHTML = getLineText(line);
             box.dataset.line = idx;
 
-            if (idx >= total - 1) {
-                box.querySelector('.indicator').textContent = '↺ 처음으로';
+            if (total === 1) {
+                box.querySelector('.indicator').textContent = '(마지막)';
+            } else if (idx >= total - 1) {
+                box.querySelector('.indicator').textContent = `(마지막) ↺ ${idx + 1}/${total}`;
             } else {
                 box.querySelector('.indicator').textContent = `▼ ${idx + 1}/${total}`;
             }
