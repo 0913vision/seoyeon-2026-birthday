@@ -27,6 +27,7 @@ function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
     const [showDialog, setShowDialog] = useState(false);
     const [dialogIndex, setDialogIndex] = useState(0);
+    const [showBuildMenu, setShowBuildMenu] = useState(false);
 
     const goToBox = () => {
         if (phaserRef.current?.scene) {
@@ -53,6 +54,11 @@ function App() {
                 <TopBar />
                 <div className="flex-1" />
 
+                {/* Build Menu */}
+                {showBuildMenu && (
+                    <BuildMenu onClose={() => setShowBuildMenu(false)} />
+                )}
+
                 {/* Dialog */}
                 {showDialog && (
                     <DialogBox
@@ -63,7 +69,7 @@ function App() {
                     />
                 )}
 
-                <BottomBar onGoToBox={goToBox} />
+                <BottomBar onGoToBox={goToBox} onBuild={() => setShowBuildMenu(!showBuildMenu)} />
             </div>
 
             {/* Debug: toggle dialog floating button */}
@@ -164,14 +170,14 @@ function TopBar() {
     );
 }
 
-function BottomBar({ onGoToBox }: { onGoToBox: () => void }) {
+function BottomBar({ onGoToBox, onBuild }: { onGoToBox: () => void; onBuild: () => void }) {
     return (
         <div
             className="pointer-events-auto pb-2 px-4"
             style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
         >
             <div className="flex justify-between">
-                <ActionButton icon="🏗️" label="BUILD" badge="NEW" badgeColor="#ef4444" bgColor="linear-gradient(180deg, #22c55e 0%, #16a34a 100%)" />
+                <ActionButton icon="🏗️" label="BUILD" badge="NEW" badgeColor="#ef4444" bgColor="linear-gradient(180deg, #22c55e 0%, #16a34a 100%)" onClick={onBuild} />
                 <ActionButton icon="🎁" label="BOX" bgColor="linear-gradient(180deg, #f59e0b 0%, #d97706 100%)" onClick={onGoToBox} />
             </div>
         </div>
@@ -235,6 +241,112 @@ function ActionButton({
                     {badge}
                 </span>
             )}
+        </div>
+    );
+}
+
+const BUILD_ITEMS = [
+    { id: 'woodshop', name: '목공방', desc: '파츠를 제작하는 시설', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 500 }], available: true, built: false },
+    { id: 'flower_farm', name: '꽃밭', desc: '꽃을 생산하는 시설', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 1000 }], available: true, built: false },
+    { id: 'quarry', name: '채석장', desc: '돌을 생산하는 시설', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 1000 }], available: false, built: false },
+    { id: 'mine', name: '광산', desc: '금속을 생산하는 시설', cost: [{ res: 'stone', img: 'assets/generated/resources/stone.png', amount: 1000 }], available: false, built: false },
+    { id: 'jewelshop', name: '세공소', desc: '금속/보석 파츠 제작', cost: [{ res: 'wood', img: 'assets/generated/resources/wood.png', amount: 1500 }, { res: 'stone', img: 'assets/generated/resources/stone.png', amount: 1000 }], available: false, built: false },
+    { id: 'gem_cave', name: '수정동굴', desc: '보석을 생산하는 시설', cost: [{ res: 'stone', img: 'assets/generated/resources/stone.png', amount: 1500 }, { res: 'metal', img: 'assets/generated/resources/metal.png', amount: 500 }], available: false, built: false },
+];
+
+function BuildMenu({ onClose }: { onClose: () => void }) {
+    return (
+        <div className="pointer-events-auto" style={{ padding: '0 12px', marginBottom: '8px' }}>
+            <div style={{
+                background: 'linear-gradient(180deg, #2a2015 0%, #1e1810 100%)',
+                border: '2px solid #5a4530',
+                borderRadius: '16px',
+                padding: '12px',
+                maxHeight: '50vh',
+                overflowY: 'auto',
+                boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
+            }}>
+                {/* Header */}
+                <div className="flex justify-between items-center" style={{ marginBottom: '10px' }}>
+                    <span style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '16px', color: '#e8c878', fontWeight: 700 }}>
+                        건설
+                    </span>
+                    <button onClick={onClose} style={{
+                        background: 'none', border: 'none', color: '#8a7a60', fontSize: '20px', cursor: 'pointer', padding: '4px 8px',
+                    }}>✕</button>
+                </div>
+
+                {/* Building cards */}
+                {BUILD_ITEMS.map(item => (
+                    <div key={item.id} style={{
+                        background: item.available ? 'linear-gradient(180deg, #3a2a18 0%, #2a1e10 100%)' : 'rgba(30,25,20,0.5)',
+                        border: item.available ? '2px solid #5a4530' : '2px solid rgba(50,40,30,0.3)',
+                        borderRadius: '12px',
+                        padding: '10px 12px',
+                        marginBottom: '8px',
+                        opacity: item.available ? 1 : 0.4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                    }}>
+                        {/* Building icon */}
+                        <div style={{
+                            width: '48px', height: '48px', borderRadius: '10px',
+                            background: '#1a1208', border: '2px solid #3a2a15',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            overflow: 'hidden',
+                        }}>
+                            <img
+                                src={`assets/generated/buildings/${item.id === 'flower_farm' ? 'flower_farm' : item.id === 'gem_cave' ? 'gem_cave' : item.id}.png`}
+                                alt={item.name}
+                                style={{ width: '44px', height: '44px', objectFit: 'contain' }}
+                            />
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '14px', color: '#e8dcc8', fontWeight: 700 }}>
+                                {item.name}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#8a7a60', marginTop: '2px' }}>
+                                {item.desc}
+                            </div>
+                            {/* Cost */}
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                {item.cost.map((c, i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                        <img src={c.img} alt={c.res} style={{ width: '14px', height: '14px' }} />
+                                        <span style={{ fontSize: '12px', color: '#e8c878', fontFamily: 'Fredoka, sans-serif' }}>
+                                            {c.amount.toLocaleString()}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Action */}
+                        <div>
+                            {item.built ? (
+                                <span style={{ fontSize: '11px', color: '#5a8a5a' }}>건설됨</span>
+                            ) : item.available ? (
+                                <button style={{
+                                    background: 'linear-gradient(180deg, #22c55e 0%, #16a34a 100%)',
+                                    border: '2px solid rgba(255,255,255,0.2)',
+                                    borderRadius: '8px',
+                                    color: '#fff',
+                                    fontFamily: 'Fredoka, sans-serif',
+                                    fontSize: '12px',
+                                    fontWeight: 700,
+                                    padding: '6px 14px',
+                                    cursor: 'pointer',
+                                }}>건설</button>
+                            ) : (
+                                <span style={{ fontSize: '18px' }}>🔒</span>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
