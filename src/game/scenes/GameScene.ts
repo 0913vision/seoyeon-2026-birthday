@@ -3,7 +3,7 @@ import { Scene } from 'phaser';
 
 const DPR = window.devicePixelRatio || 1;
 const TILE_W = 110 * DPR;
-const TILE_H = 55 * DPR;
+const TILE_H = Math.round(110 * 0.58) * DPR; // calibrated ratio 0.58
 const GRID_SIZE = 22;
 
 const GRASS_LIGHT = [0x6dbe82, 0x70c386, 0x6bba7e, 0x75c88a, 0x68b67a];
@@ -55,47 +55,32 @@ interface BuildingDef {
     row: number;
     col: number;
     label: string;
-    spriteKey?: string;       // use sprite image
-    isoBox?: { size: number; height: number; top: number; left: number; right: number }; // use IsoBox
+    spriteKey?: string;
     showExclaim?: boolean;
     isGiftBox?: boolean;
+    originY: number;
+    scale: number;
+    offX: number;
+    offY: number;
 }
 
 const BUILDINGS: BuildingDef[] = [
-    {
-        row: 10, col: 10, label: '선물상자',
-        spriteKey: 'box_empty',
-        isGiftBox: true,
-    },
-    {
-        row: 4, col: 5, label: '나무밭',
-        spriteKey: 'woodfarm',
-        showExclaim: true,
-    },
-    {
-        row: 5, col: 15, label: '꽃밭',
-        spriteKey: 'flowerfarm',
-    },
-    {
-        row: 15, col: 4, label: '채석장',
-        spriteKey: 'quarry',
-    },
-    {
-        row: 6, col: 11, label: '목공방',
-        spriteKey: 'woodshop',
-    },
-    {
-        row: 15, col: 14, label: '광산',
-        spriteKey: 'mine',
-    },
-    {
-        row: 8, col: 15, label: '세공소',
-        spriteKey: 'jewelshop',
-    },
-    {
-        row: 14, col: 8, label: '수정동굴',
-        spriteKey: 'gemcave',
-    },
+    { row: 10, col: 10, label: '선물상자', spriteKey: 'box_empty', isGiftBox: true,
+      originY: 0.62, scale: 1.25, offX: 0, offY: -4 },
+    { row: 4, col: 5, label: '나무밭', spriteKey: 'woodfarm', showExclaim: true,
+      originY: 0.71, scale: 1.2, offX: 0, offY: 0 },
+    { row: 5, col: 15, label: '꽃밭', spriteKey: 'flowerfarm',
+      originY: 0.56, scale: 1.1, offX: 0, offY: -2 },
+    { row: 15, col: 4, label: '채석장', spriteKey: 'quarry',
+      originY: 0.62, scale: 1.05, offX: 0, offY: -2 },
+    { row: 6, col: 11, label: '목공방', spriteKey: 'woodshop',
+      originY: 0.63, scale: 1.25, offX: 0.5, offY: -3 },
+    { row: 15, col: 14, label: '광산', spriteKey: 'mine',
+      originY: 0.59, scale: 1.1, offX: 3, offY: -3.5 },
+    { row: 8, col: 15, label: '세공소', spriteKey: 'jewelshop',
+      originY: 0.69, scale: 1.1, offX: -0.5, offY: -2 },
+    { row: 14, col: 8, label: '수정동굴', spriteKey: 'gemcave',
+      originY: 0.64, scale: 1.1, offX: 0, offY: -3 },
 ];
 
 const LABEL_HIDE_ZOOM = 0.35;
@@ -289,10 +274,12 @@ export class GameScene extends Scene {
             shadowGfx.fillEllipse(x + 3 * DPR, y + 5 * DPR, TILE_W * 0.7, TILE_H * 0.4);
 
             if (b.spriteKey) {
-                const sprite = this.add.image(x, y, b.spriteKey);
-                const scale = b.isGiftBox ? TILE_W * 1.3 / sprite.width : TILE_W * 1.0 / sprite.width;
+                const bx = x + (b.offX || 0) * DPR;
+                const by = y + (b.offY || 0) * DPR;
+                const sprite = this.add.image(bx, by, b.spriteKey);
+                const scale = TILE_W * b.scale / sprite.width;
                 sprite.setScale(scale);
-                sprite.setOrigin(0.5, b.isGiftBox ? 0.82 : 0.85);
+                sprite.setOrigin(0.5, b.originY);
                 sprite.setDepth(depth + 2);
                 topY = y - sprite.displayHeight * 0.5;
 
