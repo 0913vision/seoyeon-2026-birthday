@@ -36,6 +36,13 @@ html, body, #root {
 
 @keyframes floatDown {
     0% { opacity: 1; transform: translateX(-50%) translateY(0); }
-    70% { opacity: 1; }
-    100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    60% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(12px); }
+}
+
+@keyframes slotBounce {
+    0% { transform: translateY(0); }
+    30% { transform: translateY(3px); }
+    60% { transform: translateY(-1px); }
+    100% { transform: translateY(0); }
 }

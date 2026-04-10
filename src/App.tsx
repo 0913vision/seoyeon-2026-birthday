@@ -157,6 +157,8 @@ function TopBar({ resources, resDelta }: { resources: ResourceState; resDelta: {
                                 border: res.unlocked ? '2px solid #5a4530' : '2px solid rgba(50,40,30,0.5)',
                                 position: 'relative',
                                 overflow: 'visible',
+                                minWidth: 0,
+                                animation: showDelta ? 'slotBounce 0.3s ease-out' : 'none',
                             }}
                         >
                             <img src={r.img} alt={r.id} className="w-5 h-5 object-contain" />
@@ -173,14 +175,14 @@ function TopBar({ resources, resDelta }: { resources: ResourceState; resDelta: {
                                     key={Date.now()}
                                     style={{
                                         position: 'absolute',
-                                        bottom: '-20px',
+                                        bottom: '-14px',
                                         left: '50%',
                                         transform: 'translateX(-50%)',
                                         fontFamily: 'Fredoka, sans-serif',
                                         fontSize: '13px',
                                         fontWeight: 700,
                                         color: resDelta.delta > 0 ? '#4ade80' : '#f87171',
-                                        animation: 'floatDown 1.2s ease-out forwards',
+                                        animation: 'floatDown 1s ease-out forwards',
                                         pointerEvents: 'none',
                                         whiteSpace: 'nowrap',
                                     }}>
