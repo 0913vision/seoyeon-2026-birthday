@@ -599,15 +599,17 @@ export class GameScene extends Scene {
             },
         });
 
-        // Pulsing animation on scaffold
-        this.tweens.add({
-            targets: scaffoldGfx,
-            alpha: { from: 0.6, to: 0.9 },
-            duration: 800,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-        });
+        // Pulsing animation on preview
+        if (container.list.length > 0) {
+            this.tweens.add({
+                targets: container,
+                alpha: { from: 0.6, to: 0.9 },
+                duration: 800,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+        }
 
         this.constructionSprites.set(buildingId, container);
     }
