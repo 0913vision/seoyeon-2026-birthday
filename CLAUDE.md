@@ -119,7 +119,14 @@ npx vite build --config vite/config.prod.mjs
 | `/gallery.html` | 전체 에셋 갤러리 |
 | `/dialogue-preview.html` | 대화 스크립트 프리뷰 |
 | `/resource-test.html` | 자원 변동 애니메이션 테스트 |
+| `/day-test.html` | Day 전환 테스트 (해금 건물/파츠/대사 확인) |
 | `/admin.html` | DB 관리 (목업/Supabase) |
+
+## Day 시스템
+- KST 기준 날짜 자동 계산: 4/11(토)=Day1, 4/12(일)=Day2, 4/13(월)=Day3, 4/14(화)=Day4, 4/15(수)=Day5
+- `calcDayFromDate()` in `src/store/useGameStore.ts`
+- **현재 디버그**: `currentDay: 3` 고정. 배포 시 `calcDayFromDate()`로 교체
+- Day 전환 테스트: `/day-test.html`에서 자유롭게 전환 가능
 
 ## DB 연동
 
