@@ -531,49 +531,20 @@ export class GameScene extends Scene {
         const container = this.add.container(x, y);
         container.setDepth(depth + 2);
 
-        // Construction zone: excavation pit + hazard tape border
-        const zoneGfx = this.add.graphics();
-
-        // Dirt/excavation fill (darker brown diamond)
-        zoneGfx.fillStyle(0x8a7050, 1);
-        zoneGfx.beginPath();
-        zoneGfx.moveTo(0, -TILE_H / 2);
-        zoneGfx.lineTo(TILE_W / 2, 0);
-        zoneGfx.lineTo(0, TILE_H / 2);
-        zoneGfx.lineTo(-TILE_W / 2, 0);
-        zoneGfx.closePath();
-        zoneGfx.fillPath();
-
-        // Black-yellow hazard stripes around the diamond edges
-        const stripeCount = 8;
-        for (let i = 0; i < stripeCount; i++) {
-            const color = i % 2 === 0 ? 0x222222 : 0xf0c020;
-            zoneGfx.lineStyle(3 * DPR, color, 0.9);
-            // Top-right edge segments
-            const t1 = i / stripeCount;
-            const t2 = (i + 1) / stripeCount;
-            const x1 = t1 * TILE_W / 2, y1 = -TILE_H / 2 + t1 * TILE_H / 2;
-            const x2 = t2 * TILE_W / 2, y2 = -TILE_H / 2 + t2 * TILE_H / 2;
-            zoneGfx.lineBetween(x1, y1, x2, y2);
-            // Bottom-right
-            zoneGfx.lineBetween(TILE_W / 2 - x1, x1 * TILE_H / TILE_W, TILE_W / 2 - x2, x2 * TILE_H / TILE_W);
-            // Top-left (mirror)
-            zoneGfx.lineBetween(-x1, y1, -x2, y2);
-            // Bottom-left
-            zoneGfx.lineBetween(-TILE_W / 2 + x1, x1 * TILE_H / TILE_W, -TILE_W / 2 + x2, x2 * TILE_H / TILE_W);
-        }
-
-        container.add(zoneGfx);
-
-        // Construction sprite on top
+        // Semi-transparent building preview
         const scaffoldH = TILE_H * 1.2;
-        if (this.textures.exists('construction')) {
-            const scaffold = this.add.image(0, 0, 'construction');
-            const scaffoldScale = TILE_W * 0.8 / scaffold.width;
-            scaffold.setScale(scaffoldScale);
-            scaffold.setOrigin(0.5, 0.75);
-            scaffold.setAlpha(0.9);
-            container.add(scaffold);
+        const def = DATA_BUILDINGS.find(b => b.id === buildingId);
+        if (def && this.textures.exists(def.spriteKey)) {
+            const preview = this.add.image(
+                (def.offX || 0) * DPR,
+                (def.offY || 0) * DPR,
+                def.spriteKey
+            );
+            const scale = TILE_W * def.scale / preview.width;
+            preview.setScale(scale);
+            preview.setOrigin(0.5, def.originY);
+            preview.setAlpha(0.4);
+            container.add(preview);
         }
 
         // Timer text
