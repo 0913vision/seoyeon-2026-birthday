@@ -57,14 +57,14 @@
 
         // Building data
         const buildings = [
-            { id: 'woodfarm', name: '나무밭', path: 'assets/generated/buildings/wood_farm.png', originY: 0.85, scale: 1.0 },
-            { id: 'flowerfarm', name: '꽃밭', path: 'assets/generated/buildings/flower_farm.png', originY: 0.85, scale: 1.0 },
-            { id: 'quarry', name: '채석장', path: 'assets/generated/buildings/quarry.png', originY: 0.85, scale: 1.0 },
-            { id: 'woodshop', name: '목공방', path: 'assets/generated/buildings/woodshop.png', originY: 0.85, scale: 1.0 },
-            { id: 'mine', name: '광산', path: 'assets/generated/buildings/mine.png', originY: 0.85, scale: 1.0 },
-            { id: 'jewelshop', name: '세공소', path: 'assets/generated/buildings/jewelshop.png', originY: 0.85, scale: 1.0 },
-            { id: 'gemcave', name: '수정동굴', path: 'assets/generated/buildings/gem_cave.png', originY: 0.85, scale: 1.0 },
-            { id: 'box_empty', name: '선물상자', path: 'assets/generated/giftbox/box_empty.png', originY: 0.82, scale: 1.3 },
+            { id: 'woodfarm', name: '나무밭', path: 'assets/generated/buildings/wood_farm.png', originY: 0.85, scale: 1.0, skewX: 0, skewY: 0 },
+            { id: 'flowerfarm', name: '꽃밭', path: 'assets/generated/buildings/flower_farm.png', originY: 0.85, scale: 1.0, skewX: 0, skewY: 0 },
+            { id: 'quarry', name: '채석장', path: 'assets/generated/buildings/quarry.png', originY: 0.85, scale: 1.0, skewX: 0, skewY: 0 },
+            { id: 'woodshop', name: '목공방', path: 'assets/generated/buildings/woodshop.png', originY: 0.85, scale: 1.0, skewX: 0, skewY: 0 },
+            { id: 'mine', name: '광산', path: 'assets/generated/buildings/mine.png', originY: 0.85, scale: 1.0, skewX: 0, skewY: 0 },
+            { id: 'jewelshop', name: '세공소', path: 'assets/generated/buildings/jewelshop.png', originY: 0.85, scale: 1.0, skewX: 0, skewY: 0 },
+            { id: 'gemcave', name: '수정동굴', path: 'assets/generated/buildings/gem_cave.png', originY: 0.85, scale: 1.0, skewX: 0, skewY: 0 },
+            { id: 'box_empty', name: '선물상자', path: 'assets/generated/giftbox/box_empty.png', originY: 0.82, scale: 1.3, skewX: 0, skewY: 0 },
         ];
         let currentBuilding = 0;
         const imgs = {};
@@ -101,6 +101,8 @@
         const buildingContainer = document.getElementById('buildingControls');
         makeControl(buildingContainer, 'bOriginY', 'Origin Y', 0.5, 1.0, 0.01, 0.85);
         makeControl(buildingContainer, 'bScale', 'Scale', 0.3, 2.5, 0.05, 1.0);
+        makeControl(buildingContainer, 'bSkewX', 'Skew X (좌우)', -0.5, 0.5, 0.01, 0);
+        makeControl(buildingContainer, 'bSkewY', 'Skew Y (앞뒤)', -0.5, 0.5, 0.01, 0);
 
         function adj(id, delta) {
             const el = document.getElementById(id);
@@ -117,15 +119,28 @@
 
         // Building select
         select.addEventListener('change', (e) => {
-            buildings[currentBuilding].originY = parseFloat(document.getElementById('bOriginY').value);
-            buildings[currentBuilding].scale = parseFloat(document.getElementById('bScale').value);
+            saveCurrent();
             currentBuilding = parseInt(e.target.value);
-            document.getElementById('bOriginY').value = buildings[currentBuilding].originY;
-            document.getElementById('bOriginYNum').value = buildings[currentBuilding].originY;
-            document.getElementById('bScale').value = buildings[currentBuilding].scale;
-            document.getElementById('bScaleNum').value = buildings[currentBuilding].scale;
+            loadCurrent();
             draw();
         });
+
+        function saveCurrent() {
+            buildings[currentBuilding].originY = parseFloat(document.getElementById('bOriginY').value);
+            buildings[currentBuilding].scale = parseFloat(document.getElementById('bScale').value);
+            buildings[currentBuilding].skewX = parseFloat(document.getElementById('bSkewX').value);
+            buildings[currentBuilding].skewY = parseFloat(document.getElementById('bSkewY').value);
+        }
+
+        function loadCurrent() {
+            const b = buildings[currentBuilding];
+            ['bOriginY', 'bScale', 'bSkewX', 'bSkewY'].forEach(id => {
+                const key = id.replace('b', '').charAt(0).toLowerCase() + id.replace('b', '').slice(1);
+                const val = b[key] !== undefined ? b[key] : (id === 'bOriginY' ? 0.85 : id === 'bScale' ? 1.0 : 0);
+                document.getElementById(id).value = val;
+                document.getElementById(id + 'Num').value = val;
+            });
+        }
 
         // Resize
         function resize() {
@@ -207,17 +222,21 @@
             const img = imgs[b.id];
             if (img) {
                 const { x, y } = toScreen(0, 0);
-                const ty = y + offY;
                 const w = TILE_W * b.scale;
                 const h = w * (img.height / img.width);
-                ctx.drawImage(img, x - w / 2, ty - h * b.originY, w, h);
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.transform(1, b.skewY || 0, b.skewX || 0, 1, 0, 0);
+                ctx.drawImage(img, -w / 2, -h * b.originY, w, h);
+                ctx.restore();
 
                 // Crosshair at tile center
                 ctx.strokeStyle = 'rgba(255,0,0,0.4)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(x - 20, ty); ctx.lineTo(x + 20, ty);
-                ctx.moveTo(x, ty - 20); ctx.lineTo(x, ty + 20);
+                ctx.moveTo(x - 20, y); ctx.lineTo(x + 20, y);
+                ctx.moveTo(x, y - 20); ctx.lineTo(x, y + 20);
                 ctx.stroke();
             }
 
@@ -225,20 +244,17 @@
         }
 
         function updateOutput() {
-            // Save current building
-            buildings[currentBuilding].originY = parseFloat(document.getElementById('bOriginY').value);
-            buildings[currentBuilding].scale = parseFloat(document.getElementById('bScale').value);
+            saveCurrent();
 
             let text = '';
             buildings.forEach(b => {
-                text += `${b.id}: { originY: ${b.originY}, scale: ${b.scale} }\n`;
+                text += `${b.id}: { originY: ${b.originY}, scale: ${b.scale}, skewX: ${b.skewX}, skewY: ${b.skewY} }\n`;
             });
             document.getElementById('output').textContent = text;
         }
 
         function copyAll() {
-            buildings[currentBuilding].originY = parseFloat(document.getElementById('bOriginY').value);
-            buildings[currentBuilding].scale = parseFloat(document.getElementById('bScale').value);
+            saveCurrent();
             const text = document.getElementById('output').textContent;
             navigator.clipboard.writeText(text).then(() => alert('복사됨!'));
         }
