@@ -5,6 +5,16 @@ import { BUILDINGS } from '../data/buildings';
 
 const CONSTRUCTION_TIME_MS = 10_000; // 10 seconds for debug
 
+// Day calculation: KST date-based (4/11 Sat = Day 1, 4/15 Wed = Day 5)
+export function calcDayFromDate(): number {
+    const now = new Date();
+    const kstMs = now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60000;
+    const kstDate = new Date(kstMs);
+    const day1 = new Date(2026, 3, 11); // April 11, 2026
+    const diff = Math.floor((new Date(kstDate.getFullYear(), kstDate.getMonth(), kstDate.getDate()).getTime() - day1.getTime()) / 86400000);
+    return Math.max(1, Math.min(5, diff + 1));
+}
+
 interface GameState {
     // Progress
     currentDay: number;
@@ -43,6 +53,7 @@ interface GameState {
     completePart: (partId: number) => void;
     attachPart: (partId: number) => void;
     advanceDay: () => void;
+    setDay: (day: number) => void;
     setTutorialStep: (step: number) => void;
     setBoxStage: (stage: number) => void;
     startPackaging: () => void;
@@ -64,7 +75,7 @@ interface GameState {
 
 export const useGameStore = create<GameState>((set, get) => ({
     // Initial state
-    currentDay: 1,
+    currentDay: 3, // DEBUG: 고정값. 배포 시 calcDayFromDate()로 교체
     tutorialStep: 0,
     boxStage: 1,
     packagingStartedAt: null,
@@ -209,7 +220,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     // Progress actions
-    advanceDay: () => set(state => ({ currentDay: state.currentDay + 1 })),
+    advanceDay: () => set(state => ({ currentDay: Math.min(5, state.currentDay + 1) })),
+    setDay: (day: number) => set({ currentDay: Math.max(1, Math.min(5, day)) }),
     setTutorialStep: (step) => set({ tutorialStep: step }),
     setBoxStage: (stage) => set({ boxStage: stage }),
     startPackaging: () => set({ packagingStartedAt: Date.now() }),

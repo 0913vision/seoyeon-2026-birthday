@@ -95,8 +95,8 @@ export async function resetAllSaves(): Promise<void> {
 // ============================================================
 
 export function applyLoadedData(data: SaveData): void {
+    // currentDay is date-based, don't override from saved data
     useGameStore.setState({
-        currentDay: data.currentDay,
         tutorialStep: data.tutorialStep,
         boxStage: data.boxStage,
         packagingStartedAt: data.packagingStartedAt,
