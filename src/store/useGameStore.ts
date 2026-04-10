@@ -3,7 +3,7 @@ import { ResourceState, BuildingState, CraftingState } from '../types/game';
 import { INITIAL_RESOURCES } from '../data/resources';
 import { BUILDINGS } from '../data/buildings';
 
-const CONSTRUCTION_TIME_MS = 180_000; // 3 minutes
+const CONSTRUCTION_TIME_MS = 10_000; // 10 seconds for debug
 
 interface GameState {
     // Progress
