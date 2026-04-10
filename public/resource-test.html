@@ -132,7 +132,6 @@
             const ctrlEl = document.getElementById('ctrl-' + id);
             ctrlEl.textContent = r.amount.toLocaleString();
 
-            const slotEl = document.getElementById('slot-' + id);
             slotEl.classList.toggle('locked', !r.unlocked);
 
             // Show delta animation
