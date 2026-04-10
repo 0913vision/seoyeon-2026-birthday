@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자원 테스트</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #111; color: #fff; font-family: system-ui; padding: 20px; }
+        h1 { font-size: 16px; color: #8ab4d8; margin-bottom: 16px; text-align: center; }
+        .info { font-size: 12px; color: #666; text-align: center; margin-bottom: 20px; }
+        .res-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 10px; background: #1a1a1a; border-radius: 10px; }
+        .res-icon { width: 32px; height: 32px; object-fit: contain; }
+        .res-name { width: 60px; font-size: 14px; font-weight: bold; }
+        .res-amount { width: 60px; text-align: right; font-family: monospace; font-size: 16px; color: #4ade80; }
+        button { padding: 8px 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .btn-add { background: #22c55e; color: #fff; }
+        .btn-sub { background: #ef4444; color: #fff; }
+        .btn-sm { padding: 6px 10px; font-size: 12px; }
+        .actions { display: flex; gap: 4px; flex: 1; justify-content: flex-end; }
+        .note { font-size: 11px; color: #555; text-align: center; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <h1>💎 자원 변동 테스트</h1>
+    <div class="info">게임 화면(/)에서 이 페이지를 별도 탭으로 열어주세요.<br>버튼을 누르면 게임의 자원이 변동됩니다.</div>
+
+    <div id="resources"></div>
+
+    <div class="note">
+        게임 화면이 열려 있어야 합니다. 같은 브라우저의 다른 탭에서 / 를 열어주세요.<br>
+        이 페이지는 window.__addResource()를 호출합니다.
+    </div>
+
+    <script>
+        const RES = [
+            { id: 'wood', name: '나무', img: 'assets/generated/resources/wood.png' },
+            { id: 'flower', name: '꽃', img: 'assets/generated/resources/flower.png' },
+            { id: 'stone', name: '돌', img: 'assets/generated/resources/stone.png' },
+            { id: 'metal', name: '금속', img: 'assets/generated/resources/metal.png' },
+            { id: 'gem', name: '보석', img: 'assets/generated/resources/gem.png' },
+        ];
+
+        // Try to get game window reference
+        let gameWindow = null;
+
+        function findGameWindow() {
+            // Try opener
+            if (window.opener && window.opener.__addResource) {
+                gameWindow = window.opener;
+                return true;
+            }
+            // Try same window (if opened in iframe or same page)
+            if (window.__addResource) {
+                gameWindow = window;
+                return true;
+            }
+            return false;
+        }
+
+        function addRes(id, amount) {
+            if (!findGameWindow()) {
+                alert('게임 화면을 먼저 열어주세요!\n이 페이지를 게임 페이지에서 window.open()으로 열거나,\n같은 탭에서 테스트하세요.');
+                return;
+            }
+            gameWindow.__addResource(id, amount);
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            if (!findGameWindow()) return;
+            const res = gameWindow.__getResources();
+            RES.forEach(r => {
+                const el = document.getElementById('amount-' + r.id);
+                if (el && res[r.id]) {
+                    el.textContent = res[r.id].amount.toLocaleString();
+                }
+            });
+        }
+
+        function render() {
+            const container = document.getElementById('resources');
+            container.innerHTML = RES.map(r => `
+                <div class="res-row">
+                    <img class="res-icon" src="${r.img}" alt="${r.name}">
+                    <span class="res-name">${r.name}</span>
+                    <span class="res-amount" id="amount-${r.id}">-</span>
+                    <div class="actions">
+                        <button class="btn-sub btn-sm" onclick="addRes('${r.id}', -100)">-100</button>
+                        <button class="btn-sub btn-sm" onclick="addRes('${r.id}', -500)">-500</button>
+                        <button class="btn-add btn-sm" onclick="addRes('${r.id}', +100)">+100</button>
+                        <button class="btn-add btn-sm" onclick="addRes('${r.id}', +500)">+500</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        render();
+        setInterval(updateDisplay, 500);
+    </script>
+</body>
+</html>

@@ -1,13 +1,29 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { IRefPhaserGame, PhaserGame } from './PhaserGame';
 
-const RESOURCES = [
-    { id: 'wood', img: 'assets/generated/resources/wood.png', value: '1,200', unlocked: true },
-    { id: 'flower', img: 'assets/generated/resources/flower.png', value: '400', unlocked: true },
-    { id: 'stone', img: 'assets/generated/resources/stone.png', value: '600', unlocked: true },
-    { id: 'metal', img: 'assets/generated/resources/metal.png', value: '--', unlocked: false },
-    { id: 'gem', img: 'assets/generated/resources/gem.png', value: '--', unlocked: false },
+const RESOURCE_DEFS = [
+    { id: 'wood', img: 'assets/generated/resources/wood.png' },
+    { id: 'flower', img: 'assets/generated/resources/flower.png' },
+    { id: 'stone', img: 'assets/generated/resources/stone.png' },
+    { id: 'metal', img: 'assets/generated/resources/metal.png' },
+    { id: 'gem', img: 'assets/generated/resources/gem.png' },
 ];
+
+interface ResourceState {
+    [key: string]: { amount: number; unlocked: boolean };
+}
+
+const INITIAL_RESOURCES: ResourceState = {
+    wood: { amount: 1200, unlocked: true },
+    flower: { amount: 400, unlocked: true },
+    stone: { amount: 600, unlocked: true },
+    metal: { amount: 0, unlocked: false },
+    gem: { amount: 0, unlocked: false },
+};
+
+// Expose for test page
+(window as any).__setResources = null;
+(window as any).__getResources = null;
 
 interface DialogLine {
     text: string;
@@ -28,6 +44,22 @@ function App() {
     const [showDialog, setShowDialog] = useState(false);
     const [dialogIndex, setDialogIndex] = useState(0);
     const [showBuildMenu, setShowBuildMenu] = useState(false);
+    const [resources, setResources] = useState<ResourceState>(INITIAL_RESOURCES);
+    const [resDelta, setResDelta] = useState<{ id: string; delta: number } | null>(null);
+
+    // Expose for test page
+    useEffect(() => {
+        (window as any).__setResources = setResources;
+        (window as any).__getResources = () => resources;
+        (window as any).__addResource = (id: string, amount: number) => {
+            setResources(prev => ({
+                ...prev,
+                [id]: { ...prev[id], amount: prev[id].amount + amount },
+            }));
+            setResDelta({ id, delta: amount });
+            setTimeout(() => setResDelta(null), 1200);
+        };
+    }, [resources]);
 
     const goToBox = () => {
         if (phaserRef.current?.scene) {
@@ -51,7 +83,7 @@ function App() {
 
             {/* UI Overlay */}
             <div className="absolute inset-0 pointer-events-none flex flex-col">
-                <TopBar />
+                <TopBar resources={resources} resDelta={resDelta} />
                 <div className="flex-1" />
 
                 {/* Build Menu backdrop + panel */}
@@ -102,7 +134,7 @@ function App() {
     );
 }
 
-function TopBar() {
+function TopBar({ resources, resDelta }: { resources: ResourceState; resDelta: { id: string; delta: number } | null }) {
     return (
         <div
             className="pointer-events-auto px-3"
@@ -110,28 +142,54 @@ function TopBar() {
         >
             {/* Row 1: Resource slots */}
             <div className="flex gap-1 mt-1">
-                {RESOURCES.map((r) => (
-                    <div
-                        key={r.id}
-                        className="flex-1 flex items-center justify-center gap-1 py-2"
-                        style={{
-                            background: r.unlocked
-                                ? 'linear-gradient(180deg, #4a3520 0%, #3a2815 100%)'
-                                : 'rgba(30,20,10,0.5)',
-                            borderRadius: '8px',
-                            border: r.unlocked ? '2px solid #5a4530' : '2px solid rgba(50,40,30,0.5)',
-                        }}
-                    >
-                        <img src={r.img} alt={r.id} className="w-5 h-5 object-contain" />
-                        <span className={`${r.unlocked ? 'text-amber-100' : 'text-white/25'}`}
-                              style={{
-                                  fontFamily: "Fredoka, sans-serif",
-                                  fontSize: '15px',
-                              }}>
-                            {r.unlocked ? r.value : '🔒'}
-                        </span>
-                    </div>
-                ))}
+                {RESOURCE_DEFS.map((r) => {
+                    const res = resources[r.id];
+                    const showDelta = resDelta && resDelta.id === r.id;
+                    return (
+                        <div
+                            key={r.id}
+                            className="flex-1 flex items-center justify-center gap-1 py-2"
+                            style={{
+                                background: res.unlocked
+                                    ? 'linear-gradient(180deg, #4a3520 0%, #3a2815 100%)'
+                                    : 'rgba(30,20,10,0.5)',
+                                borderRadius: '8px',
+                                border: res.unlocked ? '2px solid #5a4530' : '2px solid rgba(50,40,30,0.5)',
+                                position: 'relative',
+                                overflow: 'visible',
+                            }}
+                        >
+                            <img src={r.img} alt={r.id} className="w-5 h-5 object-contain" />
+                            <span className={`${res.unlocked ? 'text-amber-100' : 'text-white/25'}`}
+                                  style={{
+                                      fontFamily: "Fredoka, sans-serif",
+                                      fontSize: '15px',
+                                  }}>
+                                {res.unlocked ? res.amount.toLocaleString() : '🔒'}
+                            </span>
+                            {/* Delta animation */}
+                            {showDelta && (
+                                <span
+                                    key={Date.now()}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '-18px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        fontFamily: 'Fredoka, sans-serif',
+                                        fontSize: '13px',
+                                        fontWeight: 700,
+                                        color: resDelta.delta > 0 ? '#4ade80' : '#f87171',
+                                        animation: 'floatUp 1.2s ease-out forwards',
+                                        pointerEvents: 'none',
+                                        whiteSpace: 'nowrap',
+                                    }}>
+                                    {resDelta.delta > 0 ? '+' : ''}{resDelta.delta.toLocaleString()}
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Row 2: Day badge + Progress bar */}
