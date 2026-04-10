@@ -256,67 +256,83 @@ const BUILD_ITEMS = [
 
 function BuildMenu({ onClose }: { onClose: () => void }) {
     return (
-        <div className="pointer-events-auto" style={{ padding: '0 12px', marginBottom: '8px' }}>
+        <div className="pointer-events-auto" style={{ padding: '0 10px', marginBottom: '6px' }}>
+            {/* Backdrop tap to close */}
+            <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: -1 }} />
+
             <div style={{
-                background: 'linear-gradient(180deg, #2a2015 0%, #1e1810 100%)',
-                border: '2px solid #5a4530',
-                borderRadius: '16px',
-                padding: '12px',
-                maxHeight: '50vh',
+                background: 'linear-gradient(180deg, #5a3a1e 0%, #4a2e14 50%, #3a220e 100%)',
+                border: '3px solid #7a5a30',
+                borderRadius: '20px',
+                padding: '14px',
+                maxHeight: '55vh',
                 overflowY: 'auto',
-                boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
+                boxShadow: '0 -4px 24px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,220,150,0.15)',
             }}>
                 {/* Header */}
-                <div className="flex justify-between items-center" style={{ marginBottom: '10px' }}>
-                    <span style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '16px', color: '#e8c878', fontWeight: 700 }}>
-                        건설
+                <div className="flex justify-between items-center" style={{ marginBottom: '12px' }}>
+                    <span style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '18px', color: '#fff', fontWeight: 700, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        🏗️ 건설
                     </span>
                     <button onClick={onClose} style={{
-                        background: 'none', border: 'none', color: '#8a7a60', fontSize: '20px', cursor: 'pointer', padding: '4px 8px',
+                        background: 'rgba(0,0,0,0.3)', border: '2px solid rgba(255,255,255,0.15)', borderRadius: '50%',
+                        color: '#ccc', fontSize: '16px', cursor: 'pointer', width: '30px', height: '30px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>✕</button>
                 </div>
 
                 {/* Building cards */}
                 {BUILD_ITEMS.map(item => (
                     <div key={item.id} style={{
-                        background: item.available ? 'linear-gradient(180deg, #3a2a18 0%, #2a1e10 100%)' : 'rgba(30,25,20,0.5)',
-                        border: item.available ? '2px solid #5a4530' : '2px solid rgba(50,40,30,0.3)',
-                        borderRadius: '12px',
-                        padding: '10px 12px',
+                        background: item.available
+                            ? 'linear-gradient(180deg, #f5e6c8 0%, #e8d4a8 100%)'
+                            : 'linear-gradient(180deg, #8a8078 0%, #706860 100%)',
+                        border: item.available ? '3px solid #c8a060' : '3px solid #5a5550',
+                        borderRadius: '14px',
+                        padding: '10px',
                         marginBottom: '8px',
-                        opacity: item.available ? 1 : 0.4,
                         display: 'flex',
                         alignItems: 'center',
                         gap: '10px',
+                        boxShadow: item.available ? 'inset 0 2px 0 rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.2)' : 'none',
+                        position: 'relative',
                     }}>
                         {/* Building icon */}
                         <div style={{
-                            width: '48px', height: '48px', borderRadius: '10px',
-                            background: '#1a1208', border: '2px solid #3a2a15',
+                            width: '56px', height: '56px', borderRadius: '12px',
+                            background: item.available ? '#e8d0a0' : '#5a5550',
+                            border: item.available ? '2px solid #c8a060' : '2px solid #4a4540',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            overflow: 'hidden',
+                            overflow: 'hidden', boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.15)',
                         }}>
                             <img
                                 src={`assets/generated/buildings/${item.id === 'flower_farm' ? 'flower_farm' : item.id === 'gem_cave' ? 'gem_cave' : item.id}.png`}
                                 alt={item.name}
-                                style={{ width: '44px', height: '44px', objectFit: 'contain' }}
+                                style={{ width: '50px', height: '50px', objectFit: 'contain', opacity: item.available ? 1 : 0.4 }}
                             />
                         </div>
 
                         {/* Info */}
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontFamily: 'Fredoka, sans-serif', fontSize: '14px', color: '#e8dcc8', fontWeight: 700 }}>
+                            <div style={{
+                                fontFamily: 'Fredoka, sans-serif', fontSize: '15px', fontWeight: 700,
+                                color: item.available ? '#3a2810' : '#aaa',
+                                textShadow: item.available ? '0 1px 0 rgba(255,255,255,0.3)' : 'none',
+                            }}>
                                 {item.name}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#8a7a60', marginTop: '2px' }}>
+                            <div style={{ fontSize: '11px', color: item.available ? '#6a5a40' : '#888', marginTop: '2px' }}>
                                 {item.desc}
                             </div>
                             {/* Cost */}
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '5px' }}>
                                 {item.cost.map((c, i) => (
-                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    <div key={i} style={{
+                                        display: 'flex', alignItems: 'center', gap: '3px',
+                                        background: 'rgba(0,0,0,0.08)', borderRadius: '6px', padding: '2px 6px',
+                                    }}>
                                         <img src={c.img} alt={c.res} style={{ width: '14px', height: '14px' }} />
-                                        <span style={{ fontSize: '12px', color: '#e8c878', fontFamily: 'Fredoka, sans-serif' }}>
+                                        <span style={{ fontSize: '12px', color: '#5a4a30', fontFamily: 'Fredoka, sans-serif', fontWeight: 700 }}>
                                             {c.amount.toLocaleString()}
                                         </span>
                                     </div>
@@ -327,21 +343,29 @@ function BuildMenu({ onClose }: { onClose: () => void }) {
                         {/* Action */}
                         <div>
                             {item.built ? (
-                                <span style={{ fontSize: '11px', color: '#5a8a5a' }}>건설됨</span>
+                                <span style={{
+                                    fontSize: '11px', color: '#fff', background: '#5a8a5a',
+                                    padding: '4px 10px', borderRadius: '8px', fontWeight: 700,
+                                }}>✓</span>
                             ) : item.available ? (
                                 <button style={{
-                                    background: 'linear-gradient(180deg, #22c55e 0%, #16a34a 100%)',
-                                    border: '2px solid rgba(255,255,255,0.2)',
-                                    borderRadius: '8px',
+                                    background: 'linear-gradient(180deg, #4cd964 0%, #2db84d 100%)',
+                                    borderTop: '2px solid rgba(255,255,255,0.3)',
+                                    borderBottom: '3px solid #1a8a30',
+                                    borderLeft: '1px solid rgba(255,255,255,0.1)',
+                                    borderRight: '1px solid rgba(0,0,0,0.1)',
+                                    borderRadius: '10px',
                                     color: '#fff',
                                     fontFamily: 'Fredoka, sans-serif',
-                                    fontSize: '12px',
+                                    fontSize: '13px',
                                     fontWeight: 700,
-                                    padding: '6px 14px',
+                                    padding: '8px 16px',
                                     cursor: 'pointer',
+                                    textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                                 }}>건설</button>
                             ) : (
-                                <span style={{ fontSize: '18px' }}>🔒</span>
+                                <span style={{ fontSize: '22px', opacity: 0.5 }}>🔒</span>
                             )}
                         </div>
                     </div>
