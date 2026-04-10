@@ -786,9 +786,9 @@ export class GameScene extends Scene {
         this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             lastPinchDist = 0;
 
-            // In build mode: treat as tap only if build mode was active at pointerdown
-            // (prevents card tap from immediately placing a building)
-            if (this.buildModeAtPointerDown && !this.isDragging && useGameStore.getState().buildMode) {
+            // In build mode: treat as tap if not dragging and enough time since entering build mode
+            const bm = useGameStore.getState().buildMode;
+            if (!this.isDragging && bm && (Date.now() - bm.enteredAt > 500)) {
                 const worldPoint = cam.getWorldPoint(pointer.x, pointer.y);
                 this.handleTileTap(worldPoint.x, worldPoint.y);
             }

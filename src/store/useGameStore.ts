@@ -33,7 +33,7 @@ interface GameState {
     dialogLineIndex: number;
     showBuildMenu: boolean;
     resDelta: { id: string; delta: number; key: number } | null;
-    buildMode: { buildingId: string } | null;
+    buildMode: { buildingId: string; enteredAt: number } | null;
 
     // Actions
     addResource: (id: string, amount: number) => void;
@@ -142,7 +142,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // Build mode actions
     enterBuildMode: (buildingId) => {
-        set({ buildMode: { buildingId }, showBuildMenu: false });
+        set({ buildMode: { buildingId, enteredAt: Date.now() }, showBuildMenu: false });
     },
 
     exitBuildMode: () => {
