@@ -23,30 +23,30 @@
         .res-val { font-family: 'Fredoka', sans-serif; font-size: 15px; color: #fde68a; }
         .res-slot.locked .res-val { color: rgba(255,255,255,0.25); }
 
-        /* Delta animation - floats down */
+        /* Delta animation - floats down gently */
         .delta {
-            position: absolute; bottom: -20px; left: 50%; font-family: 'Fredoka', sans-serif;
-            font-size: 14px; font-weight: 700; pointer-events: none; white-space: nowrap;
-            animation: floatDown 1.2s ease-out forwards;
+            position: absolute; bottom: -14px; left: 50%; font-family: 'Fredoka', sans-serif;
+            font-size: 13px; font-weight: 700; pointer-events: none; white-space: nowrap;
+            animation: floatDown 1s ease-out forwards;
         }
         .delta.plus { color: #4ade80; }
         .delta.minus { color: #f87171; }
 
         @keyframes floatDown {
             0% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            70% { opacity: 1; }
-            100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            60% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(-50%) translateY(12px); }
         }
 
-        /* Value bounce */
-        .res-val.bounce {
-            animation: valBounce 0.3s ease-out;
+        /* Slot bounce */
+        .res-slot.bounce {
+            animation: slotBounce 0.3s ease-out;
         }
 
-        @keyframes valBounce {
+        @keyframes slotBounce {
             0% { transform: translateY(0); }
-            30% { transform: translateY(4px); }
-            60% { transform: translateY(-2px); }
+            30% { transform: translateY(3px); }
+            60% { transform: translateY(-1px); }
             100% { transform: translateY(0); }
         }
 
@@ -119,12 +119,15 @@
 
             r.amount = Math.max(0, r.amount + delta);
 
-            // Update displays with bounce
+            // Update displays
             const valEl = document.getElementById('val-' + id);
             valEl.textContent = r.unlocked ? r.amount.toLocaleString() : '🔒';
-            valEl.classList.remove('bounce');
-            void valEl.offsetWidth; // force reflow
-            valEl.classList.add('bounce');
+
+            // Bounce the whole slot
+            const slotEl = document.getElementById('slot-' + id);
+            slotEl.classList.remove('bounce');
+            void slotEl.offsetWidth;
+            slotEl.classList.add('bounce');
 
             const ctrlEl = document.getElementById('ctrl-' + id);
             ctrlEl.textContent = r.amount.toLocaleString();
