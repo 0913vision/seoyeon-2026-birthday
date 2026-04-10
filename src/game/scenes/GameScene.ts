@@ -1,10 +1,13 @@
 import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
+import { useGameStore } from '../../store/useGameStore';
+import { BUILDINGS as DATA_BUILDINGS } from '../../data/buildings';
 
 const DPR = window.devicePixelRatio || 1;
 const TILE_W = 110 * DPR;
 const TILE_H = Math.round(110 * 0.58) * DPR; // calibrated ratio 0.58
 const GRID_SIZE = 16;
+const CONSTRUCTION_TIME_MS = 180_000; // 3 minutes - must match store
 
 const GRASS_LIGHT = [0x6dbe82, 0x70c386, 0x6bba7e, 0x75c88a, 0x68b67a];
 const GRASS_DARK = [0x5aaa6e, 0x5dae72, 0x58a66a, 0x62b276, 0x56a266];
@@ -91,6 +94,12 @@ export class GameScene extends Scene {
     private labels: LabelEntry[] = [];
     private exclaimContainers: Phaser.GameObjects.Container[] = [];
 
+    // Build mode
+    private buildHighlights: Phaser.GameObjects.Graphics | null = null;
+    private constructionSprites: Map<string, Phaser.GameObjects.Container> = new Map();
+    private storeUnsub: (() => void) | null = null;
+    private occupiedTiles: Set<string> = new Set();
+
     constructor() {
         super('GameScene');
     }
@@ -102,11 +111,18 @@ export class GameScene extends Scene {
         cam.scrollY = center.y - cam.height / 2 - 50 * DPR;
 
         this.drawGround();
+        this.initOccupiedTiles();
         this.placeBuildings();
         this.setupCameraDrag();
+        this.setupBuildMode();
+        this.restoreConstructions();
         this.updateLabels(0.5);
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    destroy() {
+        if (this.storeUnsub) this.storeUnsub();
     }
 
     private toScreen(row: number, col: number): { x: number; y: number } {
@@ -114,6 +130,14 @@ export class GameScene extends Scene {
             x: (col - row) * (TILE_W / 2) + 1200 * DPR,
             y: (col + row) * (TILE_H / 2) + 200 * DPR,
         };
+    }
+
+    private toGrid(worldX: number, worldY: number): { row: number; col: number } {
+        const nx = worldX - 1200 * DPR;
+        const ny = worldY - 200 * DPR;
+        const col = (nx / (TILE_W / 2) + ny / (TILE_H / 2)) / 2;
+        const row = (ny / (TILE_H / 2) - nx / (TILE_W / 2)) / 2;
+        return { row: Math.round(row), col: Math.round(col) };
     }
 
     private drawGround() {
@@ -209,7 +233,16 @@ export class GameScene extends Scene {
             this.createShadowTexture();
         }
 
-        const sorted = [...BUILDINGS].sort((a, b) => (a.row + a.col) - (b.row + b.col));
+        const storeBuildings = useGameStore.getState().buildings;
+        // Only place buildings that are marked as built in the store
+        const sorted = [...BUILDINGS]
+            .filter(b => {
+                const dataDef = DATA_BUILDINGS.find(d => d.spriteKey === b.spriteKey);
+                if (!dataDef) return true; // unknown buildings: show anyway
+                const bs = storeBuildings[dataDef.id];
+                return bs?.built ?? false;
+            })
+            .sort((a, b) => (a.row + a.col) - (b.row + b.col));
 
         for (const b of sorted) {
             const { x, y } = this.toScreen(b.row, b.col);
@@ -372,6 +405,290 @@ export class GameScene extends Scene {
         }
     }
 
+    private initOccupiedTiles() {
+        this.occupiedTiles.clear();
+        // Mark all building positions as occupied (from BUILDINGS data + store)
+        for (const b of BUILDINGS) {
+            this.occupiedTiles.add(`${b.row},${b.col}`);
+        }
+        // Also mark path tiles as occupied
+        for (const key of Object.keys(TILE_MAP)) {
+            this.occupiedTiles.add(key);
+        }
+        // Mark store buildings that have positions
+        const storeBuildings = useGameStore.getState().buildings;
+        for (const [, bs] of Object.entries(storeBuildings)) {
+            if (bs.position) {
+                this.occupiedTiles.add(`${bs.position.row},${bs.position.col}`);
+            }
+        }
+    }
+
+    private setupBuildMode() {
+        // Create a graphics object for build mode highlights (reused)
+        this.buildHighlights = this.add.graphics();
+        this.buildHighlights.setDepth(1);
+        this.buildHighlights.setVisible(false);
+
+        // Subscribe to store buildMode changes
+        this.storeUnsub = useGameStore.subscribe((state, prev) => {
+            // Build mode changed
+            if (state.buildMode !== prev.buildMode) {
+                if (state.buildMode) {
+                    this.showBuildHighlights();
+                } else {
+                    this.hideBuildHighlights();
+                }
+            }
+
+            // Check for newly completed buildings
+            for (const [id, bs] of Object.entries(state.buildings)) {
+                const prevBs = prev.buildings[id];
+                if (bs.built && prevBs && !prevBs.built && bs.position) {
+                    this.onConstructionComplete(id, bs.position.row, bs.position.col);
+                }
+            }
+        });
+    }
+
+    private showBuildHighlights() {
+        if (!this.buildHighlights) return;
+        this.buildHighlights.clear();
+        this.buildHighlights.setVisible(true);
+
+        // Highlight empty tiles within the grid
+        for (let row = 0; row < GRID_SIZE; row++) {
+            for (let col = 0; col < GRID_SIZE; col++) {
+                const key = `${row},${col}`;
+                if (this.occupiedTiles.has(key)) continue;
+
+                const { x, y } = this.toScreen(row, col);
+                this.buildHighlights.fillStyle(0x44ff88, 0.3);
+                this.buildHighlights.beginPath();
+                this.buildHighlights.moveTo(x, y - TILE_H / 2);
+                this.buildHighlights.lineTo(x + TILE_W / 2, y);
+                this.buildHighlights.lineTo(x, y + TILE_H / 2);
+                this.buildHighlights.lineTo(x - TILE_W / 2, y);
+                this.buildHighlights.closePath();
+                this.buildHighlights.fillPath();
+
+                this.buildHighlights.lineStyle(2 * DPR, 0x22cc66, 0.6);
+                this.buildHighlights.beginPath();
+                this.buildHighlights.moveTo(x, y - TILE_H / 2);
+                this.buildHighlights.lineTo(x + TILE_W / 2, y);
+                this.buildHighlights.lineTo(x, y + TILE_H / 2);
+                this.buildHighlights.lineTo(x - TILE_W / 2, y);
+                this.buildHighlights.closePath();
+                this.buildHighlights.strokePath();
+            }
+        }
+    }
+
+    private hideBuildHighlights() {
+        if (!this.buildHighlights) return;
+        this.buildHighlights.clear();
+        this.buildHighlights.setVisible(false);
+    }
+
+    private handleTileTap(worldX: number, worldY: number) {
+        const state = useGameStore.getState();
+        if (!state.buildMode) return;
+
+        const { row, col } = this.toGrid(worldX, worldY);
+
+        // Validate: in bounds
+        if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return;
+
+        // Validate: not occupied
+        const key = `${row},${col}`;
+        if (this.occupiedTiles.has(key)) return;
+
+        // Emit event to React to handle construction
+        EventBus.emit('tile-tapped', { buildingId: state.buildMode.buildingId, row, col });
+    }
+
+    public placeConstructionPlaceholder(buildingId: string, row: number, col: number) {
+        // Mark tile as occupied
+        this.occupiedTiles.add(`${row},${col}`);
+
+        const { x, y } = this.toScreen(row, col);
+        const depth = (row + col) * 10;
+
+        const container = this.add.container(x, y);
+        container.setDepth(depth + 2);
+
+        // Construction base - semi-transparent building shape
+        const def = DATA_BUILDINGS.find(b => b.id === buildingId);
+        if (def && this.textures.exists(def.spriteKey)) {
+            const preview = this.add.image(
+                (def.offX || 0) * DPR,
+                (def.offY || 0) * DPR,
+                def.spriteKey
+            );
+            const scale = TILE_W * def.scale / preview.width;
+            preview.setScale(scale);
+            preview.setOrigin(0.5, def.originY);
+            preview.setAlpha(0.35);
+            preview.setTint(0xaaaaaa);
+            container.add(preview);
+        }
+
+        // Construction scaffolding graphic
+        const scaffoldGfx = this.add.graphics();
+        scaffoldGfx.fillStyle(0xc8a050, 0.6);
+        const bw = TILE_W * 0.4;
+        const bh = TILE_H * 0.8;
+        scaffoldGfx.fillRect(-bw / 2, -bh - 10 * DPR, bw, bh);
+        // Cross beams
+        scaffoldGfx.lineStyle(2 * DPR, 0x8a6020, 0.8);
+        scaffoldGfx.lineBetween(-bw / 2, -bh - 10 * DPR, bw / 2, -10 * DPR);
+        scaffoldGfx.lineBetween(bw / 2, -bh - 10 * DPR, -bw / 2, -10 * DPR);
+        container.add(scaffoldGfx);
+
+        // Timer text
+        const timerText = this.add.text(0, -bh - 20 * DPR, '', {
+            fontSize: `${14 * DPR}px`,
+            color: '#ffffff',
+            fontFamily: 'Fredoka, system-ui, sans-serif',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3 * DPR,
+            resolution: window.devicePixelRatio || 3,
+        }).setOrigin(0.5);
+        container.add(timerText);
+
+        // Progress bar background
+        const barW = TILE_W * 0.6;
+        const barH = 8 * DPR;
+        const barY = -bh - 30 * DPR;
+        const barBg = this.add.graphics();
+        barBg.fillStyle(0x333333, 0.7);
+        barBg.fillRoundedRect(-barW / 2, barY, barW, barH, 3 * DPR);
+        container.add(barBg);
+
+        const barFill = this.add.graphics();
+        container.add(barFill);
+
+        // Store the building state start time
+        const storeState = useGameStore.getState().buildings[buildingId];
+        const startedAt = storeState?.constructionStartedAt ?? Date.now();
+
+        // Update timer every second
+        const timerEvent = this.time.addEvent({
+            delay: 500,
+            loop: true,
+            callback: () => {
+                const elapsed = Date.now() - startedAt;
+                const remaining = Math.max(0, CONSTRUCTION_TIME_MS - elapsed);
+                const progress = Math.min(1, elapsed / CONSTRUCTION_TIME_MS);
+
+                const mins = Math.floor(remaining / 60000);
+                const secs = Math.floor((remaining % 60000) / 1000);
+                timerText.setText(`${mins}:${secs.toString().padStart(2, '0')}`);
+
+                // Update progress bar
+                barFill.clear();
+                barFill.fillStyle(0x44cc66, 0.9);
+                barFill.fillRoundedRect(-barW / 2, barY, barW * progress, barH, 3 * DPR);
+
+                if (remaining <= 0) {
+                    timerEvent.destroy();
+                }
+            },
+        });
+
+        // Pulsing animation on scaffold
+        this.tweens.add({
+            targets: scaffoldGfx,
+            alpha: { from: 0.6, to: 0.9 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+
+        this.constructionSprites.set(buildingId, container);
+    }
+
+    private onConstructionComplete(buildingId: string, row: number, col: number) {
+        // Remove construction placeholder
+        const container = this.constructionSprites.get(buildingId);
+        if (container) {
+            container.destroy();
+            this.constructionSprites.delete(buildingId);
+        }
+
+        // Place the actual building sprite
+        const def = DATA_BUILDINGS.find(b => b.id === buildingId);
+        if (!def) return;
+
+        const { x, y } = this.toScreen(row, col);
+        const depth = (row + col) * 10;
+
+        // Shadow
+        if (!this.textures.exists('shadow_gradient')) {
+            this.createShadowTexture();
+        }
+        const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
+        shadow.setDisplaySize(TILE_W * 1.3, TILE_H * 0.8);
+        shadow.setDepth(depth);
+
+        // Building sprite
+        if (this.textures.exists(def.spriteKey)) {
+            const bx = x + (def.offX || 0) * DPR;
+            const by = y + (def.offY || 0) * DPR;
+            const sprite = this.add.image(bx, by, def.spriteKey);
+            const scale = TILE_W * def.scale / sprite.width;
+            sprite.setScale(scale);
+            sprite.setOrigin(0.5, def.originY);
+            sprite.setDepth(depth + 2);
+
+            // Pop-in animation
+            sprite.setScale(0);
+            this.tweens.add({
+                targets: sprite,
+                scaleX: scale,
+                scaleY: scale,
+                duration: 400,
+                ease: 'Back.easeOut',
+            });
+
+            // Label
+            const topY = y - sprite.displayHeight * 0.5;
+            const labelPosY = topY - 18 * DPR;
+            const baseFontSize = 13 * DPR;
+
+            const labelText = this.add.text(x, labelPosY, def.name, {
+                fontSize: `${baseFontSize}px`,
+                color: '#ffffff',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 3 * DPR,
+                resolution: window.devicePixelRatio || 3,
+            }).setOrigin(0.5).setDepth(depth + 6);
+
+            this.labels.push({ text: labelText, x, y: labelPosY, baseFontSize });
+            this.updateLabels(this.cameras.main.zoom);
+        }
+    }
+
+    private restoreConstructions() {
+        // Restore any in-progress constructions from store
+        const storeBuildings = useGameStore.getState().buildings;
+        for (const [id, bs] of Object.entries(storeBuildings)) {
+            if (!bs.built && bs.constructionStartedAt && bs.position) {
+                const elapsed = Date.now() - bs.constructionStartedAt;
+                if (elapsed < CONSTRUCTION_TIME_MS) {
+                    this.placeConstructionPlaceholder(id, bs.position.row, bs.position.col);
+                } else {
+                    // Construction should have completed - complete it now
+                    useGameStore.getState().completeConstruction(id);
+                }
+            }
+        }
+    }
+
     public goToGiftBox() {
         // Find the gift box building
         const giftBox = BUILDINGS.find(b => b.isGiftBox);
@@ -452,8 +769,14 @@ export class GameScene extends Scene {
             }
         });
 
-        this.input.on('pointerup', () => {
+        this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             lastPinchDist = 0;
+
+            // If we didn't drag, treat as a tap for build mode
+            if (!this.isDragging && useGameStore.getState().buildMode) {
+                const worldPoint = cam.getWorldPoint(pointer.x, pointer.y);
+                this.handleTileTap(worldPoint.x, worldPoint.y);
+            }
         });
 
         // Inertia - smooth deceleration after drag

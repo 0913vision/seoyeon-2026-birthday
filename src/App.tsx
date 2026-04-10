@@ -7,6 +7,8 @@ import { BuildMenu } from './components/BuildMenu';
 import { DialogBox } from './components/DialogBox';
 import { DIALOGUES } from './data/dialogues';
 import { loadGame, applyLoadedData } from './services/db';
+import { EventBus } from './game/EventBus';
+import { GameScene } from './game/scenes/GameScene';
 
 function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
@@ -16,6 +18,9 @@ function App() {
 
     const addResource = useGameStore(s => s.addResource);
     const resources = useGameStore(s => s.resources);
+    const buildMode = useGameStore(s => s.buildMode);
+    const exitBuildMode = useGameStore(s => s.exitBuildMode);
+    const startConstruction = useGameStore(s => s.startConstruction);
 
     // Load from DB on mount
     useEffect(() => {
@@ -26,6 +31,24 @@ function App() {
             }
         });
     }, []);
+
+    // Handle tile tap from Phaser (build mode)
+    useEffect(() => {
+        const handler = ({ buildingId, row, col }: { buildingId: string; row: number; col: number }) => {
+            startConstruction(buildingId, row, col);
+
+            // Tell Phaser to show construction placeholder
+            if (phaserRef.current?.scene) {
+                const scene = phaserRef.current.scene as GameScene;
+                if (scene.placeConstructionPlaceholder) {
+                    scene.placeConstructionPlaceholder(buildingId, row, col);
+                }
+            }
+        };
+
+        EventBus.on('tile-tapped', handler);
+        return () => { EventBus.off('tile-tapped', handler); };
+    }, [startConstruction]);
 
     // Expose for console/test
     useEffect(() => {
@@ -60,6 +83,25 @@ function App() {
             <div className="absolute inset-0 pointer-events-none flex flex-col">
                 <TopBar />
                 <div className="flex-1" />
+
+                {/* Build Mode indicator */}
+                {buildMode && (
+                    <div className="pointer-events-auto" style={{
+                        position: 'absolute', top: '80px', left: '50%', transform: 'translateX(-50%)',
+                        background: 'rgba(34,197,94,0.92)', color: '#fff', padding: '10px 24px',
+                        borderRadius: '16px', fontSize: '15px', fontFamily: 'Fredoka, sans-serif',
+                        fontWeight: 700, whiteSpace: 'nowrap', zIndex: 10,
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                    }}>
+                        <span>{'\uD83D\uDCCD'} {'\uBE48 \uD0C0\uC77C\uC744 \uD0ED\uD558\uC5EC \uAC74\uBB3C\uC744 \uBC30\uCE58\uD558\uC138\uC694'}</span>
+                        <button onClick={exitBuildMode} style={{
+                            background: 'rgba(255,255,255,0.25)', border: '2px solid rgba(255,255,255,0.5)',
+                            borderRadius: '10px', color: '#fff', padding: '4px 12px', fontSize: '13px',
+                            fontWeight: 700, cursor: 'pointer',
+                        }}>{'\uCDE8\uC18C'}</button>
+                    </div>
+                )}
 
                 {/* Build Menu backdrop + panel */}
                 {showBuildMenu && (

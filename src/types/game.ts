@@ -62,6 +62,7 @@ export interface GameProgress {
 export interface BuildingState {
     built: boolean;
     position?: { row: number; col: number };
+    constructionStartedAt?: number | null;
 }
 
 export interface CraftingState {

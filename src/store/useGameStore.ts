@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { ResourceState, BuildingState, CraftingState } from '../types/game';
 import { INITIAL_RESOURCES } from '../data/resources';
+import { BUILDINGS } from '../data/buildings';
+
+const CONSTRUCTION_TIME_MS = 180_000; // 3 minutes
 
 interface GameState {
     // Progress
@@ -30,6 +33,7 @@ interface GameState {
     dialogLineIndex: number;
     showBuildMenu: boolean;
     resDelta: { id: string; delta: number; key: number } | null;
+    buildMode: { buildingId: string } | null;
 
     // Actions
     addResource: (id: string, amount: number) => void;
@@ -43,6 +47,12 @@ interface GameState {
     setBoxStage: (stage: number) => void;
     startPackaging: () => void;
     harvestBox: () => void;
+
+    // Build mode actions
+    enterBuildMode: (buildingId: string) => void;
+    exitBuildMode: () => void;
+    startConstruction: (buildingId: string, row: number, col: number) => void;
+    completeConstruction: (buildingId: string) => void;
 
     // UI actions
     openDialog: (sceneId: string) => void;
@@ -85,6 +95,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     dialogLineIndex: 0,
     showBuildMenu: false,
     resDelta: null,
+    buildMode: null,
 
     // Resource actions
     addResource: (id, amount) => {
@@ -125,6 +136,61 @@ export const useGameStore = create<GameState>((set, get) => ({
             buildings: {
                 ...state.buildings,
                 [id]: { ...state.buildings[id], built: true },
+            },
+        }));
+    },
+
+    // Build mode actions
+    enterBuildMode: (buildingId) => {
+        set({ buildMode: { buildingId }, showBuildMenu: false });
+    },
+
+    exitBuildMode: () => {
+        set({ buildMode: null });
+    },
+
+    startConstruction: (buildingId, row, col) => {
+        const state = get();
+        const def = BUILDINGS.find(b => b.id === buildingId);
+        if (!def) return;
+
+        // Deduct resources
+        const newResources = { ...state.resources };
+        for (const c of def.cost) {
+            newResources[c.res] = {
+                ...newResources[c.res],
+                amount: Math.max(0, newResources[c.res].amount - c.amount),
+            };
+        }
+
+        set({
+            resources: newResources,
+            buildings: {
+                ...state.buildings,
+                [buildingId]: {
+                    built: false,
+                    position: { row, col },
+                    constructionStartedAt: Date.now(),
+                },
+            },
+            buildMode: null,
+        });
+
+        // Schedule completion
+        setTimeout(() => {
+            get().completeConstruction(buildingId);
+        }, CONSTRUCTION_TIME_MS);
+    },
+
+    completeConstruction: (buildingId) => {
+        set(state => ({
+            buildings: {
+                ...state.buildings,
+                [buildingId]: {
+                    ...state.buildings[buildingId],
+                    built: true,
+                    constructionStartedAt: null,
+                },
             },
         }));
     },

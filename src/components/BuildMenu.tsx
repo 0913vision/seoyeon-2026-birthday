@@ -10,6 +10,8 @@ export function BuildMenu({ onClose }: { onClose: () => void }) {
     const buildings = useGameStore(s => s.buildings);
     const currentDay = useGameStore(s => s.currentDay);
 
+    const enterBuildMode = useGameStore(s => s.enterBuildMode);
+
     const handleCardTap = (item: typeof BUILDABLE[0], affordable: boolean, available: boolean) => {
         if (!available) return;
         if (!affordable) {
@@ -17,7 +19,8 @@ export function BuildMenu({ onClose }: { onClose: () => void }) {
             setTimeout(() => setToast(''), 2000);
             return;
         }
-        // TODO: enter build placement mode
+        enterBuildMode(item.id);
+        onClose();
     };
 
     return (
@@ -46,8 +49,10 @@ export function BuildMenu({ onClose }: { onClose: () => void }) {
                 }}>
                     {BUILDABLE.map(item => {
                         const imgSrc = `assets/generated/buildings/${item.id}.png`;
-                        const built = buildings[item.id]?.built ?? false;
-                        const available = item.unlockDay <= currentDay && !built;
+                        const bState = buildings[item.id];
+                        const built = bState?.built ?? false;
+                        const underConstruction = !built && bState?.constructionStartedAt != null;
+                        const available = item.unlockDay <= currentDay && !built && !underConstruction;
                         const affordable = available && item.cost.every(c => resources[c.res]?.amount >= c.amount);
                         const isLocked = !available && !built;
                         const isPressed = pressed === item.id;
@@ -113,6 +118,13 @@ export function BuildMenu({ onClose }: { onClose: () => void }) {
                                             width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: '14px', fontWeight: 700, border: '2px solid #fff',
                                         }}>{'\u2713'}</span>
+                                    )}
+                                    {underConstruction && (
+                                        <div style={{
+                                            position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)',
+                                            background: 'rgba(245,158,11,0.9)', color: '#fff', fontSize: '10px',
+                                            padding: '1px 8px', borderRadius: '8px', fontWeight: 700,
+                                        }}>{'\uAC74\uC124 \uC911...'}</div>
                                     )}
                                     {/* Insufficient overlay */}
                                     {available && !affordable && !built && (
