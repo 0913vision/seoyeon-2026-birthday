@@ -16,25 +16,38 @@
             padding: 8px 4px; border-radius: 8px; position: relative; overflow: visible;
             background: linear-gradient(180deg, #4a3520 0%, #3a2815 100%);
             border: 2px solid #5a4530;
+            min-width: 0;
         }
         .res-slot.locked { background: rgba(30,20,10,0.5); border-color: rgba(50,40,30,0.5); }
         .res-slot img { width: 20px; height: 20px; object-fit: contain; }
         .res-val { font-family: 'Fredoka', sans-serif; font-size: 15px; color: #fde68a; }
         .res-slot.locked .res-val { color: rgba(255,255,255,0.25); }
 
-        /* Delta animation */
+        /* Delta animation - floats down */
         .delta {
-            position: absolute; top: -18px; left: 50%; font-family: 'Fredoka', sans-serif;
+            position: absolute; bottom: -20px; left: 50%; font-family: 'Fredoka', sans-serif;
             font-size: 14px; font-weight: 700; pointer-events: none; white-space: nowrap;
-            animation: floatUp 1.2s ease-out forwards;
+            animation: floatDown 1.2s ease-out forwards;
         }
         .delta.plus { color: #4ade80; }
         .delta.minus { color: #f87171; }
 
-        @keyframes floatUp {
+        @keyframes floatDown {
             0% { opacity: 1; transform: translateX(-50%) translateY(0); }
             70% { opacity: 1; }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-24px); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        }
+
+        /* Value bounce */
+        .res-val.bounce {
+            animation: valBounce 0.3s ease-out;
+        }
+
+        @keyframes valBounce {
+            0% { transform: translateY(0); }
+            30% { transform: translateY(4px); }
+            60% { transform: translateY(-2px); }
+            100% { transform: translateY(0); }
         }
 
         /* Controls */
@@ -106,9 +119,12 @@
 
             r.amount = Math.max(0, r.amount + delta);
 
-            // Update displays
+            // Update displays with bounce
             const valEl = document.getElementById('val-' + id);
             valEl.textContent = r.unlocked ? r.amount.toLocaleString() : '🔒';
+            valEl.classList.remove('bounce');
+            void valEl.offsetWidth; // force reflow
+            valEl.classList.add('bounce');
 
             const ctrlEl = document.getElementById('ctrl-' + id);
             ctrlEl.textContent = r.amount.toLocaleString();

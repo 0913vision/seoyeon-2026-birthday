@@ -173,14 +173,14 @@ function TopBar({ resources, resDelta }: { resources: ResourceState; resDelta: {
                                     key={Date.now()}
                                     style={{
                                         position: 'absolute',
-                                        top: '-18px',
+                                        bottom: '-20px',
                                         left: '50%',
                                         transform: 'translateX(-50%)',
                                         fontFamily: 'Fredoka, sans-serif',
                                         fontSize: '13px',
                                         fontWeight: 700,
                                         color: resDelta.delta > 0 ? '#4ade80' : '#f87171',
-                                        animation: 'floatUp 1.2s ease-out forwards',
+                                        animation: 'floatDown 1.2s ease-out forwards',
                                         pointerEvents: 'none',
                                         whiteSpace: 'nowrap',
                                     }}>
