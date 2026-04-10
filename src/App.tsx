@@ -281,7 +281,7 @@ function BuildMenu({ onClose }: { onClose: () => void }) {
                             <div key={item.id} style={{
                                 scrollSnapAlign: 'center',
                                 flexShrink: 0,
-                                width: '120px',
+                                width: '140px',
                                 background: item.available
                                     ? 'linear-gradient(180deg, #f5e6c8 0%, #e0c898 100%)'
                                     : '#5a5550',
@@ -293,44 +293,44 @@ function BuildMenu({ onClose }: { onClose: () => void }) {
                             }}>
                                 {/* Large building image */}
                                 <div style={{
-                                    height: '90px',
+                                    height: '110px',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     background: item.available ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.2)',
                                 }}>
                                     <img src={imgSrc} alt={item.name} style={{
-                                        width: '80px', height: '80px', objectFit: 'contain',
+                                        width: '100px', height: '100px', objectFit: 'contain',
                                         opacity: item.available ? 1 : 0.3,
                                     }} />
                                     {!item.available && !item.built && (
-                                        <span style={{ position: 'absolute', fontSize: '28px', opacity: 0.6 }}>🔒</span>
+                                        <span style={{ position: 'absolute', fontSize: '32px', opacity: 0.6 }}>🔒</span>
                                     )}
                                     {item.built && (
                                         <span style={{
                                             position: 'absolute', top: '4px', right: '4px',
                                             background: '#4cd964', color: '#fff', borderRadius: '50%',
-                                            width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '13px', fontWeight: 700, border: '2px solid #fff',
+                                            width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '14px', fontWeight: 700, border: '2px solid #fff',
                                         }}>✓</span>
                                     )}
                                 </div>
 
                                 {/* Bottom: name + cost */}
                                 <div style={{
-                                    padding: '6px 8px',
+                                    padding: '8px 8px',
                                     background: item.available ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.3)',
                                 }}>
                                     <div style={{
-                                        fontFamily: 'Fredoka, sans-serif', fontSize: '13px', fontWeight: 700,
+                                        fontFamily: 'Fredoka, sans-serif', fontSize: '15px', fontWeight: 700,
                                         color: item.available ? '#3a2810' : '#aaa', textAlign: 'center',
                                     }}>
                                         {item.name}
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '4px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '5px' }}>
                                         {item.cost.map((c, i) => (
-                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                                                <img src={c.img} alt={c.res} style={{ width: '12px', height: '12px' }} />
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                <img src={c.img} alt={c.res} style={{ width: '16px', height: '16px' }} />
                                                 <span style={{
-                                                    fontSize: '11px', fontFamily: 'Fredoka, sans-serif', fontWeight: 700,
+                                                    fontSize: '14px', fontFamily: 'Fredoka, sans-serif', fontWeight: 700,
                                                     color: item.available ? '#5a4a30' : '#888',
                                                 }}>{c.amount.toLocaleString()}</span>
                                             </div>
