@@ -325,34 +325,25 @@ function DialogBox({ text, action, onTap, isLast }: { text: string; action?: str
                     overflow: 'hidden',
                 }}>
                     {displayedText}
+                    {animDone && action && (
+                        <span style={{ color: '#fbbf24', fontSize: '12px' }}>
+                            {'\n'}({action})
+                        </span>
+                    )}
                 </div>
 
-                {/* Action guide or tap indicator */}
-                {animDone && (
-                    <>
-                        {action && (
-                            <div style={{
-                                fontSize: '12px',
-                                color: '#fbbf24',
-                                fontFamily: 'system-ui, sans-serif',
-                                marginTop: '4px',
-                            }}>
-                                ({action})
-                            </div>
-                        )}
-                        {!action && (
-                            <div style={{
-                                position: 'absolute',
-                                bottom: '8px',
-                                right: '14px',
-                                fontSize: '11px',
-                                color: '#8a7a60',
-                                fontFamily: 'Fredoka, sans-serif',
-                            }}>
-                                ▼
-                            </div>
-                        )}
-                    </>
+                {/* Tap indicator */}
+                {animDone && !action && (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        right: '14px',
+                        fontSize: '11px',
+                        color: '#8a7a60',
+                        fontFamily: 'Fredoka, sans-serif',
+                    }}>
+                        ▼
+                    </div>
                 )}
             </div>
         </div>
