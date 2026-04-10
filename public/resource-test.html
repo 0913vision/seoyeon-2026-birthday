@@ -2,101 +2,130 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>자원 테스트</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>자원 애니메이션 테스트</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #111; color: #fff; font-family: system-ui; padding: 20px; }
-        h1 { font-size: 16px; color: #8ab4d8; margin-bottom: 16px; text-align: center; }
-        .info { font-size: 12px; color: #666; text-align: center; margin-bottom: 20px; }
-        .res-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 10px; background: #1a1a1a; border-radius: 10px; }
-        .res-icon { width: 32px; height: 32px; object-fit: contain; }
-        .res-name { width: 60px; font-size: 14px; font-weight: bold; }
-        .res-amount { width: 60px; text-align: right; font-family: monospace; font-size: 16px; color: #4ade80; }
-        button { padding: 8px 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        body { background: #2d5a3f; font-family: system-ui; color: #fff; height: 100dvh; display: flex; flex-direction: column; }
+
+        /* Resource bar - same as game */
+        .res-bar { display: flex; gap: 4px; padding: 8px 12px; }
+        .res-slot {
+            flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
+            padding: 8px 4px; border-radius: 8px; position: relative; overflow: visible;
+            background: linear-gradient(180deg, #4a3520 0%, #3a2815 100%);
+            border: 2px solid #5a4530;
+        }
+        .res-slot.locked { background: rgba(30,20,10,0.5); border-color: rgba(50,40,30,0.5); }
+        .res-slot img { width: 20px; height: 20px; object-fit: contain; }
+        .res-val { font-family: 'Fredoka', sans-serif; font-size: 15px; color: #fde68a; }
+        .res-slot.locked .res-val { color: rgba(255,255,255,0.25); }
+
+        /* Delta animation */
+        .delta {
+            position: absolute; top: -18px; left: 50%; font-family: 'Fredoka', sans-serif;
+            font-size: 14px; font-weight: 700; pointer-events: none; white-space: nowrap;
+            animation: floatUp 1.2s ease-out forwards;
+        }
+        .delta.plus { color: #4ade80; }
+        .delta.minus { color: #f87171; }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            70% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-24px); }
+        }
+
+        /* Controls */
+        .spacer { flex: 1; }
+        .controls { background: #111; padding: 16px; overflow-y: auto; }
+        .res-control { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px; background: #1a1a1a; border-radius: 10px; }
+        .res-control img { width: 28px; height: 28px; }
+        .res-control .name { width: 50px; font-size: 13px; font-weight: bold; }
+        .res-control .amount { width: 60px; text-align: right; font-family: monospace; font-size: 15px; color: #4ade80; }
+        .btns { display: flex; gap: 4px; flex: 1; justify-content: flex-end; }
+        .btn { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .btn-add { background: #22c55e; color: #fff; }
         .btn-sub { background: #ef4444; color: #fff; }
-        .btn-sm { padding: 6px 10px; font-size: 12px; }
-        .actions { display: flex; gap: 4px; flex: 1; justify-content: flex-end; }
-        .note { font-size: 11px; color: #555; text-align: center; margin-top: 16px; }
     </style>
 </head>
 <body>
-    <h1>💎 자원 변동 테스트</h1>
-    <div class="info">게임 화면(/)에서 이 페이지를 별도 탭으로 열어주세요.<br>버튼을 누르면 게임의 자원이 변동됩니다.</div>
+    <!-- Fake resource bar (same design as game) -->
+    <div class="res-bar" id="resBar"></div>
 
-    <div id="resources"></div>
-
-    <div class="note">
-        게임 화면이 열려 있어야 합니다. 같은 브라우저의 다른 탭에서 / 를 열어주세요.<br>
-        이 페이지는 window.__addResource()를 호출합니다.
+    <div class="spacer" style="display:flex;align-items:center;justify-content:center;color:#4a7a5a;font-size:13px;">
+        아래 버튼으로 자원을 추가/제거하세요
     </div>
+
+    <!-- Controls -->
+    <div class="controls" id="controls"></div>
 
     <script>
         const RES = [
-            { id: 'wood', name: '나무', img: 'assets/generated/resources/wood.png' },
-            { id: 'flower', name: '꽃', img: 'assets/generated/resources/flower.png' },
-            { id: 'stone', name: '돌', img: 'assets/generated/resources/stone.png' },
-            { id: 'metal', name: '금속', img: 'assets/generated/resources/metal.png' },
-            { id: 'gem', name: '보석', img: 'assets/generated/resources/gem.png' },
+            { id: 'wood', name: '나무', img: 'assets/generated/resources/wood.png', amount: 1200, unlocked: true },
+            { id: 'flower', name: '꽃', img: 'assets/generated/resources/flower.png', amount: 400, unlocked: true },
+            { id: 'stone', name: '돌', img: 'assets/generated/resources/stone.png', amount: 600, unlocked: true },
+            { id: 'metal', name: '금속', img: 'assets/generated/resources/metal.png', amount: 0, unlocked: false },
+            { id: 'gem', name: '보석', img: 'assets/generated/resources/gem.png', amount: 0, unlocked: false },
         ];
 
-        // Try to get game window reference
-        let gameWindow = null;
-
-        function findGameWindow() {
-            // Try opener
-            if (window.opener && window.opener.__addResource) {
-                gameWindow = window.opener;
-                return true;
-            }
-            // Try same window (if opened in iframe or same page)
-            if (window.__addResource) {
-                gameWindow = window;
-                return true;
-            }
-            return false;
+        function renderBar() {
+            document.getElementById('resBar').innerHTML = RES.map(r => `
+                <div class="res-slot ${r.unlocked ? '' : 'locked'}" id="slot-${r.id}">
+                    <img src="${r.img}" alt="${r.name}">
+                    <span class="res-val" id="val-${r.id}">${r.unlocked ? r.amount.toLocaleString() : '🔒'}</span>
+                </div>
+            `).join('');
         }
 
-        function addRes(id, amount) {
-            if (!findGameWindow()) {
-                alert('게임 화면을 먼저 열어주세요!\n이 페이지를 게임 페이지에서 window.open()으로 열거나,\n같은 탭에서 테스트하세요.');
-                return;
-            }
-            gameWindow.__addResource(id, amount);
-            updateDisplay();
-        }
-
-        function updateDisplay() {
-            if (!findGameWindow()) return;
-            const res = gameWindow.__getResources();
-            RES.forEach(r => {
-                const el = document.getElementById('amount-' + r.id);
-                if (el && res[r.id]) {
-                    el.textContent = res[r.id].amount.toLocaleString();
-                }
-            });
-        }
-
-        function render() {
-            const container = document.getElementById('resources');
-            container.innerHTML = RES.map(r => `
-                <div class="res-row">
-                    <img class="res-icon" src="${r.img}" alt="${r.name}">
-                    <span class="res-name">${r.name}</span>
-                    <span class="res-amount" id="amount-${r.id}">-</span>
-                    <div class="actions">
-                        <button class="btn-sub btn-sm" onclick="addRes('${r.id}', -100)">-100</button>
-                        <button class="btn-sub btn-sm" onclick="addRes('${r.id}', -500)">-500</button>
-                        <button class="btn-add btn-sm" onclick="addRes('${r.id}', +100)">+100</button>
-                        <button class="btn-add btn-sm" onclick="addRes('${r.id}', +500)">+500</button>
+        function renderControls() {
+            document.getElementById('controls').innerHTML = RES.map(r => `
+                <div class="res-control">
+                    <img src="${r.img}" alt="${r.name}">
+                    <span class="name">${r.name}</span>
+                    <span class="amount" id="ctrl-${r.id}">${r.amount.toLocaleString()}</span>
+                    <div class="btns">
+                        <button class="btn btn-sub" onclick="change('${r.id}', -100)">-100</button>
+                        <button class="btn btn-sub" onclick="change('${r.id}', -500)">-500</button>
+                        <button class="btn btn-add" onclick="change('${r.id}', +100)">+100</button>
+                        <button class="btn btn-add" onclick="change('${r.id}', +500)">+500</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        render();
-        setInterval(updateDisplay, 500);
+        function change(id, delta) {
+            const r = RES.find(x => x.id === id);
+            if (!r) return;
+
+            // Unlock if adding to locked resource
+            if (!r.unlocked && delta > 0) {
+                r.unlocked = true;
+            }
+
+            r.amount = Math.max(0, r.amount + delta);
+
+            // Update displays
+            const valEl = document.getElementById('val-' + id);
+            valEl.textContent = r.unlocked ? r.amount.toLocaleString() : '🔒';
+
+            const ctrlEl = document.getElementById('ctrl-' + id);
+            ctrlEl.textContent = r.amount.toLocaleString();
+
+            const slotEl = document.getElementById('slot-' + id);
+            slotEl.classList.toggle('locked', !r.unlocked);
+
+            // Show delta animation
+            const deltaEl = document.createElement('span');
+            deltaEl.className = 'delta ' + (delta > 0 ? 'plus' : 'minus');
+            deltaEl.textContent = (delta > 0 ? '+' : '') + delta.toLocaleString();
+            slotEl.appendChild(deltaEl);
+            setTimeout(() => deltaEl.remove(), 1300);
+        }
+
+        renderBar();
+        renderControls();
     </script>
 </body>
 </html>
