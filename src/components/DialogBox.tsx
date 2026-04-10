@@ -71,7 +71,7 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
                             height: '34px',
                             borderRadius: '50%',
                             background: 'linear-gradient(180deg, #8ab8d0 0%, #6a98b0 100%)',
-                            border: '2px solid #4a7898',
+                            border: '2px solid #5a98b8',
                             boxShadow: '0 0 8px rgba(120,200,255,0.35)',
                             fontSize: '17px',
                         }}
@@ -81,7 +81,7 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
                     <span style={{
                         fontFamily: 'Fredoka, sans-serif',
                         fontSize: '15px',
-                        color: '#3a7090',
+                        color: '#2a5a78',
                         fontWeight: 700,
                         textShadow: '0 0 6px rgba(120,200,255,0.4)',
                     }}>
