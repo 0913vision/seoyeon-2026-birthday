@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { IRefPhaserGame, PhaserGame } from './PhaserGame';
 
 const RESOURCES = [
@@ -225,67 +225,113 @@ function ActionButton({
 }
 
 function DialogBox({ text, onTap, isLast }: { text: string; onTap: () => void; isLast: boolean }) {
+    const [displayedText, setDisplayedText] = useState('');
+    const [isAnimating, setIsAnimating] = useState(true);
+    const animRef = useRef<number | null>(null);
+    const indexRef = useRef(0);
+
+    // Reset animation when text changes
+    useEffect(() => {
+        setDisplayedText('');
+        setIsAnimating(true);
+        indexRef.current = 0;
+
+        const animate = () => {
+            indexRef.current++;
+            if (indexRef.current <= text.length) {
+                setDisplayedText(text.substring(0, indexRef.current));
+                animRef.current = window.setTimeout(animate, 40);
+            } else {
+                setIsAnimating(false);
+            }
+        };
+        animRef.current = window.setTimeout(animate, 40);
+
+        return () => {
+            if (animRef.current) clearTimeout(animRef.current);
+        };
+    }, [text]);
+
+    const handleTap = useCallback(() => {
+        if (isAnimating) {
+            // Skip animation - show full text
+            if (animRef.current) clearTimeout(animRef.current);
+            setDisplayedText(text);
+            setIsAnimating(false);
+        } else {
+            onTap();
+        }
+    }, [isAnimating, text, onTap]);
+
     return (
         <div
             className="pointer-events-auto mx-3 mb-2"
-            onClick={onTap}
+            onClick={handleTap}
             style={{ cursor: 'pointer' }}
         >
-            <div className="flex items-end gap-2">
-                {/* Choco icon placeholder */}
-                <div
-                    className="shrink-0 flex items-center justify-center"
-                    style={{
-                        width: '52px',
-                        height: '52px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(180deg, #8B6914 0%, #6B4F10 100%)',
-                        border: '3px solid #4a3520',
-                        fontSize: '24px',
-                    }}
-                >
-                    🐶
-                </div>
-
-                {/* Speech bubble */}
-                <div className="flex-1 relative"
-                     style={{
-                         background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(240,235,225,0.95) 100%)',
-                         borderRadius: '16px 16px 16px 4px',
-                         border: '2px solid #c0a878',
-                         padding: '12px 16px',
-                         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                     }}>
-                    {/* Name */}
-                    <div style={{
+            <div
+                style={{
+                    background: 'linear-gradient(180deg, #3a2818 0%, #2a1c10 100%)',
+                    borderRadius: '14px',
+                    border: '2px solid #5a4530',
+                    padding: '14px 16px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    height: '120px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative',
+                }}
+            >
+                {/* Top row: icon + name */}
+                <div className="flex items-center gap-2" style={{ marginBottom: '8px' }}>
+                    <div
+                        className="shrink-0 flex items-center justify-center"
+                        style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(180deg, #a07820 0%, #7a5a14 100%)',
+                            border: '2px solid #5a4520',
+                            fontSize: '16px',
+                        }}
+                    >
+                        🐶
+                    </div>
+                    <span style={{
                         fontFamily: 'Fredoka, sans-serif',
-                        fontSize: '12px',
-                        color: '#8B6914',
+                        fontSize: '14px',
+                        color: '#e8c878',
                         fontWeight: 700,
-                        marginBottom: '4px',
                     }}>
                         초코
-                    </div>
-                    {/* Text */}
-                    <div style={{
-                        fontFamily: 'system-ui, sans-serif',
-                        fontSize: '14px',
-                        color: '#2a2015',
-                        lineHeight: '1.5',
-                    }}>
-                        {text}
-                    </div>
-                    {/* Tap indicator */}
+                    </span>
+                </div>
+
+                {/* Text area - fixed height */}
+                <div style={{
+                    flex: 1,
+                    fontFamily: 'system-ui, sans-serif',
+                    fontSize: '14px',
+                    color: '#e8dcc8',
+                    lineHeight: '1.6',
+                    overflow: 'hidden',
+                }}>
+                    {displayedText}
+                </div>
+
+                {/* Tap indicator */}
+                {!isAnimating && (
                     <div style={{
                         position: 'absolute',
-                        bottom: '6px',
-                        right: '10px',
-                        fontSize: '10px',
-                        color: '#a09080',
+                        bottom: '8px',
+                        right: '14px',
+                        fontSize: '11px',
+                        color: '#8a7a60',
+                        fontFamily: 'Fredoka, sans-serif',
                     }}>
-                        {isLast ? '[ 확인 ]' : '▼ 탭'}
+                        {isLast ? '[ 확인 ]' : '▼'}
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
