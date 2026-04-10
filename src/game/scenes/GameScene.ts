@@ -419,18 +419,16 @@ export class GameScene extends Scene {
 
     private initOccupiedTiles() {
         this.occupiedTiles.clear();
-        // Mark all building positions as occupied (from BUILDINGS data + store)
-        for (const b of BUILDINGS) {
-            this.occupiedTiles.add(`${b.row},${b.col}`);
-        }
-        // Also mark path tiles as occupied
-        for (const key of Object.keys(TILE_MAP)) {
-            this.occupiedTiles.add(key);
-        }
-        // Mark store buildings that have positions
+        // Mark only built buildings from store as occupied
         const storeBuildings = useGameStore.getState().buildings;
         for (const [, bs] of Object.entries(storeBuildings)) {
-            if (bs.position) {
+            if (bs.built && bs.position) {
+                this.occupiedTiles.add(`${bs.position.row},${bs.position.col}`);
+            }
+        }
+        // Also mark in-progress constructions
+        for (const [, bs] of Object.entries(storeBuildings)) {
+            if (bs.position && bs.constructionStartedAt) {
                 this.occupiedTiles.add(`${bs.position.row},${bs.position.col}`);
             }
         }
@@ -467,16 +465,20 @@ export class GameScene extends Scene {
         if (!this.buildHighlights) return;
         this.buildHighlights.clear();
         this.buildHighlights.setVisible(true);
+        // Above terrain (depth 0) but below buildings
+        this.buildHighlights.setDepth(1);
 
-        // Highlight tiles: green = buildable, red = occupied
+        // Highlight tiles: bright green = buildable, bright red = occupied
         for (let row = 0; row < GRID_SIZE; row++) {
             for (let col = 0; col < GRID_SIZE; col++) {
                 const key = `${row},${col}`;
                 const occupied = this.occupiedTiles.has(key);
                 const { x, y } = this.toScreen(row, col);
 
-                // Fill
-                this.buildHighlights.fillStyle(occupied ? 0xff4444 : 0x44ff88, occupied ? 0.2 : 0.3);
+                // Solid fill - more vivid
+                const fillColor = occupied ? 0xff2030 : 0x40ff60;
+                const fillAlpha = occupied ? 0.45 : 0.55;
+                this.buildHighlights.fillStyle(fillColor, fillAlpha);
                 this.buildHighlights.beginPath();
                 this.buildHighlights.moveTo(x, y - TILE_H / 2);
                 this.buildHighlights.lineTo(x + TILE_W / 2, y);
@@ -485,13 +487,26 @@ export class GameScene extends Scene {
                 this.buildHighlights.closePath();
                 this.buildHighlights.fillPath();
 
-                // Border
-                this.buildHighlights.lineStyle(2 * DPR, occupied ? 0xcc2222 : 0x22cc66, occupied ? 0.4 : 0.6);
+                // Thick bright border for clear tile boundary
+                const borderColor = occupied ? 0xff5060 : 0x80ff90;
+                this.buildHighlights.lineStyle(3 * DPR, borderColor, 1);
                 this.buildHighlights.beginPath();
                 this.buildHighlights.moveTo(x, y - TILE_H / 2);
                 this.buildHighlights.lineTo(x + TILE_W / 2, y);
                 this.buildHighlights.lineTo(x, y + TILE_H / 2);
                 this.buildHighlights.lineTo(x - TILE_W / 2, y);
+                this.buildHighlights.closePath();
+                this.buildHighlights.strokePath();
+
+                // Inner darker outline for depth/contrast
+                const innerColor = occupied ? 0x880010 : 0x108030;
+                this.buildHighlights.lineStyle(1 * DPR, innerColor, 0.8);
+                const inset = 2 * DPR;
+                this.buildHighlights.beginPath();
+                this.buildHighlights.moveTo(x, y - TILE_H / 2 + inset);
+                this.buildHighlights.lineTo(x + TILE_W / 2 - inset, y);
+                this.buildHighlights.lineTo(x, y + TILE_H / 2 - inset);
+                this.buildHighlights.lineTo(x - TILE_W / 2 + inset, y);
                 this.buildHighlights.closePath();
                 this.buildHighlights.strokePath();
             }
@@ -647,6 +662,9 @@ export class GameScene extends Scene {
             sprite.setOrigin(0.5, def.originY);
             sprite.setDepth(depth + 2);
 
+            // Capture full-size displayHeight BEFORE pop-in scale reset
+            const fullDisplayHeight = sprite.displayHeight;
+
             // Pop-in animation
             sprite.setScale(0);
             this.tweens.add({
@@ -657,8 +675,8 @@ export class GameScene extends Scene {
                 ease: 'Back.easeOut',
             });
 
-            // Label
-            const topY = y - sprite.displayHeight * 0.5;
+            // Label (use full-size height to match initial placement)
+            const topY = y - fullDisplayHeight * 0.5;
             const labelPosY = topY - 18 * DPR;
             const baseFontSize = 13 * DPR;
 
