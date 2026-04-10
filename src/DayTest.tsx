@@ -21,7 +21,7 @@ function DayTest() {
     const todayDialogues = DIALOGUES.filter(d => d.id.startsWith(`day${currentDay}`));
 
     return (
-        <div style={{ background: '#1a1a2e', minHeight: '100dvh', color: '#e0e0e0', fontFamily: 'Fredoka, system-ui, sans-serif' }}>
+        <div style={{ background: '#1a1a2e', height: '100dvh', color: '#e0e0e0', fontFamily: 'Fredoka, system-ui, sans-serif', overflowY: 'auto' }}>
             {/* Header */}
             <div style={{ background: '#16213e', padding: '16px', borderBottom: '2px solid #0f3460' }}>
                 <div style={{ fontSize: '20px', fontWeight: 700, color: '#e8a020' }}>Day 테스트</div>
