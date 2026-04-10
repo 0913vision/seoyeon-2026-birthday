@@ -99,7 +99,8 @@ export class GameScene extends Scene {
     private constructionSprites: Map<string, Phaser.GameObjects.Container> = new Map();
     private storeUnsub: (() => void) | null = null;
     private occupiedTiles: Set<string> = new Set();
-    private buildModeAtPointerDown = false; // was build mode active when pointer went down?
+    private buildModeAtPointerDown = false;
+    private activeTouchCount = 0; // track real touch count via native events
 
     constructor() {
         super('GameScene');
@@ -518,10 +519,6 @@ export class GameScene extends Scene {
 
         // Emit event to React to handle construction
         EventBus.emit('tile-tapped', { buildingId: state.buildMode.buildingId, row, col });
-
-        // Reset pointer states to prevent camera glitches
-        this.input.pointer1.reset();
-        this.input.pointer2.reset();
     }
 
     public placeConstructionPlaceholder(buildingId: string, row: number, col: number) {
@@ -727,6 +724,12 @@ export class GameScene extends Scene {
         const cam = this.cameras.main;
         let lastPinchDist = 0;
         let velocityX = 0;
+
+        // Track real touch count via native events (Phaser pointers get stuck)
+        const canvas = this.game.canvas;
+        canvas.addEventListener('touchstart', (e) => { this.activeTouchCount = e.touches.length; }, { passive: true });
+        canvas.addEventListener('touchend', (e) => { this.activeTouchCount = e.touches.length; }, { passive: true });
+        canvas.addEventListener('touchcancel', (e) => { this.activeTouchCount = e.touches.length; }, { passive: true });
         let velocityY = 0;
 
         const MIN_ZOOM = 0.5;
@@ -751,9 +754,8 @@ export class GameScene extends Scene {
             const pointer1 = this.input.pointer1;
             const pointer2 = this.input.pointer2;
 
-            // Only pinch zoom if BOTH pointers are actively down AND have valid positions
-            if (pointer1.isDown && pointer2.isDown && pointer1.active && pointer2.active
-                && pointer1.x !== pointer2.x && pointer1.y !== pointer2.y) {
+            // Pinch zoom: use native touch count (Phaser pointers can get stuck)
+            if (this.activeTouchCount >= 2 && pointer1.isDown && pointer2.isDown) {
                 const dist = Phaser.Math.Distance.Between(
                     pointer1.x, pointer1.y,
                     pointer2.x, pointer2.y
