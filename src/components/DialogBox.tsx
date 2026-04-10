@@ -50,12 +50,12 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
         >
             <div
                 style={{
-                    background: 'linear-gradient(180deg, #384858 0%, #283848 100%)',
+                    background: 'linear-gradient(180deg, #5a8aaa 0%, #4a7a9a 100%)',
                     borderRadius: '16px',
-                    border: '3px solid #4a6878',
-                    borderBottom: '4px solid #1a2838',
+                    border: '3px solid #7abade',
+                    borderBottom: '4px solid #3a6a8a',
                     padding: '14px 16px',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(140,200,255,0.1)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(180,220,255,0.25)',
                     height: '145px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -70,9 +70,9 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
                             width: '34px',
                             height: '34px',
                             borderRadius: '50%',
-                            background: 'linear-gradient(180deg, #6a8898 0%, #4a6070 100%)',
-                            border: '2px solid #8ab0c8',
-                            boxShadow: '0 0 8px rgba(100,180,240,0.2)',
+                            background: 'linear-gradient(180deg, #8ab8d0 0%, #6a98b0 100%)',
+                            border: '2px solid #a0d8f0',
+                            boxShadow: '0 0 8px rgba(120,200,255,0.35)',
                             fontSize: '17px',
                         }}
                     >
@@ -81,9 +81,9 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
                     <span style={{
                         fontFamily: 'Fredoka, sans-serif',
                         fontSize: '15px',
-                        color: '#a0d4f0',
+                        color: '#c0ecff',
                         fontWeight: 700,
-                        textShadow: '0 0 6px rgba(100,180,240,0.3)',
+                        textShadow: '0 0 6px rgba(120,200,255,0.4)',
                     }}>
                         콜드유
                     </span>
@@ -101,11 +101,11 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
                 }}>
                     {action && displayedText.includes('\n(') ? (
                         <>
-                            <span style={{ color: '#e0eaf0' }}>{displayedText.split('\n(')[0]}</span>
+                            <span style={{ color: '#f0f6ff' }}>{displayedText.split('\n(')[0]}</span>
                             <span style={{ color: '#fbbf24', fontSize: '12px' }}>{'\n(' + displayedText.split('\n(').slice(1).join('\n(')}</span>
                         </>
                     ) : (
-                        <span style={{ color: '#e0eaf0' }}>{displayedText}</span>
+                        <span style={{ color: '#f0f6ff' }}>{displayedText}</span>
                     )}
                 </div>
 
@@ -116,7 +116,7 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
                         bottom: '8px',
                         right: '14px',
                         fontSize: '12px',
-                        color: '#6a8898',
+                        color: '#90c0d8',
                         fontFamily: 'Fredoka, sans-serif',
                     }}>
                         ▼
