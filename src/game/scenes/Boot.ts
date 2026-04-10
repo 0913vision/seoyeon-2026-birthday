@@ -18,6 +18,9 @@ export class Boot extends Scene {
         // Gift box stages
         this.load.setPath('assets/generated/giftbox');
         this.load.image('box_empty', 'box_empty.png');
+        // Terrain tile
+        this.load.setPath('assets/generated/terrain');
+        this.load.image('tile_grass', 'simple_grass.png');
         // Decorative items
         this.load.setPath('assets/iso');
         this.load.image('deco_corn', 'corn_s.png');
