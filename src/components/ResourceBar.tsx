@@ -1,54 +1,37 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useGameStore } from '../store/useGameStore';
+import { RESOURCE_DEFS } from '../data/resources';
+export { RESOURCE_DEFS } from '../data/resources';
 
-export const RESOURCE_DEFS = [
-    { id: 'wood', img: 'assets/generated/resources/wood.png' },
-    { id: 'flower', img: 'assets/generated/resources/flower.png' },
-    { id: 'stone', img: 'assets/generated/resources/stone.png' },
-    { id: 'metal', img: 'assets/generated/resources/metal.png' },
-    { id: 'gem', img: 'assets/generated/resources/gem.png' },
-];
-
+// Legacy hook – used by ResourceTest.tsx
 export interface ResourceState {
     [key: string]: { amount: number; unlocked: boolean };
 }
 
-export const INITIAL_RESOURCES: ResourceState = {
-    wood: { amount: 1200, unlocked: true },
-    flower: { amount: 400, unlocked: true },
-    stone: { amount: 600, unlocked: true },
-    metal: { amount: 0, unlocked: false },
-    gem: { amount: 0, unlocked: false },
-};
-
 interface DeltaInfo {
     id: string;
     delta: number;
-    key: number; // unique key for re-triggering animation
+    key: number;
 }
 
 export function useResources() {
-    const [resources, setResources] = useState<ResourceState>(INITIAL_RESOURCES);
-    const [resDelta, setResDelta] = useState<DeltaInfo | null>(null);
-
-    const addResource = useCallback((id: string, amount: number) => {
-        setResources(prev => {
-            const cur = prev[id];
-            return {
-                ...prev,
-                [id]: {
-                    amount: Math.max(0, cur.amount + amount),
-                    unlocked: cur.unlocked || amount > 0,
-                },
-            };
-        });
-        setResDelta({ id, delta: amount, key: Date.now() });
-        setTimeout(() => setResDelta(null), 1200);
-    }, []);
-
-    return { resources, setResources, resDelta, addResource };
+    const resources = useGameStore(s => s.resources);
+    const resDelta = useGameStore(s => s.resDelta);
+    const storeAdd = useGameStore(s => s.addResource);
+    return {
+        resources,
+        setResources: () => {},
+        resDelta,
+        addResource: storeAdd,
+    };
 }
 
-export function ResourceBar({ resources, resDelta }: { resources: ResourceState; resDelta: DeltaInfo | null }) {
+export function ResourceBar(props?: { resources?: any; resDelta?: any }) {
+    // If props are passed (legacy), use them; otherwise read from store
+    const storeResources = useGameStore(s => s.resources);
+    const storeResDelta = useGameStore(s => s.resDelta);
+    const resources = props?.resources ?? storeResources;
+    const resDelta = props?.resDelta ?? storeResDelta;
+
     return (
         <div className="flex gap-1">
             {RESOURCE_DEFS.map((r) => {
@@ -76,7 +59,7 @@ export function ResourceBar({ resources, resDelta }: { resources: ResourceState;
                                   fontFamily: "Fredoka, sans-serif",
                                   fontSize: '15px',
                               }}>
-                            {res.unlocked ? res.amount.toLocaleString() : '🔒'}
+                            {res.unlocked ? res.amount.toLocaleString() : '\uD83D\uDD12'}
                         </span>
                         {showDelta && (
                             <span
