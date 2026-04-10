@@ -518,6 +518,10 @@ export class GameScene extends Scene {
 
         // Emit event to React to handle construction
         EventBus.emit('tile-tapped', { buildingId: state.buildMode.buildingId, row, col });
+
+        // Reset pointer states to prevent camera glitches
+        this.input.pointer1.reset();
+        this.input.pointer2.reset();
     }
 
     public placeConstructionPlaceholder(buildingId: string, row: number, col: number) {
@@ -747,7 +751,9 @@ export class GameScene extends Scene {
             const pointer1 = this.input.pointer1;
             const pointer2 = this.input.pointer2;
 
-            if (pointer1.isDown && pointer2.isDown) {
+            // Only pinch zoom if BOTH pointers are actively down AND have valid positions
+            if (pointer1.isDown && pointer2.isDown && pointer1.active && pointer2.active
+                && pointer1.x !== pointer2.x && pointer1.y !== pointer2.y) {
                 const dist = Phaser.Math.Distance.Between(
                     pointer1.x, pointer1.y,
                     pointer2.x, pointer2.y
