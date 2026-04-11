@@ -150,25 +150,48 @@ function GenericInfo({ title, body }: { title: string; body: string }) {
     return <CardBody title={title}>{body}</CardBody>;
 }
 
+// Terrain → building mapping. Used both for the "build here" hint and to
+// detect when that building has already been built so the terrain tap
+// modal can switch to a different message.
+const TERRAIN_TO_BUILDING: Record<string, { buildingId: string; buildHint: string; doneHint: string }> = {
+    flower_patch: {
+        buildingId: 'flower_farm',
+        buildHint: '꽃밭 주변에 꽃밭을 지을 수 있습니다.',
+        doneHint: '이미 꽃밭이 지어진 장소입니다. 꽃밭을 터치하여 자원을 수확해 주세요.',
+    },
+    rock_outcrop: {
+        buildingId: 'quarry',
+        buildHint: '바위 주변에 채석장을 지을 수 있습니다.',
+        doneHint: '이미 채석장이 지어진 장소입니다. 채석장을 터치하여 자원을 수확해 주세요.',
+    },
+    cave_entrance: {
+        buildingId: 'mine',
+        buildHint: '동굴 주변에 광산을 지을 수 있습니다.',
+        doneHint: '이미 광산이 지어진 장소입니다. 광산을 터치하여 자원을 수확해 주세요.',
+    },
+    crystal_cluster: {
+        buildingId: 'gem_cave',
+        buildHint: '수정 주변에 수정동굴을 지을 수 있습니다.',
+        doneHint: '이미 수정동굴이 지어진 장소입니다. 수정동굴을 터치하여 자원을 수확해 주세요.',
+    },
+};
+
 // === Terrain Help ===
 function TerrainHelp({ id }: { id: string }) {
     const terrain = TERRAIN.find(t => t.id === id);
     const name = terrain?.name ?? id;
-
-    // Hint per terrain id - which building can use it
-    const hints: Record<string, string> = {
-        flower_patch: '\uAF43\uBC2D \uC8FC\uBCC0\uC5D0 \uAF43\uBC2D\uC744 \uC9C0\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.',
-        rock_outcrop: '\uBC14\uC704 \uC8FC\uBCC0\uC5D0 \uCC44\uC11D\uC7A5\uC744 \uC9C0\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.',
-        cave_entrance: '\uB3D9\uAD74 \uC8FC\uBCC0\uC5D0 \uAD11\uC0B0\uC744 \uC9C0\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.',
-        crystal_cluster: '\uC218\uC815 \uC8FC\uBCC0\uC5D0 \uC218\uC815\uB3D9\uAD74\uC744 \uC9C0\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.',
-    };
+    const buildings = useGameStore(s => s.buildings);
+    const entry = TERRAIN_TO_BUILDING[id];
+    const done = !!(entry && buildings[entry.buildingId]?.built);
 
     return (
         <CardBody title={name}>
-            <div>{hints[id] ?? '\uD2B9\uC218 \uC9C0\uD615\uC785\uB2C8\uB2E4.'}</div>
-            <div style={{ marginTop: '10px', fontSize: '13px', color: '#c8a888', fontStyle: 'italic' }}>
-                건설 메뉴에서 건물을 고른 다음, 이 지형 근처에 배치해 주세요.
-            </div>
+            <div>{done ? entry.doneHint : (entry?.buildHint ?? '특수 지형입니다.')}</div>
+            {!done && entry && (
+                <div style={{ marginTop: '10px', fontSize: '13px', color: '#c8a888', fontStyle: 'italic' }}>
+                    건설 메뉴에서 건물을 고른 다음, 이 지형 근처에 배치해 주세요.
+                </div>
+            )}
         </CardBody>
     );
 }
