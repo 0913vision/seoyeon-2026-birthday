@@ -6,15 +6,14 @@ import { BottomBar } from './components/BottomBar';
 import { BuildMenu } from './components/BuildMenu';
 import { BuildingModal } from './components/BuildingModal';
 import { DialogBox } from './components/DialogBox';
-import { DIALOGUES } from './data/dialogues';
+import { DIALOGUES, findNextDialog, DialogContext } from './data/dialogues';
 import { loadGame, applyLoadedData, startAutoSave, stopAutoSave } from './services/db';
 import { EventBus } from './game/EventBus';
 import { GameScene } from './game/scenes/GameScene';
+import { hasBuildMenuNew } from './store/badges';
 
 function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
-    const [showDialog, setShowDialog] = useState(false);
-    const [dialogIndex, setDialogIndex] = useState(0);
     const [showBuildMenu, setShowBuildMenu] = useState(false);
 
     const addResource = useGameStore(s => s.addResource);
@@ -23,6 +22,94 @@ function App() {
     const exitBuildMode = useGameStore(s => s.exitBuildMode);
     const startConstruction = useGameStore(s => s.startConstruction);
     const openBuildingModal = useGameStore(s => s.openBuildingModal);
+    const currentDay = useGameStore(s => s.currentDay);
+    const seenBuildMenuDay = useGameStore(s => s.seenNewDay.buildMenu);
+    const markBuildMenuSeen = useGameStore(s => s.markBuildMenuSeen);
+    const buildNew = hasBuildMenuNew(currentDay, seenBuildMenuDay);
+
+    // Dialog state (driven by store + rule engine)
+    const showDialog = useGameStore(s => s.showDialog);
+    const dialogSceneId = useGameStore(s => s.dialogSceneId);
+    const dialogLineIndex = useGameStore(s => s.dialogLineIndex);
+    const openDialog = useGameStore(s => s.openDialog);
+    const advanceDialog = useGameStore(s => s.advanceDialog);
+    const closeDialog = useGameStore(s => s.closeDialog);
+    const tutorialStep = useGameStore(s => s.tutorialStep);
+    const shownDialogs = useGameStore(s => s.shownDialogs);
+    const partsCompleted = useGameStore(s => s.partsCompleted);
+    const partsAttached = useGameStore(s => s.partsAttached);
+    const woodshopCrafting = useGameStore(s => s.woodshopCrafting);
+    const jewelshopCrafting = useGameStore(s => s.jewelshopCrafting);
+    const buildings = useGameStore(s => s.buildings);
+    const packagingStartedAt = useGameStore(s => s.packagingStartedAt);
+    const boxHarvested = useGameStore(s => s.boxHarvested);
+    const activeModal = useGameStore(s => s.activeModal);
+
+    // Build the context in a single object so both the auto-open and the
+    // auto-dismiss ("until") effects read from the same snapshot.
+    const ctx: DialogContext = {
+        currentDay,
+        tutorialStep,
+        shownDialogs,
+        showBuildMenu,
+        buildings,
+        partsCompleted,
+        partsAttached,
+        woodshopCrafting,
+        jewelshopCrafting,
+        resources,
+        packagingStartedAt,
+        boxHarvested,
+        activeModal,
+    };
+
+    // Dialog auto-trigger. When the store state changes, check the rule
+    // engine and open the first unshown scene whose `when` is satisfied.
+    // Guarded by showDialog so we never interrupt a scene that is open.
+    useEffect(() => {
+        if (showDialog) return;
+        const next = findNextDialog(ctx);
+        if (next) {
+            openDialog(next.id);
+            if (next.camera && phaserRef.current?.scene) {
+                const sceneInst = phaserRef.current.scene as GameScene;
+                sceneInst.panToBuilding?.(next.camera);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        showDialog, currentDay, tutorialStep, shownDialogs, showBuildMenu,
+        buildings, partsCompleted, partsAttached, woodshopCrafting,
+        jewelshopCrafting, resources, packagingStartedAt, boxHarvested,
+        activeModal,
+    ]);
+
+    // Auto-dismiss: while a scene is open, check its `until` predicate and
+    // close the dialog the instant the player performs the required action.
+    useEffect(() => {
+        if (!showDialog || !dialogSceneId) return;
+        const scene = DIALOGUES.find(d => d.id === dialogSceneId);
+        if (!scene?.until) return;
+        if (scene.until(ctx)) closeDialog();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        showDialog, dialogSceneId, currentDay, showBuildMenu, buildings,
+        partsCompleted, partsAttached, woodshopCrafting, jewelshopCrafting,
+        resources, packagingStartedAt, boxHarvested, activeModal,
+    ]);
+
+    // Also tick once a minute so time-based triggers (e.g. packaging done)
+    // eventually fire even if nothing else in state has changed.
+    useEffect(() => {
+        if (packagingStartedAt == null || boxHarvested) return;
+        const remaining = packagingStartedAt + 90 * 60_000 - Date.now();
+        if (remaining <= 0) return;
+        const t = setTimeout(() => {
+            // Bump a no-op action so the rule engine re-evaluates.
+            useGameStore.setState({});
+        }, Math.min(remaining + 500, 60_000));
+        return () => clearTimeout(t);
+    }, [packagingStartedAt, boxHarvested]);
 
     // Load from DB on mount, then start auto-save
     useEffect(() => {
@@ -71,8 +158,9 @@ function App() {
         (window as any).__getHarvestStates = () => useGameStore.getState().harvestStates;
     }, [resources, addResource]);
 
-    // Use first dialogue scene as sample
-    const dialogLines = DIALOGUES[0]?.lines ?? [];
+    // Resolve the currently-open dialog scene from the store id
+    const currentScene = DIALOGUES.find(d => d.id === dialogSceneId) ?? null;
+    const currentLine = currentScene?.lines[dialogLineIndex] ?? null;
 
     const goToBox = () => {
         if (phaserRef.current?.scene) {
@@ -82,11 +170,12 @@ function App() {
     };
 
     const handleDialogTap = () => {
-        if (dialogIndex < dialogLines.length - 1) {
-            setDialogIndex(dialogIndex + 1);
+        if (!currentScene) return;
+        if (dialogLineIndex < currentScene.lines.length - 1) {
+            advanceDialog();
         } else {
-            setShowDialog(false);
-            setDialogIndex(0);
+            // closeDialog auto-marks the scene as shown.
+            closeDialog();
         }
     };
 
@@ -138,50 +227,41 @@ function App() {
                 {/* Build Menu backdrop + panel */}
                 {showBuildMenu && (
                     <>
-                        <div className="pointer-events-auto" onClick={() => setShowBuildMenu(false)}
+                        <div className="pointer-events-auto" onClick={() => { setShowBuildMenu(false); markBuildMenuSeen(); }}
                              style={{ position: 'absolute', inset: 0 }} />
-                        <BuildMenu onClose={() => setShowBuildMenu(false)} />
+                        <BuildMenu onClose={() => { setShowBuildMenu(false); markBuildMenuSeen(); }} />
                     </>
                 )}
 
-                {/* Dialog */}
-                {showDialog && dialogLines.length > 0 && (
+                {/* Dialog — driven by the store + rule engine */}
+                {showDialog && currentScene && currentLine && (
                     <DialogBox
-                        text={dialogLines[dialogIndex].text}
-                        action={dialogLines[dialogIndex].action}
+                        text={currentLine.text}
+                        action={currentLine.action}
                         onTap={handleDialogTap}
-                        isLast={dialogIndex === dialogLines.length - 1}
+                        isLast={dialogLineIndex === currentScene.lines.length - 1}
                     />
                 )}
 
-                <BottomBar onGoToBox={goToBox} onBuild={() => setShowBuildMenu(prev => !prev)} buildOpen={showBuildMenu} />
+                <BottomBar
+                    onGoToBox={goToBox}
+                    onBuild={() => {
+                        // Open/close the menu. seenNewDay is bumped on CLOSE only,
+                        // so NEW stays visible (and indicator cards inside the menu
+                        // keep their NEW dots) for the duration of the session.
+                        setShowBuildMenu(prev => {
+                            const next = !prev;
+                            if (!next) markBuildMenuSeen();
+                            return next;
+                        });
+                    }}
+                    buildOpen={showBuildMenu}
+                    hasBuildNew={buildNew}
+                />
 
                 {/* Building/Terrain interaction modal */}
                 <BuildingModal />
             </div>
-
-            {/* Debug: toggle dialog floating button */}
-            <button
-                onClick={() => { setShowDialog(!showDialog); setDialogIndex(0); }}
-                className="absolute right-3 pointer-events-auto"
-                style={{
-                    bottom: '100px',
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '22px',
-                    background: showDialog ? '#ef4444' : '#8b5cf6',
-                    border: '2px solid rgba(255,255,255,0.3)',
-                    color: '#fff',
-                    fontSize: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    zIndex: 50,
-                }}
-            >
-                {showDialog ? '\u2715' : '\uD83D\uDCAC'}
-            </button>
         </div>
     );
 }

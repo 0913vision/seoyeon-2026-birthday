@@ -5,6 +5,9 @@ import { BUILDINGS as DATA_BUILDINGS, HARVESTABLE_BUILDINGS } from '../../data/b
 import { TERRAIN, BUILDING_TERRAIN_REQUIRE, isAdjacentToTerrain, terrainCells } from '../../data/terrain';
 import { BUBBLE_CONFIG, BUBBLE_OFFSETS } from '../../data/bubbleConfig';
 import { PRODUCTION } from '../../data/resources';
+import { PARTS } from '../../data/parts';
+import { hasWorkshopNew } from '../../store/badges';
+import { boxStageFromAttachedCount } from '../../store/useGameStore';
 import { computeHarvest, formatRemaining } from '../harvestCalc';
 
 const DPR = window.devicePixelRatio || 1;
@@ -18,17 +21,23 @@ const GRASS_DARK = [0x5aaa6e, 0x5dae72, 0x58a66a, 0x62b276, 0x56a266];
 const DIRT_COLORS = { fill: 0xa08660, highlight: 0xb89870, shadow: 0x886e48 };
 const STONE_COLORS = { fill: 0xb0aaa5, highlight: 0xc8c2bd, shadow: 0x908a85 };
 
-// Paths extending in 4 directions from gift box (8,8), 5 tiles each direction
-const PATH_TILES: string[] = [
-    // Up
-    '3,8', '4,8', '5,8', '6,8', '7,8',
-    // Down
-    '9,8', '10,8', '11,8', '12,8', '13,8',
-    // Left
-    '8,3', '8,4', '8,5', '8,6', '8,7',
-    // Right
-    '8,9', '8,10', '8,11', '8,12', '8,13',
-];
+// Paths extending in 4 directions from gift box (8,8) all the way into the
+// non-buildable extended ground area (rendered by drawGround with EXT padding).
+const PATH_TILES: string[] = (() => {
+    const PATH_REACH = 20; // how far beyond the 16x16 grid each arm reaches
+    const out: string[] = [];
+    // Up/Down arm at col 8
+    for (let r = 8 - PATH_REACH; r <= 8 + PATH_REACH; r++) {
+        if (r === 8) continue; // skip the gift box tile itself
+        out.push(`${r},8`);
+    }
+    // Left/Right arm at row 8
+    for (let c = 8 - PATH_REACH; c <= 8 + PATH_REACH; c++) {
+        if (c === 8) continue;
+        out.push(`8,${c}`);
+    }
+    return out;
+})();
 
 // Tile layout: 'sp' = stone path, 'dp' = dirt path, 'gd' = dark grass
 const TILE_MAP: Record<string, string> = {
@@ -104,15 +113,16 @@ interface LabelEntry {
 }
 
 interface HarvestBubble {
+    kind: 'harvest' | 'workshop';
     buildingId: string;
-    resId: string;
+    resId: string; // for harvest bubbles; empty string for workshop
     container: Phaser.GameObjects.Container;
     bg: Phaser.GameObjects.Graphics;
     text: Phaser.GameObjects.Text;
     icon: Phaser.GameObjects.Image | null;
     readyPulse: Phaser.Tweens.Tween | null;
     baseY: number;
-    lastState: 'ready' | 'waiting';
+    lastState: 'ready' | 'waiting' | 'idle';
 }
 
 export class GameScene extends Scene {
@@ -135,6 +145,17 @@ export class GameScene extends Scene {
     private harvestBubbles: Map<string, HarvestBubble> = new Map();
     private tappedObject: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox'; id: string } | null = null;
     private harvestTickEvent: Phaser.Time.TimerEvent | null = null;
+
+    // Workshop NEW badges (red pill over woodshop/jewelshop when new parts unlocked)
+    private workshopNewBadges: Map<string, Phaser.GameObjects.Container> = new Map();
+
+    // Gift box "!" badge (shown when there are collected, unattached parts)
+    private giftBoxExclaim: Phaser.GameObjects.Container | null = null;
+
+    // On-map gift box sprite, kept so we can swap its texture as the player
+    // attaches parts (stage 1..7 → box_stage1..7).
+    private giftBoxSprite: Phaser.GameObjects.Image | null = null;
+    private giftBoxStage = 1;
 
     constructor() {
         super('GameScene');
@@ -385,12 +406,21 @@ export class GameScene extends Scene {
             if (b.spriteKey) {
                 const bx = x + (b.offX || 0) * DPR;
                 const by = y + (b.offY || 0) * DPR;
-                const sprite = this.add.image(bx, by, b.spriteKey);
+                // Giftbox uses a dynamic stage texture (box_stage1..7) based on
+                // partsAttached.length; other buildings use their static key.
+                let initialKey = b.spriteKey;
+                if (b.isGiftBox) {
+                    const stage = boxStageFromAttachedCount(useGameStore.getState().partsAttached.length);
+                    initialKey = `box_stage${stage}`;
+                    this.giftBoxStage = stage;
+                }
+                const sprite = this.add.image(bx, by, initialKey);
                 const scale = TILE_W * b.scale / sprite.width;
                 sprite.setScale(scale);
                 sprite.setOrigin(0.5, b.originY);
                 sprite.setDepth(depth + 2);
                 topY = y - sprite.displayHeight * 0.5;
+                if (b.isGiftBox) this.giftBoxSprite = sprite;
 
                 // Make sprite tappable (pixel-perfect so transparent areas don't block neighbors)
                 const dataDef = DATA_BUILDINGS.find(d => d.spriteKey === b.spriteKey);
@@ -426,6 +456,7 @@ export class GameScene extends Scene {
                             ease: 'Sine.easeInOut',
                         });
                     }
+                    this.createGiftBoxExclaim(x, topY, depth);
                 }
             } else if (b.isoBox) {
                 // Use IsoBox (gift box)
@@ -475,12 +506,161 @@ export class GameScene extends Scene {
 
             // (Label removed)
 
-            // Harvest bubble for harvestable buildings
+            // Floating bubble for harvestable buildings or workshops
             const dataDef = DATA_BUILDINGS.find(d => d.spriteKey === b.spriteKey);
-            if (dataDef && HARVESTABLE_BUILDINGS[dataDef.id]) {
-                this.createHarvestBubble(dataDef.id, x, topY, depth);
+            if (dataDef) {
+                if (HARVESTABLE_BUILDINGS[dataDef.id]) {
+                    this.createHarvestBubble(dataDef.id, x, topY, depth);
+                } else if (dataDef.id === 'woodshop' || dataDef.id === 'jewelshop') {
+                    this.createWorkshopBubble(dataDef.id, x, topY, depth);
+                    this.createWorkshopNewBadge(dataDef.id, x, topY, depth);
+                }
             }
         }
+    }
+
+    /** Small red "NEW" pill over a workshop, shown while it has unseen
+     * unlocked parts. Visibility is driven by `updateWorkshopNewBadges`. */
+    private createWorkshopNewBadge(buildingId: string, x: number, topY: number, depth: number) {
+        if (this.workshopNewBadges.has(buildingId)) return;
+        // Place a bit higher than the workshop bubble so they never overlap.
+        const by = topY - 44 * DPR;
+        const container = this.add.container(x, by);
+        container.setDepth(9100 + depth);
+
+        const bg = this.add.graphics();
+        const padX = 8 * DPR;
+        const padY = 3 * DPR;
+        const label = this.add.text(0, 0, 'NEW', {
+            fontSize: `${12 * DPR}px`,
+            fontStyle: 'bold',
+            color: '#ffffff',
+            fontFamily: 'Fredoka, system-ui, sans-serif',
+            stroke: '#7a0010',
+            strokeThickness: 2 * DPR,
+            resolution: window.devicePixelRatio || 3,
+        }).setOrigin(0.5, 0.5);
+
+        const bgW = label.width + padX * 2;
+        const bgH = label.height + padY * 2;
+        const r = bgH / 2;
+        bg.fillStyle(0x000000, 0.35);
+        bg.fillRoundedRect(-bgW / 2 + 1 * DPR, -bgH / 2 + 2 * DPR, bgW, bgH, r);
+        bg.fillStyle(0xef4444, 1);
+        bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
+        bg.lineStyle(2 * DPR, 0xffffff, 0.9);
+        bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
+
+        container.add([bg, label]);
+        container.setVisible(false);
+        this.workshopNewBadges.set(buildingId, container);
+
+        // Gentle bob animation
+        this.tweens.add({
+            targets: container,
+            y: by - 3 * DPR,
+            duration: 700,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+    }
+
+    /** Show/hide each workshop NEW badge based on store state. */
+    private updateWorkshopNewBadges() {
+        const s = useGameStore.getState();
+        for (const [id, container] of this.workshopNewBadges.entries()) {
+            if (id !== 'woodshop' && id !== 'jewelshop') continue;
+            const show = hasWorkshopNew(id, s.currentDay, s.seenNewDay[id]);
+            if (container.visible !== show) container.setVisible(show);
+        }
+    }
+
+    /** Round red "!" badge over the gift box, shown while there are
+     * collected-but-not-attached parts waiting to be installed. */
+    private createGiftBoxExclaim(x: number, topY: number, depth: number) {
+        if (this.giftBoxExclaim) return;
+        const by = topY - 34 * DPR;
+        const container = this.add.container(x, by);
+        container.setDepth(9100 + depth);
+
+        const radius = 14 * DPR;
+        const bg = this.add.graphics();
+        // Soft shadow
+        bg.fillStyle(0x000000, 0.35);
+        bg.fillCircle(1 * DPR, 2 * DPR, radius);
+        // Body
+        bg.fillStyle(0xef4444, 1);
+        bg.fillCircle(0, 0, radius);
+        // Inner ring
+        bg.lineStyle(2 * DPR, 0xffffff, 0.95);
+        bg.strokeCircle(0, 0, radius);
+
+        const label = this.add.text(0, 0, '!', {
+            fontSize: `${18 * DPR}px`,
+            fontStyle: 'bold',
+            color: '#ffffff',
+            fontFamily: 'Fredoka, system-ui, sans-serif',
+            stroke: '#7a0010',
+            strokeThickness: 2 * DPR,
+            resolution: window.devicePixelRatio || 3,
+        }).setOrigin(0.5, 0.55);
+
+        container.add([bg, label]);
+        container.setVisible(false);
+        this.giftBoxExclaim = container;
+
+        // Gentle bob
+        this.tweens.add({
+            targets: container,
+            y: by - 4 * DPR,
+            duration: 650,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+    }
+
+    /** Show the gift box "!" when there are unattached collected parts. */
+    private updateGiftBoxExclaim() {
+        if (!this.giftBoxExclaim) return;
+        const s = useGameStore.getState();
+        const show = s.partsCompleted.some(id => !s.partsAttached.includes(id));
+        if (this.giftBoxExclaim.visible !== show) this.giftBoxExclaim.setVisible(show);
+    }
+
+    /**
+     * Swap the on-map gift box texture to match partsAttached.length.
+     * When the stage changes we punch-scale the sprite briefly so the
+     * player feels the box "growing" from the main view.
+     */
+    private updateGiftBoxStage() {
+        if (!this.giftBoxSprite) return;
+        const s = useGameStore.getState();
+        const stage = boxStageFromAttachedCount(s.partsAttached.length);
+        if (stage === this.giftBoxStage) return;
+
+        const sprite = this.giftBoxSprite;
+        const key = `box_stage${stage}`;
+        if (!this.textures.exists(key)) {
+            this.giftBoxStage = stage;
+            return;
+        }
+
+        sprite.setTexture(key);
+        this.giftBoxStage = stage;
+
+        // Punch feedback
+        const baseScaleX = sprite.scaleX;
+        const baseScaleY = sprite.scaleY;
+        this.tweens.add({
+            targets: sprite,
+            scaleX: baseScaleX * 1.08,
+            scaleY: baseScaleY * 1.08,
+            duration: 180,
+            yoyo: true,
+            ease: 'Sine.easeInOut',
+        });
     }
 
     private createHarvestBubble(buildingId: string, x: number, topY: number, depth: number) {
@@ -524,6 +704,7 @@ export class GameScene extends Scene {
         // exclusively through the building tap → modal → hold-button flow.
 
         const bubble: HarvestBubble = {
+            kind: 'harvest',
             buildingId,
             resId,
             container,
@@ -539,7 +720,54 @@ export class GameScene extends Scene {
         this.renderBubble(bubble);
     }
 
+    private createWorkshopBubble(buildingId: string, x: number, topY: number, depth: number) {
+        if (this.harvestBubbles.has(buildingId)) return;
+        // Use same offset as harvest bubbles; workshops share BUBBLE_OFFSETS fallback
+        const off = BUBBLE_OFFSETS[buildingId] ?? { offX: 0, offY: -20 };
+        const bx = x + off.offX * DPR;
+        const by = topY + off.offY * DPR;
+
+        const container = this.add.container(bx, by);
+        container.setDepth(9000 + depth);
+
+        const bg = this.add.graphics();
+        container.add(bg);
+
+        // Workshop bubble has no resource icon; just text
+        const text = this.add.text(0, 0, '', {
+            fontSize: `${BUBBLE_CONFIG.fontSize * DPR}px`,
+            fontStyle: 'bold',
+            color: '#ffffff',
+            fontFamily: 'Fredoka, system-ui, sans-serif',
+            stroke: '#000000',
+            strokeThickness: 3 * DPR,
+            resolution: window.devicePixelRatio || 3,
+        }).setOrigin(0.5, 0.5);
+        container.add(text);
+
+        const bubble: HarvestBubble = {
+            kind: 'workshop',
+            buildingId,
+            resId: '',
+            container,
+            bg,
+            text,
+            icon: null,
+            readyPulse: null,
+            baseY: by,
+            lastState: 'idle',
+        };
+        this.harvestBubbles.set(buildingId, bubble);
+
+        this.renderBubble(bubble);
+    }
+
     private renderBubble(bubble: HarvestBubble) {
+        if (bubble.kind === 'workshop') {
+            this.renderWorkshopBubble(bubble);
+            return;
+        }
+
         const hs = useGameStore.getState().harvestStates[bubble.buildingId];
         if (!hs) return;
         const prod = PRODUCTION[bubble.resId as keyof typeof PRODUCTION];
@@ -653,6 +881,125 @@ export class GameScene extends Scene {
     private updateHarvestBubbles() {
         for (const bubble of this.harvestBubbles.values()) {
             this.renderBubble(bubble);
+        }
+        this.updateWorkshopNewBadges();
+        this.updateGiftBoxExclaim();
+        this.updateGiftBoxStage();
+    }
+
+    private renderWorkshopBubble(bubble: HarvestBubble) {
+        const state = useGameStore.getState();
+        const slot = bubble.buildingId === 'woodshop' ? state.woodshopCrafting : state.jewelshopCrafting;
+
+        // Idle: no part crafting → hide bubble
+        if (slot.partId == null || slot.startedAt == null) {
+            bubble.container.setVisible(false);
+            if (bubble.readyPulse) { bubble.readyPulse.stop(); bubble.readyPulse = null; }
+            bubble.container.y = bubble.baseY;
+            bubble.lastState = 'idle';
+            return;
+        }
+
+        bubble.container.setVisible(true);
+
+        // Look up part for craft time
+        const part = PARTS.find(p => p.id === slot.partId);
+        if (!part) {
+            bubble.container.setVisible(false);
+            return;
+        }
+
+        const craftMs = part.craftTime * 60 * 1000;
+        const elapsed = Math.max(0, Date.now() - slot.startedAt);
+        const remainingMs = craftMs - elapsed;
+        const ready = remainingMs <= 0;
+
+        // Text: "제작 중 10:00" or "완료!"
+        if (ready) {
+            bubble.text.setText('완료!');
+        } else {
+            bubble.text.setText(formatRemaining(remainingMs));
+        }
+
+        // Layout & background
+        const cfg = BUBBLE_CONFIG;
+        const textW = bubble.text.width;
+        bubble.text.setPosition(0, 0);
+
+        const padX = cfg.padX * DPR;
+        const padY = cfg.padY * DPR;
+        const bgW = textW + padX * 2;
+        const bgH = Math.max(cfg.iconSize * DPR, bubble.text.height) + padY * 2;
+        const r = cfg.cornerRadius > 0 ? cfg.cornerRadius * DPR : bgH / 2;
+        const tailW = cfg.tailW * DPR;
+        const tailH = cfg.tailH * DPR;
+        const borderW = cfg.borderWidth * DPR;
+
+        bubble.bg.clear();
+        const drawPath = (offX: number, offY: number) => {
+            const l = -bgW / 2 + offX;
+            const rt = bgW / 2 + offX;
+            const tp = -bgH / 2 + offY;
+            const bt = bgH / 2 + offY;
+            bubble.bg.beginPath();
+            bubble.bg.moveTo(l + r, tp);
+            bubble.bg.lineTo(rt - r, tp);
+            bubble.bg.arc(rt - r, tp + r, r, -Math.PI / 2, 0);
+            bubble.bg.lineTo(rt, bt - r);
+            bubble.bg.arc(rt - r, bt - r, r, 0, Math.PI / 2);
+            bubble.bg.lineTo(tailW / 2 + offX, bt);
+            bubble.bg.lineTo(0 + offX, bt + tailH);
+            bubble.bg.lineTo(-tailW / 2 + offX, bt);
+            bubble.bg.lineTo(l + r, bt);
+            bubble.bg.arc(l + r, bt - r, r, Math.PI / 2, Math.PI);
+            bubble.bg.lineTo(l, tp + r);
+            bubble.bg.arc(l + r, tp + r, r, Math.PI, Math.PI * 1.5);
+            bubble.bg.closePath();
+        };
+
+        // Shadow
+        bubble.bg.fillStyle(0x000000, 0.28);
+        drawPath(1 * DPR, 3 * DPR);
+        bubble.bg.fillPath();
+
+        // Body fill: green when ready, dark-brown while producing
+        if (ready) {
+            bubble.bg.fillStyle(0x22c55e, 1);
+        } else {
+            bubble.bg.fillStyle(0x2a2018, 0.92);
+        }
+        drawPath(0, 0);
+        bubble.bg.fillPath();
+
+        // Border
+        if (ready) {
+            bubble.bg.lineStyle(borderW, 0xffffff, 1);
+        } else {
+            bubble.bg.lineStyle(borderW * 0.8, 0xc0a880, 0.95);
+        }
+        drawPath(0, 0);
+        bubble.bg.strokePath();
+
+        // Pulse animation when ready
+        if (ready && bubble.lastState !== 'ready') {
+            if (bubble.readyPulse) bubble.readyPulse.stop();
+            bubble.container.y = bubble.baseY;
+            bubble.readyPulse = this.tweens.add({
+                targets: bubble.container,
+                y: bubble.baseY - 6 * DPR,
+                duration: 600,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+            bubble.lastState = 'ready';
+        } else if (!ready && bubble.lastState !== 'waiting') {
+            if (bubble.readyPulse) {
+                bubble.readyPulse.stop();
+                bubble.readyPulse = null;
+            }
+            bubble.container.y = bubble.baseY;
+            bubble.lastState = 'waiting';
         }
     }
 
@@ -1042,7 +1389,10 @@ export class GameScene extends Scene {
     }
 
     private restoreConstructions() {
-        // Restore any in-progress constructions from store
+        // Restore any in-progress constructions from store. CRUCIAL: also
+        // re-schedule the completion timer, since the original setTimeout
+        // was thrown away when the page was reloaded (or the auto-save
+        // preserved state after a crash).
         const storeBuildings = useGameStore.getState().buildings;
         for (const [id, bs] of Object.entries(storeBuildings)) {
             if (!bs.built && bs.constructionStartedAt && bs.position) {
@@ -1054,6 +1404,9 @@ export class GameScene extends Scene {
                 const elapsed = Date.now() - bs.constructionStartedAt;
                 if (elapsed < CONSTRUCTION_TIME_MS) {
                     this.placeConstructionPlaceholder(id, bs.position.row, bs.position.col);
+                    // Reschedule completion for the remaining time.
+                    const remaining = CONSTRUCTION_TIME_MS - elapsed;
+                    setTimeout(() => useGameStore.getState().completeConstruction(id), remaining);
                 } else {
                     // Construction should have completed - complete it now
                     useGameStore.getState().completeConstruction(id);
@@ -1063,14 +1416,31 @@ export class GameScene extends Scene {
     }
 
     public goToGiftBox() {
-        // Find the gift box building
-        const giftBox = BUILDINGS.find(b => b.isGiftBox);
-        if (!giftBox) return;
+        this.panToBuilding('box');
+    }
 
-        const { x, y } = this.toScreen(giftBox.row, giftBox.col);
+    /**
+     * Smooth pan the camera to a building by its id. Resolves the target
+     * tile from the store (for built or in-progress buildings) or from the
+     * static BUILDINGS list. Respects camera bounds.
+     */
+    public panToBuilding(id: string) {
+        // Prefer live store position (handles player-placed buildings)
+        const state = useGameStore.getState();
+        const bs = state.buildings[id];
+        let row: number | null = null;
+        let col: number | null = null;
+        if (bs?.position) {
+            row = bs.position.row;
+            col = bs.position.col;
+        } else {
+            const def = BUILDINGS.find(b => b.id === id);
+            if (def) { row = def.row; col = def.col; }
+        }
+        if (row == null || col == null) return;
+
+        const { x, y } = this.toScreen(row, col);
         const cam = this.cameras.main;
-
-        // Smooth pan to gift box (respects camera bounds)
         this.tweens.add({
             targets: cam,
             scrollX: x - cam.width / 2,

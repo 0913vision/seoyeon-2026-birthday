@@ -1,133 +1,308 @@
 import { DialogLine } from '../types/game';
 
+/**
+ * Minimal view into the game state that the dialog rule engine needs. We
+ * pass only the fields we read so the `when` predicate is pure and cheap,
+ * and so the engine doesn't re-fire on unrelated state churn (drag ghost
+ * position, etc.).
+ */
+export interface DialogContext {
+    currentDay: number;
+    tutorialStep: number;
+    shownDialogs: string[];
+    showBuildMenu: boolean;
+    buildings: Record<string, { built: boolean; constructionStartedAt?: number | null }>;
+    partsCompleted: number[];
+    partsAttached: number[];
+    woodshopCrafting: { partId: number | null; startedAt: number | null };
+    jewelshopCrafting: { partId: number | null; startedAt: number | null };
+    resources: Record<string, { amount: number; unlocked: boolean }>;
+    packagingStartedAt: number | null;
+    boxHarvested: boolean;
+    // UI slice: which building modal is open (if any)
+    activeModal: { category: string; id: string } | null;
+}
+
 export interface DialogueScene {
     id: string;
-    trigger: string;
+    /**
+     * True when this scene should auto-open. The engine checks scenes in
+     * declaration order and opens the first one that (a) is not in
+     * shownDialogs, (b) returns true here, (c) no other scene is open.
+     */
+    when: (ctx: DialogContext) => boolean;
+    /**
+     * Optional: while the scene is open, if this predicate becomes true
+     * the dialog is automatically closed (and marked as shown). Useful for
+     * "do the action and the hint dissolves" flows — player taps BUILD,
+     * the hint vanishes, the build menu opens.
+     */
+    until?: (ctx: DialogContext) => boolean;
+    /**
+     * Optional building id to pan the camera to when the scene opens.
+     * Either a building key (e.g. 'wood_farm', 'box', 'woodshop') or null.
+     */
+    camera?: string;
     lines: DialogLine[];
 }
 
+// Helpers
+const any = (ctx: DialogContext, fn: (p: DialogContext) => boolean) => fn(ctx);
+const hasShown = (ctx: DialogContext, id: string) => ctx.shownDialogs.includes(id);
+const built = (ctx: DialogContext, id: string) => ctx.buildings[id]?.built === true;
+const isBuilding = (ctx: DialogContext, id: string) => !!ctx.buildings[id]?.constructionStartedAt;
+
 export const DIALOGUES: DialogueScene[] = [
-    // Day 1
-    { id: 'day1_intro', trigger: 'app_start', lines: [
-        { text: '안녕하세요.' },
-        { text: '저는 김유찬님의 비서 로봇 콜드유입니다.' },
-        { text: '김유찬님의 지시를 받고 왔습니다.' },
-        { text: '5일 후 특별한 날을 위해, 선물 하나를 준비해야 합니다.' },
-        { text: '수령인 정보는 제게 전달되지 않았습니다.' },
-        { text: '선물 제작을 도와드리겠습니다. 협조 부탁드립니다.' },
-    ]},
-    { id: 'day1_intro_after', trigger: 'day1_confirm', lines: [
-        { text: '감사합니다.' },
-        { text: '선물의 정체는 제작 과정에서 확인하실 수 있습니다.' },
-        { text: '그럼 작업을 시작하겠습니다.' },
-    ]},
-    { id: 'day1_map_guide', trigger: 'day1_intro_done', lines: [
-        { text: '이곳이 작업장입니다.' },
-        { text: '화면을 드래그하시면 주변을 둘러보실 수 있습니다.' },
-        { text: '중앙에 보이는 것이 선물상자입니다.' },
-    ]},
-    { id: 'day1_box_intro', trigger: 'day1_swipe', lines: [
-        { text: '이 상자에 파츠를 부착하여 선물을 완성합니다.' },
-        { text: '총 24개의 파츠가 필요합니다. 기간은 5일입니다.' },
-    ]},
-    { id: 'day1_harvest_guide', trigger: 'day1_box_seen', lines: [
-        { text: '이것은 나무밭입니다. 자원을 생산하는 시설입니다.' },
-        { text: '터치하시면 자원을 수확할 수 있습니다.', action: '나무밭을 터치하세요' },
-    ]},
-    { id: 'day1_harvest_done', trigger: 'day1_harvest', lines: [
-        { text: '자원 수확이 완료되었습니다.' },
-        { text: '상단 인벤토리에서 보유 자원량을 확인하실 수 있습니다.' },
-    ]},
-    { id: 'day1_waiting', trigger: 'day1_harvest_done', lines: [
-        { text: '자원은 일정 주기마다 자동으로 생산됩니다.' },
-        { text: '나무의 경우 1시간 30분마다 생산됩니다.' },
-        { text: '접속하지 않아도 생산은 계속 진행됩니다.' },
-    ]},
-    { id: 'day1_build_guide', trigger: 'day1_waiting_done', lines: [
-        { text: '파츠 제작을 위해 공방이 필요합니다.' },
-        { text: '하단의 건설 버튼을 터치해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-    ]},
-    { id: 'day1_woodshop', trigger: 'day1_build_menu', lines: [
-        { text: '목공방은 파츠를 제작하는 시설입니다.' },
-        { text: '건설 위치를 지정해 주세요.', action: '빈 타일을 터치하여 건설' },
-    ]},
-    { id: 'day1_woodshop_done', trigger: 'day1_woodshop_built', lines: [
-        { text: '건설이 완료되었습니다.' },
-    ]},
-    { id: 'day1_craft_guide', trigger: 'day1_woodshop_done', lines: [
-        { text: '목공방을 터치하시면 제작 메뉴가 열립니다.' },
-        { text: '첫 번째 파츠는 상자 바닥판입니다.' },
-        { text: '제작 시간은 10분 소요됩니다.', action: '목공방을 터치하여 제작 시작' },
-    ]},
-    { id: 'day1_tutorial_end', trigger: 'day1_craft_started', lines: [
-        { text: '기본 안내가 완료되었습니다.' },
-        { text: '자원이 생산되면 수확 후 파츠 제작을 계속해 주세요.' },
-        { text: '오늘 만들어야 할 파츠는 4개입니다.' },
-    ]},
-    { id: 'day1_first_part', trigger: 'part_1_attached', lines: [
-        { text: '첫 번째 파츠가 부착되었습니다.' },
-        { text: '진행도: 1/24. 나머지는 23개입니다.' },
-    ]},
-    { id: 'day1_complete', trigger: 'day1_parts_done', lines: [
-        { text: '오늘 작업이 완료되었습니다.' },
-        { text: '수고하셨습니다. 내일 다시 진행하겠습니다.' },
-    ]},
+    // ==============
+    // DAY 1 TUTORIAL
+    // ==============
+    {
+        id: 'day1_intro',
+        when: (ctx) => ctx.currentDay === 1,
+        camera: 'box',
+        lines: [
+            { text: '안녕하세요.' },
+            { text: '저는 김유찬님의 비서 로봇 콜드유입니다.' },
+            { text: '김유찬님의 지시를 받고 왔습니다.' },
+            { text: '5일 후 특별한 날을 위해, 선물 하나를 준비해야 합니다.' },
+            { text: '수령인 정보는 제게 전달되지 않았습니다.' },
+            { text: '선물 제작을 도와드리겠습니다. 협조 부탁드립니다.' },
+        ],
+    },
+    {
+        id: 'day1_map_guide',
+        when: (ctx) => ctx.currentDay === 1 && hasShown(ctx, 'day1_intro'),
+        camera: 'box',
+        lines: [
+            { text: '이곳이 작업장입니다.' },
+            { text: '화면을 드래그하시면 주변을 둘러보실 수 있습니다.' },
+            { text: '중앙에 보이는 것이 선물상자입니다.' },
+            { text: '이 상자에 파츠 24개를 부착하여 선물을 완성합니다.' },
+            { text: '5일 안에 모든 파츠를 만들어야 합니다.' },
+        ],
+    },
+    {
+        id: 'day1_harvest_guide',
+        when: (ctx) => ctx.currentDay === 1 && hasShown(ctx, 'day1_map_guide'),
+        // Dismiss the moment the harvest modal opens so the player can
+        // interact with it without the dialog overlapping. The next scene
+        // only fires *after* the modal closes (activeModal == null).
+        until: (ctx) => ctx.activeModal?.category === 'harvest' && ctx.activeModal.id === 'wood_farm',
+        camera: 'wood_farm',
+        lines: [
+            { text: '위쪽에 나무밭이 있습니다.' },
+            { text: '나무밭을 터치해서 자원 창을 열어 주세요.' },
+            { text: '창이 열리면 아래쪽 버튼을 꾹 눌러 수확하시면 됩니다.', action: '나무밭을 터치하세요' },
+        ],
+    },
+    {
+        id: 'day1_after_first_harvest',
+        // Fires only after the player harvested AND closed the modal so the
+        // dialog never competes with the harvest modal for screen space.
+        when: (ctx) => ctx.currentDay === 1
+            && (ctx.resources.wood?.amount ?? 0) > 2500
+            && ctx.activeModal == null
+            && hasShown(ctx, 'day1_harvest_guide'),
+        // Dismiss when the player opens the BUILD menu.
+        until: (ctx) => ctx.showBuildMenu,
+        lines: [
+            { text: '자원 수확이 완료되었습니다.' },
+            { text: '수확한 자원은 화면 상단에서 확인하실 수 있습니다.' },
+            { text: '자원은 시간이 지나면 자동으로 다시 쌓입니다.' },
+            { text: '이제 공방을 지어야 합니다.' },
+            { text: '하단의 BUILD 버튼을 눌러 주세요.', action: 'BUILD 버튼을 누르세요' },
+        ],
+    },
+    {
+        id: 'day1_build_menu_opened',
+        when: (ctx) => ctx.currentDay === 1 && ctx.showBuildMenu && hasShown(ctx, 'day1_after_first_harvest'),
+        // Dismiss once woodshop construction begins.
+        until: (ctx) => !!ctx.buildings.woodshop?.constructionStartedAt || !!ctx.buildings.woodshop?.built,
+        lines: [
+            { text: '이곳에서 건물을 지을 수 있습니다.' },
+            { text: '목공방 카드를 눌러 주세요.' },
+            { text: '그다음, 원하시는 빈 타일을 터치하시면 그 자리에 공방이 지어집니다.', action: '목공방 → 원하는 빈 타일' },
+        ],
+    },
+    {
+        id: 'day1_woodshop_done',
+        when: (ctx) => ctx.currentDay === 1 && built(ctx, 'woodshop') && hasShown(ctx, 'day1_build_menu_opened'),
+        // Dismiss when the player opens the woodshop modal.
+        until: (ctx) => ctx.activeModal?.category === 'workshop' && ctx.activeModal.id === 'woodshop',
+        camera: 'woodshop',
+        lines: [
+            { text: '목공방이 완성되었습니다.' },
+            { text: '목공방을 터치하여 제작 메뉴를 열어 주세요.', action: '목공방을 터치하세요' },
+        ],
+    },
+    {
+        id: 'day1_craft_started',
+        when: (ctx) => ctx.currentDay === 1 && ctx.woodshopCrafting.partId != null && hasShown(ctx, 'day1_woodshop_done'),
+        lines: [
+            { text: '제작이 시작되었습니다.' },
+            { text: '파츠 제작에는 시간이 걸립니다.' },
+            { text: '완성되면 공방 위에 완료 표시가 뜹니다.' },
+            { text: '수거한 후 선물상자를 터치하여 파츠를 부착해 주세요.' },
+        ],
+    },
+    {
+        id: 'day1_first_part_attached',
+        when: (ctx) => ctx.currentDay === 1 && ctx.partsAttached.length >= 1 && hasShown(ctx, 'day1_craft_started'),
+        camera: 'box',
+        lines: [
+            { text: '첫 번째 파츠가 부착되었습니다.' },
+            { text: '진행도 1/24. 잘 하셨습니다.' },
+            { text: '오늘은 총 4개의 파츠를 완성해 주세요.' },
+            { text: '기본 안내는 여기까지입니다. 이후는 직접 진행해 주세요.' },
+        ],
+    },
+    {
+        id: 'day1_complete',
+        when: (ctx) => ctx.currentDay === 1 && ctx.partsAttached.length >= 4 && hasShown(ctx, 'day1_first_part_attached'),
+        camera: 'box',
+        lines: [
+            { text: '오늘의 목표 4개 파츠가 모두 부착되었습니다.' },
+            { text: '수고하셨습니다.' },
+            { text: '내일은 새로운 재료와 파츠가 추가됩니다.' },
+        ],
+    },
 
-    // Day 2
-    { id: 'day2_start', trigger: 'day2_enter', lines: [
-        { text: '좋은 아침입니다. 오늘은 꽃밭을 만들어 보겠습니다.' },
-        { text: '건설 메뉴에서 꽃밭을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-        { text: '오늘 만들어야 할 파츠는 5개입니다.' },
-    ]},
-    { id: 'day2_quarry', trigger: 'day2_stagger', lines: [
-        { text: '채석장을 만들 수 있게 되었습니다.' },
-        { text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-    ]},
+    // ==============
+    // DAY 2
+    // ==============
+    {
+        id: 'day2_start',
+        when: (ctx) => ctx.currentDay === 2,
+        lines: [
+            { text: '좋은 아침입니다.' },
+            { text: '오늘은 꽃밭을 지을 수 있습니다.' },
+            { text: 'BUILD 버튼에서 꽃밭을 확인해 주세요.' },
+            { text: '오늘 만들어야 할 파츠는 5개입니다.' },
+        ],
+    },
+    {
+        id: 'day2_quarry_unlocked',
+        // Stagger unlock — can be wired to a time-of-day trigger later
+        when: (ctx) => ctx.currentDay === 2 && hasShown(ctx, 'day2_start') && ctx.partsAttached.length >= 6,
+        lines: [
+            { text: '채석장도 지을 수 있게 되었습니다.' },
+            { text: '돌이 필요한 파츠를 만들려면 먼저 채석장을 지어 주세요.' },
+        ],
+    },
+    {
+        id: 'day2_complete',
+        when: (ctx) => ctx.currentDay === 2 && ctx.partsAttached.length >= 9 && hasShown(ctx, 'day2_start'),
+        lines: [
+            { text: '오늘의 목표 5개 파츠가 모두 부착되었습니다.' },
+            { text: '내일 다시 뵙겠습니다.' },
+        ],
+    },
 
-    // Day 3
-    { id: 'day3_start', trigger: 'day3_enter', lines: [
-        { text: '좋은 아침입니다. 오늘은 광산을 만들어 보겠습니다.' },
-        { text: '건설 메뉴에서 광산을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-        { text: '오늘 만들어야 할 파츠는 5개입니다.' },
-    ]},
-    { id: 'day3_jewelshop', trigger: 'day3_stagger', lines: [
-        { text: '세공소를 만들 수 있게 되었습니다.' },
-        { text: '두 번째 공방이 추가됩니다.' },
-        { text: '건설 메뉴를 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-    ]},
+    // ==============
+    // DAY 3
+    // ==============
+    {
+        id: 'day3_start',
+        when: (ctx) => ctx.currentDay === 3,
+        lines: [
+            { text: '좋은 아침입니다.' },
+            { text: '오늘은 광산을 지을 수 있습니다. 금속을 얻을 수 있는 시설입니다.' },
+            { text: '오늘 만들어야 할 파츠는 5개입니다.' },
+        ],
+    },
+    {
+        id: 'day3_jewelshop_unlocked',
+        when: (ctx) => ctx.currentDay === 3 && hasShown(ctx, 'day3_start') && ctx.partsAttached.length >= 11,
+        lines: [
+            { text: '세공소도 지을 수 있게 되었습니다.' },
+            { text: '두 번째 공방입니다. 금속 파츠는 이곳에서 만듭니다.' },
+        ],
+    },
+    {
+        id: 'day3_complete',
+        when: (ctx) => ctx.currentDay === 3 && ctx.partsAttached.length >= 14 && hasShown(ctx, 'day3_start'),
+        lines: [
+            { text: '오늘의 목표가 달성되었습니다.' },
+            { text: '절반이 넘었습니다. 잘 하고 계십니다.' },
+        ],
+    },
 
-    // Day 4
-    { id: 'day4_start', trigger: 'day4_enter', lines: [
-        { text: '좋은 아침입니다. 오늘은 수정동굴을 만들어 보겠습니다.' },
-        { text: '건설 메뉴에서 수정동굴을 확인해 주세요.', action: 'BUILD 버튼을 터치하세요' },
-        { text: '오늘 만들어야 할 파츠는 5개입니다.' },
-    ]},
+    // ==============
+    // DAY 4
+    // ==============
+    {
+        id: 'day4_start',
+        when: (ctx) => ctx.currentDay === 4,
+        lines: [
+            { text: '좋은 아침입니다.' },
+            { text: '오늘은 수정동굴을 지을 수 있습니다.' },
+            { text: '보석 파츠를 만들기 위해 꼭 필요합니다.' },
+            { text: '오늘 만들어야 할 파츠는 5개입니다.' },
+        ],
+    },
+    {
+        id: 'day4_complete',
+        when: (ctx) => ctx.currentDay === 4 && ctx.partsAttached.length >= 19 && hasShown(ctx, 'day4_start'),
+        lines: [
+            { text: '오늘의 목표가 달성되었습니다.' },
+            { text: '내일이 마지막 날입니다.' },
+        ],
+    },
 
-    // Day 5
-    { id: 'day5_start', trigger: 'day5_enter', lines: [
-        { text: '좋은 아침입니다. 오늘이 마지막 날입니다.' },
-        { text: '남은 파츠 5개를 완성하면 포장이 시작됩니다.' },
-        { text: '오늘 안에 모든 작업을 완료해 주세요.' },
-    ]},
-    { id: 'day5_packaging', trigger: 'all_parts_done', lines: [
-        { text: '모든 파츠가 완성되었습니다.' },
-        { text: '포장을 시작합니다. 약 1시간 30분 정도 소요됩니다.' },
-        { text: '완료되면 다시 안내드리겠습니다.' },
-    ]},
-    { id: 'day5_waiting', trigger: 'packaging_check', lines: [
-        { text: '포장이 진행 중입니다.' },
-        { text: '남은 시간을 상자 상단에서 확인하실 수 있습니다.' },
-    ]},
-    { id: 'day5_complete', trigger: 'packaging_done', lines: [
-        { text: '선물 준비가 완료되었습니다.' },
-        { text: '5일간의 작업이 모두 마무리되었습니다.' },
-        { text: '상자를 열어 주세요.' },
-    ]},
-    { id: 'day5_open', trigger: 'box_open_prompt', lines: [
-        { text: '열기 버튼을 터치해 주세요.', action: '상자의 열기 버튼을 터치하세요' },
-    ]},
-    { id: 'day5_certificate', trigger: 'box_opened', lines: [
-        { text: '선물 준비가 완료되었습니다.' },
-        { text: '이 증명서를 김유찬님께 제시해 주세요.' },
-    ]},
+    // ==============
+    // DAY 5 — FINAL
+    // ==============
+    {
+        id: 'day5_start',
+        when: (ctx) => ctx.currentDay === 5,
+        lines: [
+            { text: '좋은 아침입니다. 오늘이 마지막 날입니다.' },
+            { text: '남은 파츠 5개를 완성하고 부착하면 포장이 시작됩니다.' },
+            { text: '오늘 안에 모든 작업을 완료해 주세요.' },
+        ],
+    },
+    {
+        id: 'day5_packaging_started',
+        when: (ctx) => ctx.packagingStartedAt != null && !hasShown(ctx, 'day5_packaging_started'),
+        lines: [
+            { text: '모든 파츠가 부착되었습니다.' },
+            { text: '지금부터 포장을 시작합니다.' },
+            { text: '약 1시간 30분 정도 소요됩니다.' },
+            { text: '완료되면 다시 안내드리겠습니다.' },
+        ],
+    },
+    {
+        id: 'day5_packaging_done',
+        when: (ctx) => ctx.packagingStartedAt != null
+            && Date.now() - ctx.packagingStartedAt >= 90 * 60_000
+            && !ctx.boxHarvested
+            && hasShown(ctx, 'day5_packaging_started'),
+        lines: [
+            { text: '포장이 완료되었습니다.' },
+            { text: '선물 준비가 모두 끝났습니다.' },
+            { text: '상자를 터치하여 열기를 눌러 주세요.', action: '상자를 터치하세요' },
+        ],
+    },
+    {
+        id: 'day5_certificate',
+        when: (ctx) => ctx.boxHarvested,
+        lines: [
+            { text: '선물 준비가 완료되었습니다.' },
+            { text: '5일간의 작업이 모두 마무리되었습니다.' },
+            { text: '이 증명서를 김유찬님께 제시해 주세요.' },
+        ],
+    },
 ];
+
+// Helper used by tests / the dialog controller
+export function findNextDialog(ctx: DialogContext): DialogueScene | null {
+    for (const scene of DIALOGUES) {
+        if (ctx.shownDialogs.includes(scene.id)) continue;
+        if (scene.when(ctx)) return scene;
+    }
+    return null;
+}
+
+// Suppress unused warning
+void any;
+void isBuilding;

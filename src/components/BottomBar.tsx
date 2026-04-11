@@ -59,14 +59,14 @@ function ActionButton({
     );
 }
 
-export function BottomBar({ onGoToBox, onBuild, buildOpen }: { onGoToBox: () => void; onBuild: () => void; buildOpen: boolean }) {
+export function BottomBar({ onGoToBox, onBuild, buildOpen, hasBuildNew }: { onGoToBox: () => void; onBuild: () => void; buildOpen: boolean; hasBuildNew: boolean }) {
     return (
         <div
             className="pointer-events-auto pb-2 px-4"
             style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
         >
             <div className="flex justify-between">
-                <ActionButton icon={'\uD83C\uDFD7\uFE0F'} label="BUILD" badge="NEW" badgeColor="#ef4444" bgColor="linear-gradient(180deg, #22c55e 0%, #16a34a 100%)" onClick={onBuild} />
+                <ActionButton icon={'\uD83C\uDFD7\uFE0F'} label="BUILD" badge={hasBuildNew ? 'NEW' : undefined} badgeColor="#ef4444" bgColor="linear-gradient(180deg, #22c55e 0%, #16a34a 100%)" onClick={onBuild} />
                 <ActionButton icon={'\uD83C\uDF81'} label="BOX" bgColor="linear-gradient(180deg, #f59e0b 0%, #d97706 100%)" onClick={onGoToBox} />
             </div>
         </div>

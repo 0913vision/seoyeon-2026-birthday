@@ -12,6 +12,10 @@ export function BuildMenu({ onClose }: { onClose: () => void }) {
 
     const enterBuildMode = useGameStore(s => s.enterBuildMode);
 
+    // Snapshot seenNewDay.buildMenu at mount so indicator dots stay stable
+    // while the menu is open (seen day is bumped by the App on close).
+    const [seenSnapshot] = useState(() => useGameStore.getState().seenNewDay.buildMenu);
+
     const handleCardTap = (item: typeof BUILDABLE[0], affordable: boolean, available: boolean) => {
         if (!available) return;
         if (!affordable) {
@@ -57,6 +61,7 @@ export function BuildMenu({ onClose }: { onClose: () => void }) {
                         const isLocked = !available && !built;
                         const isPressed = pressed === item.id;
                         const imgSize = 80 * item.scale;
+                        const isNew = item.unlockDay > seenSnapshot && item.unlockDay <= currentDay;
 
                         // Find resource images from RESOURCE_DEFS
                         const getResImg = (resId: string) => {
@@ -118,6 +123,20 @@ export function BuildMenu({ onClose }: { onClose: () => void }) {
                                             width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: '14px', fontWeight: 700, border: '2px solid #fff',
                                         }}>{'\u2713'}</span>
+                                    )}
+                                    {!built && isNew && (
+                                        <span style={{
+                                            position: 'absolute', top: '4px', left: '4px',
+                                            background: '#ef4444', color: '#fff',
+                                            borderRadius: '10px',
+                                            padding: '2px 7px',
+                                            fontSize: '10px',
+                                            fontWeight: 900,
+                                            letterSpacing: '0.03em',
+                                            border: '2px solid rgba(255,255,255,0.9)',
+                                            boxShadow: '0 2px 6px rgba(239,68,68,0.5)',
+                                            fontFamily: 'Fredoka, sans-serif',
+                                        }}>NEW</span>
                                     )}
                                     {underConstruction && (
                                         <div style={{

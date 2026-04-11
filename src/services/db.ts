@@ -40,6 +40,8 @@ export interface SaveData {
     woodshopCrafting: { partId: number | null; startedAt: number | null };
     jewelshopCrafting: { partId: number | null; startedAt: number | null };
     harvestStates?: Record<string, { lastHarvestAt: number }>;
+    seenNewDay?: { buildMenu: number; woodshop: number; jewelshop: number };
+    shownDialogs?: string[];
     savedAt: number;
 }
 
@@ -185,41 +187,43 @@ export async function resetAllSaves(): Promise<void> {
 // Mock seed (initial state for first load in this session)
 // ============================================================
 
+// Fresh-game seed. Mirrors the Zustand store's initial state so "first load"
+// and "brand new player" converge. currentDay is NOT serialized (the app
+// recomputes from the real date at load time).
 const MOCK_SEED: SaveData = {
     currentDay: 1,
-    tutorialStep: 99,
+    tutorialStep: 0,
     boxStage: 1,
     packagingStartedAt: null,
     boxHarvested: false,
+    // Starter wood enough for all Day 1 parts + the woodshop, so the player
+    // can progress on Saturday with only 1–2 wood farm harvests.
     resources: {
-        wood: { amount: 3000, unlocked: true },
-        flower: { amount: 2000, unlocked: true },
-        stone: { amount: 3000, unlocked: true },
-        metal: { amount: 2000, unlocked: true },
-        gem: { amount: 1000, unlocked: true },
+        wood: { amount: 2500, unlocked: true },
+        flower: { amount: 0, unlocked: false },
+        stone: { amount: 0, unlocked: false },
+        metal: { amount: 0, unlocked: false },
+        gem: { amount: 0, unlocked: false },
     },
     buildings: {
         box: { built: true, position: { row: 8, col: 8 } },
         wood_farm: { built: true, position: { row: 3, col: 4 } },
-        woodshop: { built: true, position: { row: 5, col: 9 } },
-        flower_farm: { built: true, position: { row: 5, col: 7 } },
-        quarry: { built: true, position: { row: 7, col: 11 } },
-        mine: { built: true, position: { row: 12, col: 5 } },
-        jewelshop: { built: true, position: { row: 7, col: 3 } },
-        gem_cave: { built: true, position: { row: 12, col: 12 } },
-        test_construction: { built: false, position: { row: 2, col: 2 }, constructionStartedAt: -1 },
+        woodshop: { built: false },
+        flower_farm: { built: false },
+        quarry: { built: false },
+        mine: { built: false },
+        jewelshop: { built: false },
+        gem_cave: { built: false },
     },
     partsCompleted: [],
     partsAttached: [],
     woodshopCrafting: { partId: null, startedAt: null },
     jewelshopCrafting: { partId: null, startedAt: null },
-    // Debug: wood_farm ~10s before ready; others ~50% of cycle.
+    seenNewDay: { buildMenu: 0, woodshop: 0, jewelshop: 0 },
+    shownDialogs: [],
+    // wood_farm is instantly ready so the Day 1 harvest tutorial can fire.
     harvestStates: {
-        wood_farm:   { lastHarvestAt: Date.now() - (60 * 60_000 - 10_000) },
-        flower_farm: { lastHarvestAt: Date.now() - 30 * 60_000 },
-        quarry:      { lastHarvestAt: Date.now() - 30 * 60_000 },
-        mine:        { lastHarvestAt: Date.now() - 45 * 60_000 },
-        gem_cave:    { lastHarvestAt: Date.now() - 45 * 60_000 },
+        wood_farm: { lastHarvestAt: Date.now() - 90 * 60_000 },
     },
     savedAt: Date.now(),
 };
@@ -243,6 +247,8 @@ export function applyLoadedData(data: SaveData): void {
         jewelshopCrafting: data.jewelshopCrafting,
     };
     if (data.harvestStates) patch.harvestStates = data.harvestStates;
+    if (data.seenNewDay) patch.seenNewDay = data.seenNewDay;
+    if (data.shownDialogs) patch.shownDialogs = data.shownDialogs;
     useGameStore.setState(patch);
 }
 
@@ -301,6 +307,8 @@ type PersistentSlice = {
     woodshopCrafting: unknown;
     jewelshopCrafting: unknown;
     tutorialStep: unknown;
+    seenNewDay: unknown;
+    shownDialogs: unknown;
 };
 
 function pickPersistent(s: ReturnType<typeof useGameStore.getState>): PersistentSlice {
@@ -316,6 +324,8 @@ function pickPersistent(s: ReturnType<typeof useGameStore.getState>): Persistent
         woodshopCrafting: s.woodshopCrafting,
         jewelshopCrafting: s.jewelshopCrafting,
         tutorialStep: s.tutorialStep,
+        seenNewDay: s.seenNewDay,
+        shownDialogs: s.shownDialogs,
     };
 }
 
@@ -334,6 +344,8 @@ function persistentEqual(a: PersistentSlice, b: PersistentSlice): boolean {
         a.boxHarvested === b.boxHarvested &&
         a.woodshopCrafting === b.woodshopCrafting &&
         a.jewelshopCrafting === b.jewelshopCrafting &&
-        a.tutorialStep === b.tutorialStep
+        a.tutorialStep === b.tutorialStep &&
+        a.seenNewDay === b.seenNewDay &&
+        a.shownDialogs === b.shownDialogs
     );
 }

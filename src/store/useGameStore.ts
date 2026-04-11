@@ -2,9 +2,25 @@ import { create } from 'zustand';
 import { ResourceState, BuildingState, CraftingState, HarvestState } from '../types/game';
 import { INITIAL_RESOURCES, PRODUCTION } from '../data/resources';
 import { BUILDINGS, HARVESTABLE_BUILDINGS } from '../data/buildings';
+import { PARTS } from '../data/parts';
 import { computeHarvest } from '../game/harvestCalc';
 
 const CONSTRUCTION_TIME_MS = 10_000; // 10 seconds for debug
+
+/**
+ * Box stage (1..7) for a given number of attached parts. Matches the 7
+ * stage sprites in public/assets/generated/giftbox/. 0 parts → stage 1,
+ * all 24 → stage 7.
+ */
+export function boxStageFromAttachedCount(n: number): number {
+    if (n >= 24) return 7;
+    if (n >= 20) return 6;
+    if (n >= 15) return 5;
+    if (n >= 10) return 4;
+    if (n >= 5) return 3;
+    if (n >= 1) return 2;
+    return 1;
+}
 
 // Day calculation: KST date-based (4/11 Sat = Day 1, 4/15 Wed = Day 5)
 export function calcDayFromDate(): number {
@@ -41,6 +57,15 @@ interface GameState {
     // Harvest accumulation per harvestable building
     harvestStates: Record<string, HarvestState>;
 
+    // "NEW" badge tracking. Stores the last day on which the user opened each
+    // surface. A NEW badge is shown while the surface has content unlocked on
+    // a day strictly greater than its seen value (and <= currentDay).
+    seenNewDay: { buildMenu: number; woodshop: number; jewelshop: number };
+
+    // Dialogue scenes the player has already seen. The dialog rule engine
+    // skips any scene whose id is in this list.
+    shownDialogs: string[];
+
     // UI (not persisted to DB)
     showDialog: boolean;
     dialogSceneId: string | null;
@@ -73,10 +98,23 @@ interface GameState {
     // Harvest actions
     harvestBuilding: (buildingId: string) => number;
 
+    // NEW badge actions
+    markBuildMenuSeen: () => void;
+    markWorkshopSeen: (workshopId: 'woodshop' | 'jewelshop') => void;
+
+    // Workshop crafting actions
+    startCrafting: (workshopId: 'woodshop' | 'jewelshop', partId: number) => boolean;
+    /** Move the crafted part to completed inventory. Only works if the
+     * craft timer has finished. Returns true on success. */
+    collectCrafting: (workshopId: 'woodshop' | 'jewelshop') => boolean;
+    /** True if the workshop's slot is finished and ready to collect. */
+    isCraftingReady: (workshopId: 'woodshop' | 'jewelshop') => boolean;
+
     // UI actions
     openDialog: (sceneId: string) => void;
     advanceDialog: () => void;
     closeDialog: () => void;
+    markDialogShown: (sceneId: string) => void;
     toggleBuildMenu: () => void;
     closeBuildMenu: () => void;
     openBuildingModal: (category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox', id: string) => void;
@@ -84,8 +122,9 @@ interface GameState {
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
-    // Initial state
-    currentDay: 3, // DEBUG: 고정값. 배포 시 calcDayFromDate()로 교체
+    // Initial state — fresh game. Date-based day; 0 parts; only box + wood_farm
+    // pre-placed; wood_farm ready to harvest immediately so the tutorial flows.
+    currentDay: calcDayFromDate(),
     tutorialStep: 0,
     boxStage: 1,
     packagingStartedAt: null,
@@ -110,18 +149,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     woodshopCrafting: { partId: null, startedAt: null },
     jewelshopCrafting: { partId: null, startedAt: null },
 
-    // Debug: each harvestable building starts with ~50% of its cycle already elapsed
-    harvestStates: (() => {
-        const now = Date.now();
-        const out: Record<string, HarvestState> = {};
-        for (const [bid, resId] of Object.entries(HARVESTABLE_BUILDINGS)) {
-            const prod = PRODUCTION[resId as keyof typeof PRODUCTION];
-            if (!prod) continue;
-            // 50% of cycle already elapsed
-            out[bid] = { lastHarvestAt: now - prod.cycle * 60_000 * 0.5 };
-        }
-        return out;
-    })(),
+    seenNewDay: { buildMenu: 0, woodshop: 0, jewelshop: 0 },
+    shownDialogs: [],
+
+    // wood_farm starts ready to harvest so the Day 1 tutorial hint can fire
+    // immediately. Others seed an empty record; harvestStates for later
+    // buildings are created when they're built.
+    harvestStates: {
+        wood_farm: { lastHarvestAt: Date.now() - 90 * 60_000 },
+    },
 
     // UI
     showDialog: false,
@@ -264,6 +300,18 @@ export const useGameStore = create<GameState>((set, get) => ({
         return info.amount;
     },
 
+    // NEW badge: record that the user has opened the surface up to currentDay
+    markBuildMenuSeen: () => {
+        set(state => ({
+            seenNewDay: { ...state.seenNewDay, buildMenu: state.currentDay },
+        }));
+    },
+    markWorkshopSeen: (workshopId) => {
+        set(state => ({
+            seenNewDay: { ...state.seenNewDay, [workshopId]: state.currentDay },
+        }));
+    },
+
     // Part actions
     completePart: (partId) => {
         set(state => ({
@@ -272,9 +320,97 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     attachPart: (partId) => {
-        set(state => ({
-            partsAttached: [...state.partsAttached, partId],
-        }));
+        set(state => {
+            // Already attached → no-op
+            if (state.partsAttached.includes(partId)) return {};
+            const nextAttached = [...state.partsAttached, partId];
+            // Remove from partsCompleted if present (parts move completed → attached)
+            const nextCompleted = state.partsCompleted.filter(id => id !== partId);
+            // Starting packaging: when the 24th part is attached, kick off the
+            // 90-minute packaging countdown (once).
+            const patch: Partial<GameState> = {
+                partsAttached: nextAttached,
+                partsCompleted: nextCompleted,
+                boxStage: boxStageFromAttachedCount(nextAttached.length),
+            };
+            if (nextAttached.length >= PARTS.length && state.packagingStartedAt == null) {
+                patch.packagingStartedAt = Date.now();
+            }
+            return patch;
+        });
+    },
+
+    // Workshop crafting ---------------------------------------------------
+    startCrafting: (workshopId, partId) => {
+        const state = get();
+        const part = PARTS.find(p => p.id === partId);
+        if (!part) return false;
+        if (part.workshop !== workshopId) return false;
+
+        // Slot must be empty
+        const slot = workshopId === 'woodshop' ? state.woodshopCrafting : state.jewelshopCrafting;
+        if (slot.partId != null) return false;
+
+        // Already completed or attached → can't re-craft
+        if (state.partsCompleted.includes(partId)) return false;
+        if (state.partsAttached.includes(partId)) return false;
+
+        // Can afford?
+        for (const c of part.cost) {
+            if ((state.resources[c.res]?.amount ?? 0) < c.amount) return false;
+        }
+
+        // Deduct resources + set slot atomically
+        const newResources = { ...state.resources };
+        for (const c of part.cost) {
+            newResources[c.res] = {
+                ...newResources[c.res],
+                amount: newResources[c.res].amount - c.amount,
+            };
+        }
+        const newSlot: CraftingState = { partId, startedAt: Date.now() };
+        if (workshopId === 'woodshop') {
+            set({ resources: newResources, woodshopCrafting: newSlot });
+        } else {
+            set({ resources: newResources, jewelshopCrafting: newSlot });
+        }
+        return true;
+    },
+
+    isCraftingReady: (workshopId) => {
+        const state = get();
+        const slot = workshopId === 'woodshop' ? state.woodshopCrafting : state.jewelshopCrafting;
+        if (slot.partId == null || slot.startedAt == null) return false;
+        const part = PARTS.find(p => p.id === slot.partId);
+        if (!part) return false;
+        const elapsed = Date.now() - slot.startedAt;
+        const craftMs = part.craftTime * 60 * 1000;
+        return elapsed >= craftMs;
+    },
+
+    collectCrafting: (workshopId) => {
+        const state = get();
+        const slot = workshopId === 'woodshop' ? state.woodshopCrafting : state.jewelshopCrafting;
+        if (slot.partId == null || slot.startedAt == null) return false;
+
+        const part = PARTS.find(p => p.id === slot.partId);
+        if (!part) return false;
+
+        // Must be done
+        const elapsed = Date.now() - slot.startedAt;
+        const craftMs = part.craftTime * 60 * 1000;
+        if (elapsed < craftMs) return false;
+
+        set(s => ({
+            partsCompleted: s.partsCompleted.includes(slot.partId as number)
+                ? s.partsCompleted
+                : [...s.partsCompleted, slot.partId as number],
+            [workshopId === 'woodshop' ? 'woodshopCrafting' : 'jewelshopCrafting']: {
+                partId: null,
+                startedAt: null,
+            },
+        } as Partial<GameState>));
+        return true;
     },
 
     // Progress actions
@@ -288,7 +424,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     // UI actions
     openDialog: (sceneId) => set({ showDialog: true, dialogSceneId: sceneId, dialogLineIndex: 0 }),
     advanceDialog: () => set(state => ({ dialogLineIndex: state.dialogLineIndex + 1 })),
-    closeDialog: () => set({ showDialog: false, dialogSceneId: null, dialogLineIndex: 0 }),
+    closeDialog: () => set(state => {
+        // Closing auto-marks the scene as shown, so the rule engine never
+        // re-opens the same scene.
+        const id = state.dialogSceneId;
+        const next: Partial<GameState> = { showDialog: false, dialogSceneId: null, dialogLineIndex: 0 };
+        if (id && !state.shownDialogs.includes(id)) {
+            next.shownDialogs = [...state.shownDialogs, id];
+        }
+        return next;
+    }),
+    markDialogShown: (sceneId) => set(state => (
+        state.shownDialogs.includes(sceneId)
+            ? {}
+            : { shownDialogs: [...state.shownDialogs, sceneId] }
+    )),
     toggleBuildMenu: () => set(state => ({ showBuildMenu: !state.showBuildMenu })),
     closeBuildMenu: () => set({ showBuildMenu: false }),
     openBuildingModal: (category, id) => set({ activeModal: { category, id } }),
@@ -311,5 +461,7 @@ export function getSerializableState() {
         woodshopCrafting: state.woodshopCrafting,
         jewelshopCrafting: state.jewelshopCrafting,
         harvestStates: state.harvestStates,
+        seenNewDay: state.seenNewDay,
+        shownDialogs: state.shownDialogs,
     };
 }
