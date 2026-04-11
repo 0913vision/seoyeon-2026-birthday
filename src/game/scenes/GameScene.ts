@@ -15,6 +15,18 @@ const GRASS_DARK = [0x5aaa6e, 0x5dae72, 0x58a66a, 0x62b276, 0x56a266];
 const DIRT_COLORS = { fill: 0xa08660, highlight: 0xb89870, shadow: 0x886e48 };
 const STONE_COLORS = { fill: 0xb0aaa5, highlight: 0xc8c2bd, shadow: 0x908a85 };
 
+// Paths extending in 4 directions from gift box (8,8), 5 tiles each direction
+const PATH_TILES: string[] = [
+    // Up
+    '3,8', '4,8', '5,8', '6,8', '7,8',
+    // Down
+    '9,8', '10,8', '11,8', '12,8', '13,8',
+    // Left
+    '8,3', '8,4', '8,5', '8,6', '8,7',
+    // Right
+    '8,9', '8,10', '8,11', '8,12', '8,13',
+];
+
 // Tile layout: 'sp' = stone path, 'dp' = dirt path, 'gd' = dark grass
 const TILE_MAP: Record<string, string> = {
     // Stone ring around Gift Box (8,8)
@@ -197,19 +209,42 @@ export class GameScene extends Scene {
             }
         }
 
+        // Draw paths (stone color overlay on grass)
+        const PATH_FILL = 0xb0a898;
+        const PATH_EDGE = 0x8a7f70;
+        for (const key of PATH_TILES) {
+            const [r, c] = key.split(',').map(Number);
+            const { x, y } = this.toScreen(r, c);
+            gfx.fillStyle(PATH_FILL, 1);
+            gfx.beginPath();
+            gfx.moveTo(x, y - TILE_H / 2);
+            gfx.lineTo(x + TILE_W / 2, y);
+            gfx.lineTo(x, y + TILE_H / 2);
+            gfx.lineTo(x - TILE_W / 2, y);
+            gfx.closePath();
+            gfx.fillPath();
+            // Thin border
+            gfx.lineStyle(2 * DPR, PATH_EDGE, 0.6);
+            gfx.beginPath();
+            gfx.moveTo(x, y - TILE_H / 2);
+            gfx.lineTo(x + TILE_W / 2, y);
+            gfx.lineTo(x, y + TILE_H / 2);
+            gfx.lineTo(x - TILE_W / 2, y);
+            gfx.closePath();
+            gfx.strokePath();
+        }
 
-        // Camera bounds - generous margin for zoom out
-        const margin = 6;
-        const top = this.toScreen(-margin, -margin);
-        const right = this.toScreen(-margin, GRID_SIZE + margin);
-        const bottom = this.toScreen(GRID_SIZE + margin, GRID_SIZE + margin);
-        const left = this.toScreen(GRID_SIZE + margin, -margin);
 
-        const boundsX = left.x - TILE_W * 3;
-        const boundsY = top.y - TILE_H * 4;
-        const boundsW = (right.x - left.x) + TILE_W * 6;
-        const boundsH = (bottom.y - top.y) + TILE_H * 8;
-        this.cameras.main.setBounds(boundsX, boundsY, boundsW, boundsH);
+        // Camera bounds - tight around grid center
+        const gridCenter = this.toScreen(GRID_SIZE / 2, GRID_SIZE / 2);
+        const halfW = 9 * TILE_W;
+        const halfH = 10 * TILE_H;
+        this.cameras.main.setBounds(
+            gridCenter.x - halfW,
+            gridCenter.y - halfH,
+            halfW * 2,
+            halfH * 2
+        );
     }
 
     private createShadowTexture() {
@@ -491,6 +526,10 @@ export class GameScene extends Scene {
                 this.occupiedTiles.add(`${c.row},${c.col}`);
             }
         }
+        // Mark paths as occupied
+        for (const key of PATH_TILES) {
+            this.occupiedTiles.add(key);
+        }
     }
 
     private setupBuildMode() {
@@ -623,7 +662,9 @@ export class GameScene extends Scene {
 
         // Semi-transparent building preview
         const scaffoldH = TILE_H * 1.2;
-        const def = DATA_BUILDINGS.find(b => b.id === buildingId);
+        // For test entries without a real def, fall back to woodshop sprite
+        const def = DATA_BUILDINGS.find(b => b.id === buildingId)
+            || DATA_BUILDINGS.find(b => b.id === 'woodshop');
         if (def && this.textures.exists(def.spriteKey)) {
             const preview = this.add.image(
                 (def.offX || 0) * DPR,
@@ -829,7 +870,7 @@ export class GameScene extends Scene {
         canvas.addEventListener('touchcancel', (e) => { this.activeTouchCount = e.touches.length; }, { passive: true });
         let velocityY = 0;
 
-        const MIN_ZOOM = 0.4;
+        const MIN_ZOOM = 0.55;
         const MAX_ZOOM = 1.3;
 
         cam.setZoom(0.65);

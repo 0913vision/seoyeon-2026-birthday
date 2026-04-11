@@ -57,9 +57,11 @@ const MOCK_SAVE: SaveData = {
         flower_farm: { built: true, position: { row: 4, col: 6 } },
         quarry: { built: true, position: { row: 4, col: 11 } },
         mine: { built: true, position: { row: 9, col: 4 } },
-        jewelshop: { built: true, position: { row: 8, col: 3 } },
+        jewelshop: { built: true, position: { row: 7, col: 3 } },
+        gem_cave: { built: true, position: { row: 10, col: 11 } },
         // Frozen test construction (constructionStartedAt: -1 = never decrements)
-        gem_cave: { built: false, position: { row: 10, col: 11 }, constructionStartedAt: -1 },
+        // Separate entry, uses woodshop sprite for preview, placed at empty (2, 2)
+        test_construction: { built: false, position: { row: 2, col: 2 }, constructionStartedAt: -1 },
     },
     partsCompleted: [],
     partsAttached: [],
