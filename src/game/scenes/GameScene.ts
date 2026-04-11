@@ -498,9 +498,9 @@ export class GameScene extends Scene {
         }).setOrigin(0, 0.5);
         container.add(text);
 
-        // Interactive hit area: will be resized in renderBubble
-        const hitW = 72 * DPR;
-        const hitH = 36 * DPR;
+        // Interactive hit area: generous default, updated in renderBubble to match actual bubble
+        const hitW = 200 * DPR;
+        const hitH = 60 * DPR;
         container.setSize(hitW, hitH);
         container.setInteractive(
             new Phaser.Geom.Rectangle(-hitW / 2, -hitH / 2, hitW, hitH),
@@ -617,10 +617,11 @@ export class GameScene extends Scene {
         drawBubblePath(0, 0);
         bubble.bg.strokePath();
 
-        // Update hit area (include tail)
-        bubble.container.input?.hitArea && Object.assign(bubble.container.input.hitArea, {
-            x: -bgW / 2, y: -bgH / 2, width: bgW, height: bgH + tailH,
-        });
+        // Update hit area (include tail) — use setTo for reliable Phaser update
+        if (bubble.container.input) {
+            const ha = bubble.container.input.hitArea as Phaser.Geom.Rectangle;
+            ha.setTo(-bgW / 2, -bgH / 2, bgW, bgH + tailH);
+        }
 
         // Pulse animation when ready; stop when not
         if (ready && bubble.lastState !== 'ready') {
@@ -662,17 +663,18 @@ export class GameScene extends Scene {
         const prod = PRODUCTION[resId as keyof typeof PRODUCTION];
         if (!prod) return;
 
+        // Current rest scale (zoom-aware) so we don't fight updateLabels
+        const restScale = bubble.container.scale;
+
         const info = computeHarvest(hs.lastHarvestAt, Date.now(), prod.cycle, prod.perCycle);
         if (info.percent >= 1) {
             // Harvest!
             useGameStore.getState().harvestBuilding(buildingId);
-            // Immediate refresh
             this.renderBubble(bubble);
-            // Pop feedback
             this.tweens.add({
                 targets: bubble.container,
-                scaleX: { from: 1.2, to: 1 },
-                scaleY: { from: 1.2, to: 1 },
+                scaleX: { from: restScale * 1.2, to: restScale },
+                scaleY: { from: restScale * 1.2, to: restScale },
                 duration: 250,
                 ease: 'Back.easeOut',
             });
@@ -680,8 +682,8 @@ export class GameScene extends Scene {
             // Not ready: small shake/feedback
             this.tweens.add({
                 targets: bubble.container,
-                scaleX: { from: 0.9, to: 1 },
-                scaleY: { from: 0.9, to: 1 },
+                scaleX: { from: restScale * 0.9, to: restScale },
+                scaleY: { from: restScale * 0.9, to: restScale },
                 duration: 180,
                 ease: 'Sine.easeOut',
             });
