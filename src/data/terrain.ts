@@ -27,7 +27,8 @@ export const TERRAIN: TerrainDef[] = [
     },
     {
         id: 'rock_outcrop', name: '바위', spriteKey: 'rock_outcrop',
-        row: 6, col: 11, originY: 0.58, scale: 1.2, offX: 6, offY: 0,
+        row: 5, col: 10, width: 2, height: 2,
+        originY: 0.58, scale: 2.4, offX: 6, offY: 0,
     },
     {
         id: 'cave_entrance', name: '동굴', spriteKey: 'cave_entrance',

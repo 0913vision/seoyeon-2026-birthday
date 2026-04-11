@@ -247,9 +247,11 @@ export class GameScene extends Scene {
 
             // Shadow (size proportional to area)
             const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
-            shadow.setDisplaySize(TILE_W * 1.1 * Math.max(w, h), TILE_H * 0.7 * Math.max(w, h));
+            shadow.setDisplaySize(TILE_W * 1.3 * Math.max(w, h), TILE_H * 0.85 * Math.max(w, h));
+            shadow.setAlpha(0.9);
             shadow.setDepth(depth);
 
+            let topY = y - 30 * DPR;
             if (this.textures.exists(t.spriteKey)) {
                 const tx = x + (t.offX || 0) * DPR;
                 const ty = y + (t.offY || 0) * DPR;
@@ -258,7 +260,22 @@ export class GameScene extends Scene {
                 sprite.setScale(scale);
                 sprite.setOrigin(0.5, t.originY);
                 sprite.setDepth(depth + 2);
+                topY = y - sprite.displayHeight * 0.5;
             }
+
+            // Label (same style as buildings)
+            const labelPosY = topY - 18 * DPR;
+            const baseFontSize = 13 * DPR;
+            const labelText = this.add.text(x, labelPosY, t.name, {
+                fontSize: `${baseFontSize}px`,
+                color: '#ffffff',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 3 * DPR,
+                resolution: window.devicePixelRatio || 3,
+            }).setOrigin(0.5).setDepth(depth + 6);
+            this.labels.push({ text: labelText, x, y: labelPosY, baseFontSize });
         }
     }
 
