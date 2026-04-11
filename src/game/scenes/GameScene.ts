@@ -286,9 +286,9 @@ export class GameScene extends Scene {
         const ctx = canvas.getContext('2d')!;
 
         const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-        gradient.addColorStop(0, 'rgba(0,0,0,0.25)');
-        gradient.addColorStop(0.4, 'rgba(0,0,0,0.15)');
-        gradient.addColorStop(0.7, 'rgba(0,0,0,0.06)');
+        gradient.addColorStop(0, 'rgba(0,0,0,0.5)');
+        gradient.addColorStop(0.4, 'rgba(0,0,0,0.35)');
+        gradient.addColorStop(0.7, 'rgba(0,0,0,0.15)');
         gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
         ctx.fillStyle = gradient;
@@ -327,11 +327,12 @@ export class GameScene extends Scene {
                 sprite.setScale(scale);
                 sprite.setOrigin(0.5, t.originY);
                 sprite.setDepth(depth + 2);
-                // Make terrain sprite tappable
-                sprite.setInteractive();
+                // Make terrain sprite tappable (pixel-perfect)
+                sprite.setInteractive(this.input.makePixelPerfect());
                 const tid = t.id;
                 sprite.on('pointerdown', () => {
                     if (useGameStore.getState().buildMode) return;
+                    if (this.activeTouchCount >= 2) return;
                     this.tappedObject = { category: 'terrain', id: tid };
                 });
                 // Match building label style: use displayHeight * 0.5 (visual top of content)
@@ -391,12 +392,13 @@ export class GameScene extends Scene {
                 sprite.setDepth(depth + 2);
                 topY = y - sprite.displayHeight * 0.5;
 
-                // Make sprite tappable (sprite pixel area, not just tile)
+                // Make sprite tappable (pixel-perfect so transparent areas don't block neighbors)
                 const dataDef = DATA_BUILDINGS.find(d => d.spriteKey === b.spriteKey);
                 if (dataDef) {
-                    sprite.setInteractive();
+                    sprite.setInteractive(this.input.makePixelPerfect());
                     sprite.on('pointerdown', () => {
                         if (useGameStore.getState().buildMode) return;
+                        if (this.activeTouchCount >= 2) return;
                         const id = dataDef.id;
                         let cat: 'giftbox' | 'workshop' | 'harvest';
                         if (id === 'box') cat = 'giftbox';
@@ -957,10 +959,11 @@ export class GameScene extends Scene {
             preview.setScale(scale);
             preview.setOrigin(0.5, def.originY);
             preview.setAlpha(0.4);
-            // Make preview sprite tappable (for "construction" modal)
-            preview.setInteractive();
+            // Make preview sprite tappable (pixel-perfect, for "construction" modal)
+            preview.setInteractive(this.input.makePixelPerfect());
             preview.on('pointerdown', () => {
                 if (useGameStore.getState().buildMode) return;
+                if (this.activeTouchCount >= 2) return;
                 this.tappedObject = { category: 'construction', id: buildingId };
             });
             container.add(preview);

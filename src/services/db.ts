@@ -55,24 +55,27 @@ const MOCK_SAVE: SaveData = {
         box: { built: true, position: { row: 8, col: 8 } },
         wood_farm: { built: true, position: { row: 3, col: 4 } },
         woodshop: { built: true, position: { row: 5, col: 9 } },
-        flower_farm: { built: true, position: { row: 4, col: 6 } },
-        quarry: { built: true, position: { row: 4, col: 11 } },
-        mine: { built: true, position: { row: 9, col: 4 } },
+        // Front of flower_patch (5,6): right col (5,7)
+        flower_farm: { built: true, position: { row: 5, col: 7 } },
+        // Front of rock 2x2 (5-6, 10-11): bottom row (7,11)
+        quarry: { built: true, position: { row: 7, col: 11 } },
+        // Front of cave 2x2 (10-11, 4-5): bottom row (12,5)
+        mine: { built: true, position: { row: 12, col: 5 } },
         jewelshop: { built: true, position: { row: 7, col: 3 } },
-        gem_cave: { built: true, position: { row: 10, col: 11 } },
+        // Front of crystal (11,11): corner (12,12)
+        gem_cave: { built: true, position: { row: 12, col: 12 } },
         // Frozen test construction (constructionStartedAt: -1 = never decrements)
-        // Separate entry, uses woodshop sprite for preview, placed at empty (2, 2)
         test_construction: { built: false, position: { row: 2, col: 2 }, constructionStartedAt: -1 },
     },
     partsCompleted: [],
     partsAttached: [],
     woodshopCrafting: { partId: null, startedAt: null },
     jewelshopCrafting: { partId: null, startedAt: null },
-    // Debug: each harvestable building starts ~50% of its cycle elapsed.
-    // wood_farm/flower_farm/quarry cycle=60min → lastHarvestAt = now - 30min
-    // mine/gem_cave cycle=90min → lastHarvestAt = now - 45min
+    // Debug: variety of progress states for visual testing.
+    // wood_farm: 10 seconds before 100% (waiting → ready transition visible)
+    // flower_farm/quarry/mine/gem_cave: ~50% of cycle elapsed
     harvestStates: {
-        wood_farm:   { lastHarvestAt: Date.now() - 30 * 60_000 },
+        wood_farm:   { lastHarvestAt: Date.now() - (60 * 60_000 - 10_000) },
         flower_farm: { lastHarvestAt: Date.now() - 30 * 60_000 },
         quarry:      { lastHarvestAt: Date.now() - 30 * 60_000 },
         mine:        { lastHarvestAt: Date.now() - 45 * 60_000 },

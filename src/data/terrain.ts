@@ -62,22 +62,29 @@ export function* terrainCells(t: TerrainDef): Generator<{ row: number; col: numb
     }
 }
 
-// Returns true if (row, col) is 8-adjacent to any cell of the given terrain (and not a cell of it).
+// Returns true if (row, col) is in the "front" area of any terrain tile of the given type.
+// "Front" = the isometric down-right column + down-right row + corner.
+//   1x1 terrain → 3 front cells
+//   2x2 terrain → 5 front cells
+// Specifically, for a terrain spanning rows [tr, tr+h-1] cols [tc, tc+w-1]:
+//   - right col: (tr+i, tc+w) for i in [0, h-1]
+//   - bottom row: (tr+h, tc+j) for j in [0, w-1]
+//   - bottom-right corner: (tr+h, tc+w)
 export function isAdjacentToTerrain(row: number, col: number, terrainId: string): boolean {
     const targets = TERRAIN.filter(t => t.id === terrainId);
     for (const t of targets) {
-        // Skip if (row, col) is a cell of the terrain itself
-        let isOwnCell = false;
-        for (const c of terrainCells(t)) {
-            if (c.row === row && c.col === col) { isOwnCell = true; break; }
+        const w = t.width ?? 1;
+        const h = t.height ?? 1;
+        // Right column
+        for (let i = 0; i < h; i++) {
+            if (row === t.row + i && col === t.col + w) return true;
         }
-        if (isOwnCell) continue;
-        // Check 8-adjacency to any cell of the terrain
-        for (const c of terrainCells(t)) {
-            const dr = Math.abs(c.row - row);
-            const dc = Math.abs(c.col - col);
-            if (dr <= 1 && dc <= 1) return true;
+        // Bottom row
+        for (let j = 0; j < w; j++) {
+            if (row === t.row + h && col === t.col + j) return true;
         }
+        // Bottom-right corner
+        if (row === t.row + h && col === t.col + w) return true;
     }
     return false;
 }
