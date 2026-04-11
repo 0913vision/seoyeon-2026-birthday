@@ -114,35 +114,42 @@ function BubbleCalibrate() {
         const tailW = globals.tailW;
         const tailH = globals.tailH;
 
-        // Shadow behind bubble
+        // Unified bubble path (rect + tail)
+        const drawBubblePath = (offX: number, offY: number) => {
+            const l = bx - bgW / 2 + offX;
+            const rt = bx + bgW / 2 + offX;
+            const tp = by - bgH / 2 + offY;
+            const bt = by + bgH / 2 + offY;
+            ctx.beginPath();
+            ctx.moveTo(l + r, tp);
+            ctx.lineTo(rt - r, tp);
+            ctx.arcTo(rt, tp, rt, tp + r, r);
+            ctx.lineTo(rt, bt - r);
+            ctx.arcTo(rt, bt, rt - r, bt, r);
+            ctx.lineTo(bx + tailW / 2 + offX, bt);
+            ctx.lineTo(bx + offX, bt + tailH);
+            ctx.lineTo(bx - tailW / 2 + offX, bt);
+            ctx.lineTo(l + r, bt);
+            ctx.arcTo(l, bt, l, bt - r, r);
+            ctx.lineTo(l, tp + r);
+            ctx.arcTo(l, tp, l + r, tp, r);
+            ctx.closePath();
+        };
+
+        // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.28)';
-        roundRect(ctx, bx - bgW / 2 + 1, by - bgH / 2 + 3, bgW, bgH, r);
+        drawBubblePath(1, 3);
         ctx.fill();
 
-        // Bubble body
+        // Body
         ctx.fillStyle = ready ? '#fbbf24' : '#2a2018';
-        roundRect(ctx, bx - bgW / 2, by - bgH / 2, bgW, bgH, r);
-        ctx.fill();
-
-        // Tail
-        ctx.beginPath();
-        ctx.moveTo(bx - tailW / 2, by + bgH / 2 - 0.5);
-        ctx.lineTo(bx + tailW / 2, by + bgH / 2 - 0.5);
-        ctx.lineTo(bx, by + bgH / 2 + tailH);
-        ctx.closePath();
+        drawBubblePath(0, 0);
         ctx.fill();
 
         // Border
         ctx.lineWidth = globals.borderWidth;
         ctx.strokeStyle = ready ? '#ffffff' : '#c0a880';
-        roundRect(ctx, bx - bgW / 2, by - bgH / 2, bgW, bgH, r);
-        ctx.stroke();
-        // Tail border
-        ctx.beginPath();
-        ctx.moveTo(bx - tailW / 2, by + bgH / 2);
-        ctx.lineTo(bx, by + bgH / 2 + tailH);
-        ctx.moveTo(bx + tailW / 2, by + bgH / 2);
-        ctx.lineTo(bx, by + bgH / 2 + tailH);
+        drawBubblePath(0, 0);
         ctx.stroke();
 
         // Icon

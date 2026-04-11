@@ -596,37 +596,51 @@ export class GameScene extends Scene {
         const borderW = cfg.borderWidth * DPR;
 
         bubble.bg.clear();
-        // Shadow
-        bubble.bg.fillStyle(0x000000, 0.25);
-        bubble.bg.fillRoundedRect(-bgW / 2 + 1 * DPR, -bgH / 2 + 3 * DPR, bgW, bgH, r);
 
+        // Unified path: rounded rect + tail as one continuous closed shape
+        const drawBubblePath = (offX: number, offY: number) => {
+            const l = -bgW / 2 + offX;
+            const rt = bgW / 2 + offX;
+            const tp = -bgH / 2 + offY;
+            const bt = bgH / 2 + offY;
+            bubble.bg.beginPath();
+            bubble.bg.moveTo(l + r, tp);
+            bubble.bg.lineTo(rt - r, tp);
+            bubble.bg.arc(rt - r, tp + r, r, -Math.PI / 2, 0);
+            bubble.bg.lineTo(rt, bt - r);
+            bubble.bg.arc(rt - r, bt - r, r, 0, Math.PI / 2);
+            bubble.bg.lineTo(tailW / 2 + offX, bt);
+            bubble.bg.lineTo(0 + offX, bt + tailH);
+            bubble.bg.lineTo(-tailW / 2 + offX, bt);
+            bubble.bg.lineTo(l + r, bt);
+            bubble.bg.arc(l + r, bt - r, r, Math.PI / 2, Math.PI);
+            bubble.bg.lineTo(l, tp + r);
+            bubble.bg.arc(l + r, tp + r, r, Math.PI, Math.PI * 1.5);
+            bubble.bg.closePath();
+        };
+
+        // Shadow
+        bubble.bg.fillStyle(0x000000, 0.28);
+        drawBubblePath(1 * DPR, 3 * DPR);
+        bubble.bg.fillPath();
+
+        // Body fill
         if (ready) {
-            // Yellow ready state
             bubble.bg.fillStyle(0xfbbf24, 1);
-            bubble.bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            bubble.bg.fillTriangle(
-                -tailW / 2, bgH / 2 - 0.5 * DPR,
-                tailW / 2, bgH / 2 - 0.5 * DPR,
-                0, bgH / 2 + tailH,
-            );
-            bubble.bg.lineStyle(borderW, 0xffffff, 1);
-            bubble.bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            bubble.bg.lineBetween(-tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
-            bubble.bg.lineBetween(tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
         } else {
-            // Dark waiting state
             bubble.bg.fillStyle(0x2a2018, 0.92);
-            bubble.bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            bubble.bg.fillTriangle(
-                -tailW / 2, bgH / 2 - 0.5 * DPR,
-                tailW / 2, bgH / 2 - 0.5 * DPR,
-                0, bgH / 2 + tailH,
-            );
-            bubble.bg.lineStyle(borderW * 0.8, 0xc0a880, 0.95);
-            bubble.bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            bubble.bg.lineBetween(-tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
-            bubble.bg.lineBetween(tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
         }
+        drawBubblePath(0, 0);
+        bubble.bg.fillPath();
+
+        // Body stroke (continuous, no seam between body and tail)
+        if (ready) {
+            bubble.bg.lineStyle(borderW, 0xffffff, 1);
+        } else {
+            bubble.bg.lineStyle(borderW * 0.8, 0xc0a880, 0.95);
+        }
+        drawBubblePath(0, 0);
+        bubble.bg.strokePath();
 
         // Update hit area (include tail)
         bubble.container.input?.hitArea && Object.assign(bubble.container.input.hitArea, {
