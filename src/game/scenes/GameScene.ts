@@ -261,8 +261,8 @@ export class GameScene extends Scene {
                 sprite.setScale(scale);
                 sprite.setOrigin(0.5, t.originY);
                 sprite.setDepth(depth + 2);
-                // True top edge: origin point ty minus displayHeight * originY
-                topY = ty - sprite.displayHeight * t.originY;
+                // Match building label style: use displayHeight * 0.5 (visual top of content)
+                topY = ty - sprite.displayHeight * 0.5;
                 labelX = tx;
             }
 
