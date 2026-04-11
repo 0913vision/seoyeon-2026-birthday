@@ -25,11 +25,12 @@ export const BUBBLE_CONFIG: BubbleGlobalConfig = {
     cornerRadius: 0,
 };
 
-// Per-building position offset from the sprite's top center (CSS pixels, before DPR).
+// Per-building position offset from the tile top center (CSS pixels, before DPR).
+// Default offX = 0 means the bubble is centered horizontally above the building.
 export const BUBBLE_OFFSETS: Record<string, { offX: number; offY: number }> = {
-    wood_farm:   { offX: 30, offY: -36 },
-    flower_farm: { offX: 30, offY: -36 },
-    quarry:      { offX: 30, offY: -36 },
-    mine:        { offX: 30, offY: -36 },
-    gem_cave:    { offX: 30, offY: -36 },
+    wood_farm:   { offX: 0, offY: -20 },
+    flower_farm: { offX: 0, offY: -20 },
+    quarry:      { offX: 0, offY: -20 },
+    mine:        { offX: 0, offY: -20 },
+    gem_cave:    { offX: 0, offY: -20 },
 };
