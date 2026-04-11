@@ -173,10 +173,12 @@ function App() {
         if (!currentScene) return;
         if (dialogLineIndex < currentScene.lines.length - 1) {
             advanceDialog();
-        } else {
-            // closeDialog auto-marks the scene as shown.
-            closeDialog();
+            return;
         }
+        // Last line: action-blocking scenes (those with `until`) cannot be
+        // dismissed by tap — the player must perform the required action.
+        if (currentScene.until) return;
+        closeDialog();
     };
 
     return (

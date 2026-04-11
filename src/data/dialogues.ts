@@ -84,9 +84,9 @@ export const DIALOGUES: DialogueScene[] = [
     {
         id: 'day1_harvest_guide',
         when: (ctx) => ctx.currentDay === 1 && hasShown(ctx, 'day1_map_guide'),
-        // No auto-dismiss — player can tap the wood farm with the dialog
-        // still visible, and the next scene only fires after this one is
-        // manually tapped through.
+        // Action-blocking: tapping the dialog advances lines but cannot
+        // close it. The ONLY way to dismiss it is to open the harvest modal.
+        until: (ctx) => ctx.activeModal?.category === 'harvest' && ctx.activeModal.id === 'wood_farm',
         camera: 'wood_farm',
         lines: [
             { text: '위쪽에 나무밭이 있습니다.' },
@@ -102,6 +102,8 @@ export const DIALOGUES: DialogueScene[] = [
             && (ctx.resources.wood?.amount ?? 0) > 2500
             && ctx.activeModal == null
             && hasShown(ctx, 'day1_harvest_guide'),
+        // Action-blocking: closes only when the player opens the BUILD menu.
+        until: (ctx) => ctx.showBuildMenu,
         lines: [
             { text: '자원 수확이 완료되었습니다.' },
             { text: '수확한 자원은 화면 상단에서 확인하실 수 있습니다.' },
@@ -113,6 +115,8 @@ export const DIALOGUES: DialogueScene[] = [
     {
         id: 'day1_build_menu_opened',
         when: (ctx) => ctx.currentDay === 1 && ctx.showBuildMenu && hasShown(ctx, 'day1_after_first_harvest'),
+        // Action-blocking: closes once the woodshop enters construction.
+        until: (ctx) => !!ctx.buildings.woodshop?.constructionStartedAt || !!ctx.buildings.woodshop?.built,
         lines: [
             { text: '이곳에서 건물을 지을 수 있습니다.' },
             { text: '목공방 카드를 눌러 주세요.' },
@@ -122,6 +126,8 @@ export const DIALOGUES: DialogueScene[] = [
     {
         id: 'day1_woodshop_done',
         when: (ctx) => ctx.currentDay === 1 && built(ctx, 'woodshop') && hasShown(ctx, 'day1_build_menu_opened'),
+        // Action-blocking: closes only when the player opens the woodshop modal.
+        until: (ctx) => ctx.activeModal?.category === 'workshop' && ctx.activeModal.id === 'woodshop',
         camera: 'woodshop',
         lines: [
             { text: '목공방이 완성되었습니다.' },
