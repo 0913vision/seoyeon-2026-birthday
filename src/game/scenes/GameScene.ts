@@ -2,7 +2,7 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 import { useGameStore } from '../../store/useGameStore';
 import { BUILDINGS as DATA_BUILDINGS } from '../../data/buildings';
-import { TERRAIN, BUILDING_TERRAIN_REQUIRE, isAdjacentToTerrain } from '../../data/terrain';
+import { TERRAIN, BUILDING_TERRAIN_REQUIRE, isAdjacentToTerrain, terrainCells } from '../../data/terrain';
 
 const DPR = window.devicePixelRatio || 1;
 const TILE_W = 110 * DPR;
@@ -236,12 +236,18 @@ export class GameScene extends Scene {
             this.createShadowTexture();
         }
         for (const t of TERRAIN) {
-            const { x, y } = this.toScreen(t.row, t.col);
-            const depth = (t.row + t.col) * 10;
+            const w = t.width ?? 1;
+            const h = t.height ?? 1;
+            // Visual center of the multi-tile area
+            const centerRow = t.row + (h - 1) / 2;
+            const centerCol = t.col + (w - 1) / 2;
+            const { x, y } = this.toScreen(centerRow, centerCol);
+            // Use bottom-right cell for depth so it sorts correctly
+            const depth = (t.row + h - 1 + t.col + w - 1) * 10;
 
-            // Shadow
+            // Shadow (size proportional to area)
             const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
-            shadow.setDisplaySize(TILE_W * 1.1, TILE_H * 0.7);
+            shadow.setDisplaySize(TILE_W * 1.1 * Math.max(w, h), TILE_H * 0.7 * Math.max(w, h));
             shadow.setDepth(depth);
 
             if (this.textures.exists(t.spriteKey)) {
@@ -459,9 +465,11 @@ export class GameScene extends Scene {
                 this.occupiedTiles.add(`${bs.position.row},${bs.position.col}`);
             }
         }
-        // Mark pre-placed terrain tiles as occupied
+        // Mark pre-placed terrain tiles as occupied (multi-tile aware)
         for (const t of TERRAIN) {
-            this.occupiedTiles.add(`${t.row},${t.col}`);
+            for (const c of terrainCells(t)) {
+                this.occupiedTiles.add(`${c.row},${c.col}`);
+            }
         }
     }
 

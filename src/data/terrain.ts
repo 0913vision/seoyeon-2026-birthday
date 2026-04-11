@@ -5,8 +5,10 @@ export interface TerrainDef {
     id: string;
     name: string;
     spriteKey: string;
-    row: number;
-    col: number;
+    row: number;       // top-left tile row
+    col: number;       // top-left tile col
+    width?: number;    // tile width (default 1)
+    height?: number;   // tile height (default 1)
     originY: number;
     scale: number;
     offX: number;
@@ -29,7 +31,8 @@ export const TERRAIN: TerrainDef[] = [
     },
     {
         id: 'cave_entrance', name: '동굴', spriteKey: 'cave_entrance',
-        row: 11, col: 5, originY: 0.61, scale: 1.0, offX: -2.5, offY: -1,
+        row: 10, col: 4, width: 2, height: 2,
+        originY: 0.61, scale: 2.0, offX: -2.5, offY: -1,
     },
     {
         id: 'crystal_cluster', name: '수정', spriteKey: 'crystal_cluster',
@@ -45,13 +48,33 @@ export const BUILDING_TERRAIN_REQUIRE: Record<string, string> = {
     mine: 'cave_entrance',
 };
 
-// Returns true if (row, col) is adjacent (8-directional) to any tile of the given terrain.
+// Iterate over all tiles occupied by a multi-tile terrain.
+export function* terrainCells(t: TerrainDef): Generator<{ row: number; col: number }> {
+    const w = t.width ?? 1;
+    const h = t.height ?? 1;
+    for (let r = 0; r < h; r++) {
+        for (let c = 0; c < w; c++) {
+            yield { row: t.row + r, col: t.col + c };
+        }
+    }
+}
+
+// Returns true if (row, col) is 8-adjacent to any cell of the given terrain (and not a cell of it).
 export function isAdjacentToTerrain(row: number, col: number, terrainId: string): boolean {
     const targets = TERRAIN.filter(t => t.id === terrainId);
     for (const t of targets) {
-        const dr = Math.abs(t.row - row);
-        const dc = Math.abs(t.col - col);
-        if (dr <= 1 && dc <= 1 && (dr + dc) > 0) return true;
+        // Skip if (row, col) is a cell of the terrain itself
+        let isOwnCell = false;
+        for (const c of terrainCells(t)) {
+            if (c.row === row && c.col === col) { isOwnCell = true; break; }
+        }
+        if (isOwnCell) continue;
+        // Check 8-adjacency to any cell of the terrain
+        for (const c of terrainCells(t)) {
+            const dr = Math.abs(c.row - row);
+            const dc = Math.abs(c.col - col);
+            if (dr <= 1 && dc <= 1) return true;
+        }
     }
     return false;
 }
