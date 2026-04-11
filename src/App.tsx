@@ -5,6 +5,7 @@ import { TopBar } from './components/TopBar';
 import { BottomBar } from './components/BottomBar';
 import { BuildMenu } from './components/BuildMenu';
 import { BuildingModal } from './components/BuildingModal';
+import { DebugPanel } from './components/DebugPanel';
 import { DialogBox } from './components/DialogBox';
 import { DIALOGUES, findNextDialog, DialogContext } from './data/dialogues';
 import { loadGame, applyLoadedData, startAutoSave, stopAutoSave } from './services/db';
@@ -264,6 +265,11 @@ function App() {
                 {/* Building/Terrain interaction modal */}
                 <BuildingModal />
             </div>
+
+            {/* Debug admin panel — only on /debug path */}
+            {typeof window !== 'undefined' && window.location.pathname === '/debug' && (
+                <DebugPanel />
+            )}
         </div>
     );
 }

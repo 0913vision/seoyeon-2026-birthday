@@ -286,10 +286,11 @@ const MOCK_SEED: SaveData = {
     boxStage: 1,
     packagingStartedAt: null,
     boxHarvested: false,
-    // Starter wood enough for all Day 1 parts + the woodshop, so the player
-    // can progress on Saturday with only 1–2 wood farm harvests.
+    // Starter resources tuned so the player can clear Day 1 with at most a
+    // single wood harvest: 4000 wood covers woodshop (500) + 4 parts (2000)
+    // + 1500 carry-over for Day 2 build costs. Other resources stay locked.
     resources: {
-        wood: { amount: 2500, unlocked: true },
+        wood: { amount: 4000, unlocked: true },
         flower: { amount: 0, unlocked: false },
         stone: { amount: 0, unlocked: false },
         metal: { amount: 0, unlocked: false },
