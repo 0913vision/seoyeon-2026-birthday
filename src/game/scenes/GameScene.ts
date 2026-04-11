@@ -664,30 +664,38 @@ export class GameScene extends Scene {
         // Store the building state start time
         const storeState = useGameStore.getState().buildings[buildingId];
         const startedAt = storeState?.constructionStartedAt ?? Date.now();
+        const isFrozen = startedAt === -1;
 
-        // Update timer every second
-        const timerEvent = this.time.addEvent({
-            delay: 500,
-            loop: true,
-            callback: () => {
-                const elapsed = Date.now() - startedAt;
-                const remaining = Math.max(0, CONSTRUCTION_TIME_MS - elapsed);
-                const progress = Math.min(1, elapsed / CONSTRUCTION_TIME_MS);
+        if (isFrozen) {
+            // Frozen test placeholder: fixed display, no countdown
+            timerText.setText('TEST');
+            barFill.fillStyle(0xfbbf24, 0.9);
+            barFill.fillRoundedRect(-barW / 2, barY, barW * 0.5, barH, 3 * DPR);
+        } else {
+            // Update timer every second
+            const timerEvent = this.time.addEvent({
+                delay: 500,
+                loop: true,
+                callback: () => {
+                    const elapsed = Date.now() - startedAt;
+                    const remaining = Math.max(0, CONSTRUCTION_TIME_MS - elapsed);
+                    const progress = Math.min(1, elapsed / CONSTRUCTION_TIME_MS);
 
-                const mins = Math.floor(remaining / 60000);
-                const secs = Math.floor((remaining % 60000) / 1000);
-                timerText.setText(`${mins}:${secs.toString().padStart(2, '0')}`);
+                    const mins = Math.floor(remaining / 60000);
+                    const secs = Math.floor((remaining % 60000) / 1000);
+                    timerText.setText(`${mins}:${secs.toString().padStart(2, '0')}`);
 
-                // Update progress bar
-                barFill.clear();
-                barFill.fillStyle(0x44cc66, 0.9);
-                barFill.fillRoundedRect(-barW / 2, barY, barW * progress, barH, 3 * DPR);
+                    // Update progress bar
+                    barFill.clear();
+                    barFill.fillStyle(0x44cc66, 0.9);
+                    barFill.fillRoundedRect(-barW / 2, barY, barW * progress, barH, 3 * DPR);
 
-                if (remaining <= 0) {
-                    timerEvent.destroy();
-                }
-            },
-        });
+                    if (remaining <= 0) {
+                        timerEvent.destroy();
+                    }
+                },
+            });
+        }
 
         // Pulsing animation on preview
         if (container.list.length > 0) {
@@ -775,6 +783,11 @@ export class GameScene extends Scene {
         const storeBuildings = useGameStore.getState().buildings;
         for (const [id, bs] of Object.entries(storeBuildings)) {
             if (!bs.built && bs.constructionStartedAt && bs.position) {
+                // Frozen test placeholder (constructionStartedAt = -1) - never completes
+                if (bs.constructionStartedAt === -1) {
+                    this.placeConstructionPlaceholder(id, bs.position.row, bs.position.col);
+                    continue;
+                }
                 const elapsed = Date.now() - bs.constructionStartedAt;
                 if (elapsed < CONSTRUCTION_TIME_MS) {
                     this.placeConstructionPlaceholder(id, bs.position.row, bs.position.col);
