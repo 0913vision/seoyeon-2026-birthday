@@ -3,6 +3,7 @@ import { Scene } from 'phaser';
 import { useGameStore } from '../../store/useGameStore';
 import { BUILDINGS as DATA_BUILDINGS, HARVESTABLE_BUILDINGS } from '../../data/buildings';
 import { TERRAIN, BUILDING_TERRAIN_REQUIRE, isAdjacentToTerrain, terrainCells } from '../../data/terrain';
+import { BUBBLE_CONFIG, BUBBLE_OFFSETS } from '../../data/bubbleConfig';
 import { PRODUCTION } from '../../data/resources';
 import { computeHarvest, formatRemaining } from '../harvestCalc';
 
@@ -489,9 +490,10 @@ export class GameScene extends Scene {
         const resId = HARVESTABLE_BUILDINGS[buildingId];
         if (!resId) return;
 
-        // Position: right of top, slightly above building
-        const bx = x + 30 * DPR;
-        const by = topY - 36 * DPR;
+        // Position from config (per-building offset)
+        const off = BUBBLE_OFFSETS[buildingId] ?? { offX: 30, offY: -36 };
+        const bx = x + off.offX * DPR;
+        const by = topY + off.offY * DPR;
 
         const container = this.add.container(bx, by);
         container.setDepth(depth + 8);
@@ -505,13 +507,13 @@ export class GameScene extends Scene {
         let icon: Phaser.GameObjects.Image | null = null;
         if (this.textures.exists(iconKey)) {
             icon = this.add.image(0, 0, iconKey);
-            icon.setDisplaySize(18 * DPR, 18 * DPR);
+            icon.setDisplaySize(BUBBLE_CONFIG.iconSize * DPR, BUBBLE_CONFIG.iconSize * DPR);
             container.add(icon);
         }
 
         // Amount text (position set dynamically in renderBubble)
         const text = this.add.text(0, 0, '', {
-            fontSize: `${13 * DPR}px`,
+            fontSize: `${BUBBLE_CONFIG.fontSize * DPR}px`,
             fontStyle: 'bold',
             color: '#ffffff',
             fontFamily: 'Fredoka, system-ui, sans-serif',
@@ -570,8 +572,9 @@ export class GameScene extends Scene {
         }
 
         // Layout: [iconW][gap][textW] centered within the bubble
-        const iconW = bubble.icon ? 18 * DPR : 0;
-        const gap = bubble.icon ? 5 * DPR : 0;
+        const cfg = BUBBLE_CONFIG;
+        const iconW = bubble.icon ? cfg.iconSize * DPR : 0;
+        const gap = bubble.icon ? cfg.iconGap * DPR : 0;
         const textW = bubble.text.width;
         const contentW = iconW + gap + textW;
 
@@ -583,13 +586,14 @@ export class GameScene extends Scene {
         bubble.text.setPosition(-contentW / 2 + iconW + gap, 0);
 
         // Bubble dimensions
-        const padX = 12 * DPR;
-        const padY = 7 * DPR;
+        const padX = cfg.padX * DPR;
+        const padY = cfg.padY * DPR;
         const bgW = contentW + padX * 2;
-        const bgH = Math.max(18 * DPR, textW > 0 ? bubble.text.height : 18 * DPR) + padY * 2;
-        const r = bgH / 2;
-        const tailW = 10 * DPR;
-        const tailH = 7 * DPR;
+        const bgH = Math.max(cfg.iconSize * DPR, textW > 0 ? bubble.text.height : cfg.iconSize * DPR) + padY * 2;
+        const r = cfg.cornerRadius > 0 ? cfg.cornerRadius * DPR : bgH / 2;
+        const tailW = cfg.tailW * DPR;
+        const tailH = cfg.tailH * DPR;
+        const borderW = cfg.borderWidth * DPR;
 
         bubble.bg.clear();
         // Shadow
@@ -600,33 +604,26 @@ export class GameScene extends Scene {
             // Yellow ready state
             bubble.bg.fillStyle(0xfbbf24, 1);
             bubble.bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            // Tail
             bubble.bg.fillTriangle(
                 -tailW / 2, bgH / 2 - 0.5 * DPR,
                 tailW / 2, bgH / 2 - 0.5 * DPR,
                 0, bgH / 2 + tailH,
             );
-            // Border
-            bubble.bg.lineStyle(2.5 * DPR, 0xffffff, 1);
+            bubble.bg.lineStyle(borderW, 0xffffff, 1);
             bubble.bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            // Border on tail (left + right strokes)
-            bubble.bg.lineStyle(2.5 * DPR, 0xffffff, 1);
             bubble.bg.lineBetween(-tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
             bubble.bg.lineBetween(tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
         } else {
             // Dark waiting state
             bubble.bg.fillStyle(0x2a2018, 0.92);
             bubble.bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            // Tail
             bubble.bg.fillTriangle(
                 -tailW / 2, bgH / 2 - 0.5 * DPR,
                 tailW / 2, bgH / 2 - 0.5 * DPR,
                 0, bgH / 2 + tailH,
             );
-            // Border
-            bubble.bg.lineStyle(2 * DPR, 0xc0a880, 0.95);
+            bubble.bg.lineStyle(borderW * 0.8, 0xc0a880, 0.95);
             bubble.bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            bubble.bg.lineStyle(2 * DPR, 0xc0a880, 0.95);
             bubble.bg.lineBetween(-tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
             bubble.bg.lineBetween(tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
         }

@@ -33,6 +33,7 @@ export default defineConfig({
                 main: resolve(__dirname, '../index.html'),
                 resourceTest: resolve(__dirname, '../resource-test.html'),
                 dayTest: resolve(__dirname, '../day-test.html'),
+                bubbleCalibrate: resolve(__dirname, '../bubble-calibrate.html'),
             },
             output: {
                 manualChunks: {

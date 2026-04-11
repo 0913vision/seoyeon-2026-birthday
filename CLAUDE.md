@@ -120,6 +120,7 @@ npx vite build --config vite/config.prod.mjs
 | `/dialogue-preview.html` | 대화 스크립트 프리뷰 |
 | `/resource-test.html` | 자원 변동 애니메이션 테스트 |
 | `/day-test.html` | Day 전환 테스트 (해금 건물/파츠/대사 확인) |
+| `/bubble-calibrate.html` | 수확 말풍선 위치/크기 캘리브레이션 |
 | `/admin.html` | DB 관리 (목업/Supabase) |
 
 ## Day 시스템
