@@ -40,12 +40,13 @@ const ASSETS = [
         dir: 'parts',
         name: 'part_15_leather',
         prompt:
-            'Cute cartoon 3D small square piece of black leather patch, '
-            + 'deep matte black color with subtle leather grain texture, '
+            'Cute cartoon 3D small square piece of dark charcoal gray leather patch, '
+            + 'dark charcoal color (approximately #36414a, like heather coal), '
+            + 'NOT pure black, slightly warm dark gray with visible leather grain, '
             + 'delicate cream white thread stitching around the edges, '
             + 'slight rolled corner, soft and handmade feel, '
             + 'centered single item on transparent background, '
-            + 'NO brown, NO tan, only black leather, '
+            + 'NO brown, NO tan, NO pure black, dark charcoal gray leather only, '
             + BASE
             + ', transparent background',
     },
