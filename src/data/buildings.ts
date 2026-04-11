@@ -8,7 +8,7 @@ export const BUILDINGS: BuildingDef[] = [
         isGiftBox: true,
     },
     {
-        id: 'wood_farm', name: '나무밭', spriteKey: 'woodfarm',
+        id: 'wood_farm', name: '숲', spriteKey: 'woodfarm',
         cost: [], unlockDay: 1, row: 3, col: 4,
         originY: 0.71, scale: 1.2, offX: 0, offY: 0,
         showExclaim: true,

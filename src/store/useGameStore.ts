@@ -20,18 +20,53 @@ export type TutorialLock =
     | 'woodshop';        // tap woodshop (built) → open workshop modal
 
 /**
- * Box stage (1..7) for a given number of attached parts. Matches the 7
- * stage sprites in public/assets/generated/giftbox/. 0 parts → stage 1,
- * all 24 → stage 7.
+ * Box stage for a given number of attached parts. Stages 7 and 8 are
+ * NOT produced by this function — they come from `boxStageForDisplay`
+ * which layers the packaging timer on top.
+ *
+ *   0      → 1 (empty base)
+ *   1..4   → 2 (frame)           Day 1 parts
+ *   5..9   → 3 (flowers)         Day 2 parts
+ *   10..14 → 4 (numbers)         Day 3 parts
+ *   15..19 → 5 (metal)           Day 4 parts
+ *   20..24 → 6 (complete handmade)
+ *            Day 5 parts — the box has everything attached and looks
+ *            handmade/decorated, but has not been wrapped yet.
  */
 export function boxStageFromAttachedCount(n: number): number {
-    if (n >= 24) return 7;
     if (n >= 20) return 6;
     if (n >= 15) return 5;
     if (n >= 10) return 4;
     if (n >= 5) return 3;
     if (n >= 1) return 2;
     return 1;
+}
+
+/**
+ * The visual stage to display (1..8):
+ *
+ *   ≤6               : returned by `boxStageFromAttachedCount`
+ *   7 (in progress)  : all 24 parts attached AND the 90-minute packaging
+ *                      timer is still ticking
+ *   8 (wrapped)      : packaging finished, OR the box has been harvested
+ *
+ * Splitting 7 and 8 gives the player a visual step between "completed
+ * decorated box" and "pink-wrapped final" so the wait for packaging is
+ * not invisible.
+ */
+export function boxStageForDisplay(
+    attachedCount: number,
+    packagingStartedAt: number | null,
+    boxHarvested: boolean,
+): number {
+    const packagingElapsed = packagingStartedAt != null
+        ? Date.now() - packagingStartedAt
+        : 0;
+    const packagingDone = boxHarvested
+        || (packagingStartedAt != null && packagingElapsed >= 90 * 60_000);
+    if (packagingDone) return 8;
+    if (packagingStartedAt != null) return 7;
+    return boxStageFromAttachedCount(attachedCount);
 }
 
 // Day calculation: KST date-based (4/11 Sat = Day 1, 4/15 Wed = Day 5).
@@ -350,8 +385,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             const nextAttached = [...state.partsAttached, partId];
             // Remove from partsCompleted if present (parts move completed → attached)
             const nextCompleted = state.partsCompleted.filter(id => id !== partId);
-            // Starting packaging: when the 24th part is attached, kick off the
-            // 90-minute packaging countdown (once).
+            // boxStage store field is the "intermediate" stage (1..6).
+            // Stage 7 (wrapped) is computed at render time from packaging
+            // state, so it never shows until the timer has elapsed.
             const patch: Partial<GameState> = {
                 partsAttached: nextAttached,
                 partsCompleted: nextCompleted,

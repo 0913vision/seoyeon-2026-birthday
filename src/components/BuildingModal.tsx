@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useGameStore, boxStageFromAttachedCount } from '../store/useGameStore';
+import { useGameStore, boxStageFromAttachedCount, boxStageForDisplay } from '../store/useGameStore';
 import { BUILDINGS, HARVESTABLE_BUILDINGS } from '../data/buildings';
 import { TERRAIN } from '../data/terrain';
 import { PRODUCTION, RESOURCE_DEFS } from '../data/resources';
@@ -150,29 +150,29 @@ function GenericInfo({ title, body }: { title: string; body: string }) {
     return <CardBody title={title}>{body}</CardBody>;
 }
 
-// Terrain → building mapping. Used both for the "build here" hint and to
-// detect when that building has already been built so the terrain tap
-// modal can switch to a different message.
+// Terrain → building mapping. Each entry has a descriptive "buildHint"
+// that flavors the terrain and, when the paired building has been built,
+// switches to a shorter "doneHint" that points the player at the building.
 const TERRAIN_TO_BUILDING: Record<string, { buildingId: string; buildHint: string; doneHint: string }> = {
     flower_patch: {
         buildingId: 'flower_farm',
-        buildHint: '꽃밭 주변에 꽃밭을 지을 수 있습니다.',
-        doneHint: '이미 꽃밭이 지어진 장소입니다. 꽃밭을 터치하여 자원을 수확해 주세요.',
+        buildHint: '향기로운 꽃이 가득합니다. 근처에 꽃밭을 지어서 꽃을 수확할 수 있습니다.',
+        doneHint: '향기로운 꽃이 가득합니다. 근처의 꽃밭을 터치하여 꽃을 수확해 주세요.',
     },
     rock_outcrop: {
         buildingId: 'quarry',
-        buildHint: '바위 주변에 채석장을 지을 수 있습니다.',
-        doneHint: '이미 채석장이 지어진 장소입니다. 채석장을 터치하여 자원을 수확해 주세요.',
+        buildHint: '단단한 바위가 드러나 있습니다. 근처에 채석장을 지어서 돌을 수확할 수 있습니다.',
+        doneHint: '단단한 바위가 드러나 있습니다. 근처의 채석장을 터치하여 돌을 수확해 주세요.',
     },
     cave_entrance: {
         buildingId: 'mine',
-        buildHint: '동굴 주변에 광산을 지을 수 있습니다.',
-        doneHint: '이미 광산이 지어진 장소입니다. 광산을 터치하여 자원을 수확해 주세요.',
+        buildHint: '깊고 어두운 동굴이 뚫려 있습니다. 근처에 광산을 지어서 금속을 수확할 수 있습니다.',
+        doneHint: '깊고 어두운 동굴이 뚫려 있습니다. 근처의 광산을 터치하여 금속을 수확해 주세요.',
     },
     crystal_cluster: {
         buildingId: 'gem_cave',
-        buildHint: '수정 주변에 수정동굴을 지을 수 있습니다.',
-        doneHint: '이미 수정동굴이 지어진 장소입니다. 수정동굴을 터치하여 자원을 수확해 주세요.',
+        buildHint: '신비로운 수정이 반짝이며 무리 지어 있습니다. 근처에 수정동굴을 지어서 보석을 수확할 수 있습니다.',
+        doneHint: '신비로운 수정이 반짝이며 무리 지어 있습니다. 근처의 수정동굴을 터치하여 보석을 수확해 주세요.',
     },
 };
 
@@ -187,11 +187,6 @@ function TerrainHelp({ id }: { id: string }) {
     return (
         <CardBody title={name}>
             <div>{done ? entry.doneHint : (entry?.buildHint ?? '특수 지형입니다.')}</div>
-            {!done && entry && (
-                <div style={{ marginTop: '10px', fontSize: '13px', color: '#c8a888', fontStyle: 'italic' }}>
-                    건설 메뉴에서 건물을 고른 다음, 이 지형 근처에 배치해 주세요.
-                </div>
-            )}
         </CardBody>
     );
 }
@@ -675,7 +670,7 @@ function GiftBoxPanel() {
         .slice()
         .sort((a, b) => a.day - b.day || a.id - b.id);
     const attachedCount = partsAttached.length;
-    const stage = boxStageFromAttachedCount(attachedCount);
+    const stage = boxStageForDisplay(attachedCount, packagingStartedAt, boxHarvested);
     const boxImgSrc = `assets/generated/giftbox/${STAGE_FILE_NAMES[stage]}`;
 
     // Ordering constraint — a part is attachable only if every part of an
@@ -999,7 +994,9 @@ function GiftBoxPanel() {
     );
 }
 
-// File name lookup for the 7 stage sprites
+// File name lookup for the 8 stage sprites. Stage 7 (packaging in
+// progress) is a new visual that will be generated; until then it falls
+// back to stage 6 so nothing breaks.
 const STAGE_FILE_NAMES: Record<number, string> = {
     1: 'box_stage1_base.png',
     2: 'box_stage2_frame.png',
@@ -1007,7 +1004,8 @@ const STAGE_FILE_NAMES: Record<number, string> = {
     4: 'box_stage4_numbers.png',
     5: 'box_stage5_metal.png',
     6: 'box_stage6_complete.png',
-    7: 'box_stage7_wrapped.png',
+    7: 'box_stage7_packaging.png',
+    8: 'box_stage8_wrapped.png',
 };
 
 // Packaging countdown / ready / completed panel shown inside the giftbox

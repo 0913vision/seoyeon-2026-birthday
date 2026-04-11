@@ -7,7 +7,7 @@ import { BUBBLE_CONFIG, BUBBLE_OFFSETS } from '../../data/bubbleConfig';
 import { PRODUCTION } from '../../data/resources';
 import { PARTS } from '../../data/parts';
 import { hasWorkshopNew } from '../../store/badges';
-import { boxStageFromAttachedCount } from '../../store/useGameStore';
+import { boxStageForDisplay } from '../../store/useGameStore';
 import { computeHarvest, formatRemaining } from '../harvestCalc';
 
 const DPR = window.devicePixelRatio || 1;
@@ -410,7 +410,8 @@ export class GameScene extends Scene {
                 // partsAttached.length; other buildings use their static key.
                 let initialKey = b.spriteKey;
                 if (b.isGiftBox) {
-                    const stage = boxStageFromAttachedCount(useGameStore.getState().partsAttached.length);
+                    const st = useGameStore.getState();
+                    const stage = boxStageForDisplay(st.partsAttached.length, st.packagingStartedAt, st.boxHarvested);
                     initialKey = `box_stage${stage}`;
                     this.giftBoxStage = stage;
                 }
@@ -637,7 +638,7 @@ export class GameScene extends Scene {
     private updateGiftBoxStage() {
         if (!this.giftBoxSprite) return;
         const s = useGameStore.getState();
-        const stage = boxStageFromAttachedCount(s.partsAttached.length);
+        const stage = boxStageForDisplay(s.partsAttached.length, s.packagingStartedAt, s.boxHarvested);
         if (stage === this.giftBoxStage) return;
 
         const sprite = this.giftBoxSprite;

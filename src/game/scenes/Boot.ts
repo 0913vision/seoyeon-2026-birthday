@@ -16,7 +16,9 @@ export class Boot extends Scene {
         this.load.image('jewelshop', 'jewelshop.png');
         this.load.image('gemcave', 'gem_cave.png');
         this.load.image('construction', 'construction.png');
-        // Gift box stages (1..7 — used by both the map sprite and the modal)
+        // Gift box stages (1..8 — used by both the map sprite and the modal)
+        // Stage 7 is the NEW "packaging in progress" image (to be generated).
+        // Until it's ready, stage 7 falls back to stage 6 visually.
         this.load.setPath('assets/generated/giftbox');
         this.load.image('box_empty', 'box_stage1_base.png'); // legacy alias
         this.load.image('box_stage1', 'box_stage1_base.png');
@@ -25,7 +27,8 @@ export class Boot extends Scene {
         this.load.image('box_stage4', 'box_stage4_numbers.png');
         this.load.image('box_stage5', 'box_stage5_metal.png');
         this.load.image('box_stage6', 'box_stage6_complete.png');
-        this.load.image('box_stage7', 'box_stage7_wrapped.png');
+        this.load.image('box_stage7', 'box_stage7_packaging.png');
+        this.load.image('box_stage8', 'box_stage8_wrapped.png');
         // Pre-placed terrain
         this.load.setPath('assets/generated/terrain');
         this.load.image('rock_outcrop', 'rock_outcrop.png');

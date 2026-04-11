@@ -14,8 +14,8 @@ export const PARTS: PartDef[] = [
     { id: 11, name: '금속 손잡이', cost: [{ res: 'metal', amount: 500 }], craftTime: 25, workshop: 'jewelshop', day: 3 },
     { id: 12, name: '금속 버클', cost: [{ res: 'metal', amount: 500 }], craftTime: 25, workshop: 'jewelshop', day: 3 },
     { id: 13, name: '금속 테두리', cost: [{ res: 'metal', amount: 700 }, { res: 'wood', amount: 300 }], craftTime: 30, workshop: 'jewelshop', day: 3 },
-    { id: 14, name: '조각 장식판', cost: [{ res: 'stone', amount: 700 }, { res: 'metal', amount: 500 }], craftTime: 35, workshop: 'jewelshop', day: 3 },
-    { id: 15, name: '크리스탈 별', cost: [{ res: 'gem', amount: 350 }], craftTime: 30, workshop: 'jewelshop', day: 4 },
+    { id: 14, name: '버튼', cost: [{ res: 'stone', amount: 700 }, { res: 'metal', amount: 500 }], craftTime: 35, workshop: 'jewelshop', day: 3 },
+    { id: 15, name: '가죽 조각', cost: [{ res: 'flower', amount: 400 }, { res: 'metal', amount: 300 }], craftTime: 30, workshop: 'jewelshop', day: 4 },
     { id: 16, name: '보석 장식 A', cost: [{ res: 'gem', amount: 350 }, { res: 'metal', amount: 350 }], craftTime: 30, workshop: 'jewelshop', day: 4 },
     { id: 17, name: '금속 프레임', cost: [{ res: 'metal', amount: 650 }, { res: 'gem', amount: 200 }], craftTime: 35, workshop: 'jewelshop', day: 4 },
     { id: 18, name: '꽃 왕관', cost: [{ res: 'flower', amount: 650 }, { res: 'metal', amount: 500 }, { res: 'gem', amount: 350 }], craftTime: 40, workshop: 'jewelshop', day: 4 },
@@ -23,7 +23,7 @@ export const PARTS: PartDef[] = [
     { id: 20, name: '크리스탈 왕관', cost: [{ res: 'metal', amount: 800 }, { res: 'gem', amount: 650 }], craftTime: 45, workshop: 'jewelshop', day: 5 },
     { id: 21, name: '메인 리본', cost: [{ res: 'flower', amount: 500 }, { res: 'metal', amount: 650 }, { res: 'gem', amount: 350 }], craftTime: 50, workshop: 'jewelshop', day: 5 },
     { id: 22, name: 'HAPPY 24 배너', cost: [{ res: 'wood', amount: 500 }, { res: 'metal', amount: 500 }, { res: 'gem', amount: 350 }], craftTime: 40, workshop: 'woodshop', day: 5 },
-    { id: 23, name: '불꽃 장식', cost: [{ res: 'gem', amount: 800 }, { res: 'metal', amount: 350 }], craftTime: 45, workshop: 'jewelshop', day: 5 },
+    { id: 23, name: '플라스틱 부품', cost: [{ res: 'gem', amount: 800 }, { res: 'metal', amount: 350 }], craftTime: 45, workshop: 'jewelshop', day: 5 },
     { id: 24, name: '최종 뚜껑 매듭', cost: [{ res: 'flower', amount: 350 }, { res: 'metal', amount: 500 }, { res: 'gem', amount: 500 }], craftTime: 60, workshop: 'jewelshop', day: 5 },
 ];
 
