@@ -22,13 +22,18 @@ export function boxStageFromAttachedCount(n: number): number {
     return 1;
 }
 
-// Day calculation: KST date-based (4/11 Sat = Day 1, 4/15 Wed = Day 5)
+// Day calculation: KST date-based (4/11 Sat = Day 1, 4/15 Wed = Day 5).
+// The day rolls over at 06:00 KST, not at midnight — playing at 3 AM on
+// April 12 still counts as Day 1. Implemented by subtracting 6 hours from
+// "now KST" before taking the calendar date.
 export function calcDayFromDate(): number {
     const now = new Date();
     const kstMs = now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60000;
-    const kstDate = new Date(kstMs);
-    const day1 = new Date(2026, 3, 11); // April 11, 2026
-    const diff = Math.floor((new Date(kstDate.getFullYear(), kstDate.getMonth(), kstDate.getDate()).getTime() - day1.getTime()) / 86400000);
+    const shifted = new Date(kstMs - 6 * 60 * 60 * 1000);
+    const day1 = new Date(2026, 3, 11); // April 11, 2026 (month is 0-indexed)
+    const diff = Math.floor(
+        (new Date(shifted.getFullYear(), shifted.getMonth(), shifted.getDate()).getTime() - day1.getTime()) / 86400000
+    );
     return Math.max(1, Math.min(5, diff + 1));
 }
 
