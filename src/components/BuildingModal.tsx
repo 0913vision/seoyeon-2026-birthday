@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { BUILDINGS } from '../data/buildings';
+import { BUILDINGS, HARVESTABLE_BUILDINGS } from '../data/buildings';
 import { TERRAIN } from '../data/terrain';
+import { PRODUCTION, RESOURCE_DEFS } from '../data/resources';
+import { computeHarvest, formatRemaining } from '../game/harvestCalc';
 
 const CLOSE_MS = 180;
 
@@ -132,8 +134,8 @@ function CardBody({ title, children }: { title: string; children: React.ReactNod
             <div style={{
                 padding: '16px 18px 18px',
                 background: 'linear-gradient(180deg, #4a2e16 0%, #3a220e 100%)',
-                fontSize: '14px',
-                lineHeight: 1.55,
+                fontSize: '15px',
+                lineHeight: 1.6,
                 color: '#f5e6c8',
             }}>
                 {children}
@@ -162,25 +164,214 @@ function TerrainHelp({ id }: { id: string }) {
     return (
         <CardBody title={name}>
             <div>{hints[id] ?? '\uD2B9\uC218 \uC9C0\uD615\uC785\uB2C8\uB2E4.'}</div>
-            <div style={{ marginTop: '10px', fontSize: '12px', color: '#c8a888', fontStyle: 'italic' }}>
-                {'\uAC74\uC124 \uBA54\uB274\uC5D0\uC11C \uAC74\uBB3C\uC744 \uACE0\uB978 \uB2E4\uC74C, \uC774 \uC9C0\uD615 \uADFC\uCC98\uC5D0 \uBC30\uCE58\uD574 \uC8FC\uC138\uC694.'}
+            <div style={{ marginTop: '10px', fontSize: '13px', color: '#c8a888', fontStyle: 'italic' }}>
+                건설 메뉴에서 건물을 고른 다음, 이 지형 근처에 배치해 주세요.
             </div>
         </CardBody>
     );
 }
 
-// === Harvest Info (stub) ===
+const HOLD_MS = 600;
+
+// === Harvest Info ===
 function HarvestInfo({ id }: { id: string }) {
     const def = BUILDINGS.find(b => b.id === id);
     const name = def?.name ?? id;
+    const resId = HARVESTABLE_BUILDINGS[id];
+    const prod = resId ? PRODUCTION[resId as keyof typeof PRODUCTION] : undefined;
+    const resDef = RESOURCE_DEFS.find(r => r.id === resId);
+
+    const harvestStates = useGameStore(s => s.harvestStates);
+    const harvestBuilding = useGameStore(s => s.harvestBuilding);
+    const closeBuildingModal = useGameStore(s => s.closeBuildingModal);
+
+    // Tick every 500ms so remaining time / amount stay live
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const t = setInterval(() => setTick(n => n + 1), 500);
+        return () => clearInterval(t);
+    }, []);
+
+    // Long-press state
+    const [holdProgress, setHoldProgress] = useState(0);
+    const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+    const holdStartAt = useRef(0);
+    const clearHold = () => {
+        if (holdTimer.current) {
+            clearInterval(holdTimer.current);
+            holdTimer.current = null;
+        }
+        setHoldProgress(0);
+    };
+    useEffect(() => () => clearHold(), []);
+
+    // "Just harvested" feedback (shows success message for ~1.5s)
+    const [justHarvested, setJustHarvested] = useState<{ amount: number } | null>(null);
+    const justHarvestedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => {
+        if (justHarvestedTimer.current) clearTimeout(justHarvestedTimer.current);
+    }, []);
+
+    if (!prod || !resId || !resDef) {
+        return <CardBody title={name}><div>정보를 불러올 수 없습니다.</div></CardBody>;
+    }
+
+    const hs = harvestStates[id];
+    const info = hs
+        ? computeHarvest(hs.lastHarvestAt, Date.now(), prod.cycle, prod.perCycle)
+        : { amount: 0, percent: 0, msUntil100: prod.cycle * 60_000, msUntil200: prod.cycle * 60_000 * 5 };
+
+    const percentClamped = Math.min(2, info.percent);
+    const ready = percentClamped >= 1;
+    const cap = prod.perCycle * 2;
+    const progressPct = (percentClamped / 2) * 100;
+
+    const doHarvest = () => {
+        const amount = info.amount;
+        harvestBuilding(id);
+        setJustHarvested({ amount });
+        if (justHarvestedTimer.current) clearTimeout(justHarvestedTimer.current);
+        justHarvestedTimer.current = setTimeout(() => {
+            setJustHarvested(null);
+            closeBuildingModal();
+        }, 1600);
+    };
+
+    const startHold = () => {
+        if (!ready || justHarvested) return;
+        clearHold();
+        holdStartAt.current = Date.now();
+        setHoldProgress(0.01);
+        holdTimer.current = setInterval(() => {
+            const elapsed = Date.now() - holdStartAt.current;
+            const pct = Math.min(1, elapsed / HOLD_MS);
+            setHoldProgress(pct);
+            if (pct >= 1) {
+                clearHold();
+                doHarvest();
+            }
+        }, 16);
+    };
+
     return (
         <CardBody title={name}>
-            <div>{'\uC218\uD655 \uAC00\uB2A5\uD55C \uC790\uC6D0 \uAC74\uBB3C\uC785\uB2C8\uB2E4.'}</div>
-            <div style={{ marginTop: '10px', fontSize: '12px', color: '#c8a888' }}>
-                {'TODO: \uC218\uD655\uB7C9 \uD45C\uC2DC, \uC218\uD655 \uBC84\uD2BC, \uB204\uC801 \uC0C1\uD0DC \uB4F1'}
+            {/* Resource summary */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <img src={resDef.img} alt={resId}
+                     style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', color: '#c8a888' }}>저장 중인 {resDef.name}</div>
+                    <div style={{ fontSize: '24px', fontWeight: 700, color: '#fbbf24' }}>
+                        {info.amount.toLocaleString()}
+                        <span style={{ fontSize: '14px', color: '#8a7358', marginLeft: '6px' }}>
+                            / {cap.toLocaleString()}
+                        </span>
+                    </div>
+                </div>
             </div>
+
+            {/* Progress bar (0 ~ 200%) */}
+            <div style={{
+                height: '10px', background: '#1a1208', borderRadius: '5px',
+                overflow: 'hidden', border: '1px solid #3a2a15', marginBottom: '12px',
+            }}>
+                <div style={{
+                    height: '100%',
+                    width: `${progressPct}%`,
+                    background: ready
+                        ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)'
+                        : 'linear-gradient(90deg, #6a9a48 0%, #4a7a2a 100%)',
+                    transition: 'width 400ms ease-out',
+                }} />
+            </div>
+
+            {/* Production info */}
+            <div style={{ fontSize: '13px', color: '#c8a888', lineHeight: 1.8 }}>
+                <div>
+                    기본 생산량: <b style={{ color: '#f0e0b8' }}>{formatCycle(prod.cycle)}마다 +{prod.perCycle}</b>
+                </div>
+                {percentClamped >= 2 ? (
+                    <div>저장 한도에 도달했어요. 수확해야 다시 쌓입니다.</div>
+                ) : percentClamped >= 1 ? (
+                    <>
+                        <div>저장 한도까지: <b style={{ color: '#f0e0b8' }}>{formatRemaining(info.msUntil200)}</b></div>
+                        <div style={{ fontSize: '12px', color: '#8a7358' }}>
+                            지금은 1/4 속도로 천천히 쌓이는 중이에요.
+                        </div>
+                    </>
+                ) : (
+                    <div>수확 준비까지: <b style={{ color: '#f0e0b8' }}>{formatRemaining(info.msUntil100)}</b></div>
+                )}
+            </div>
+
+            {/* Harvest button (long press) */}
+            <button
+                onPointerDown={startHold}
+                onPointerUp={clearHold}
+                onPointerLeave={clearHold}
+                onPointerCancel={clearHold}
+                disabled={!ready || !!justHarvested}
+                style={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    display: 'block',
+                    width: '100%',
+                    marginTop: '14px',
+                    padding: '14px 16px',
+                    border: 'none',
+                    borderRadius: '12px',
+                    background: justHarvested
+                        ? 'linear-gradient(180deg, #22c55e 0%, #15803d 100%)'
+                        : ready
+                        ? 'linear-gradient(180deg, #fbbf24 0%, #d97706 100%)'
+                        : 'linear-gradient(180deg, #4a3520 0%, #3a2815 100%)',
+                    color: justHarvested ? '#ffffff' : ready ? '#3a220e' : '#8a7358',
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    fontFamily: 'Fredoka, sans-serif',
+                    cursor: justHarvested ? 'default' : ready ? 'pointer' : 'not-allowed',
+                    boxShadow: justHarvested
+                        ? '0 3px 0 #0f5132'
+                        : ready
+                        ? '0 3px 0 #7a4010'
+                        : 'none',
+                    borderTop: ready || justHarvested ? '2px solid rgba(255,255,255,0.4)' : 'none',
+                    userSelect: 'none',
+                    touchAction: 'none',
+                    transform: holdProgress > 0 ? 'scale(0.98)' : 'scale(1)',
+                    transition: 'transform 80ms ease-out, background 160ms ease-out',
+                }}
+            >
+                {/* Hold progress fill */}
+                {holdProgress > 0 && !justHarvested && (
+                    <div style={{
+                        position: 'absolute', left: 0, top: 0, bottom: 0,
+                        width: `${holdProgress * 100}%`,
+                        background: 'rgba(255,255,255,0.35)',
+                        pointerEvents: 'none',
+                    }} />
+                )}
+                <span style={{ position: 'relative' }}>
+                    {justHarvested
+                        ? `✅ 수확 완료! +${justHarvested.amount}`
+                        : ready
+                        ? (holdProgress > 0
+                            ? `수확 중... (+${info.amount})`
+                            : `✨ 꾹 눌러서 수확 (+${info.amount})`)
+                        : '아직 수확 불가'}
+                </span>
+            </button>
         </CardBody>
     );
+}
+
+function formatCycle(minutes: number): string {
+    if (minutes >= 60) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return m > 0 ? `${h}시간 ${m}분` : `${h}시간`;
+    }
+    return `${minutes}분`;
 }
 
 // === Construction Info (stub) ===

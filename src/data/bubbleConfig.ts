@@ -14,14 +14,14 @@ export interface BubbleGlobalConfig {
 }
 
 export const BUBBLE_CONFIG: BubbleGlobalConfig = {
-    tailH: 10,
-    tailW: 12,
-    padX: 12,
-    padY: 7,
-    fontSize: 13,
-    iconSize: 18,
-    iconGap: 5,
-    borderWidth: 2.5,
+    tailH: 13,
+    tailW: 15,
+    padX: 15,
+    padY: 9,
+    fontSize: 16,
+    iconSize: 23,
+    iconGap: 6,
+    borderWidth: 3,
     cornerRadius: 0,
 };
 

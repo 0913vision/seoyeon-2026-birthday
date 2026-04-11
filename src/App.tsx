@@ -7,7 +7,7 @@ import { BuildMenu } from './components/BuildMenu';
 import { BuildingModal } from './components/BuildingModal';
 import { DialogBox } from './components/DialogBox';
 import { DIALOGUES } from './data/dialogues';
-import { loadGame, applyLoadedData } from './services/db';
+import { loadGame, applyLoadedData, startAutoSave, stopAutoSave } from './services/db';
 import { EventBus } from './game/EventBus';
 import { GameScene } from './game/scenes/GameScene';
 
@@ -24,14 +24,16 @@ function App() {
     const startConstruction = useGameStore(s => s.startConstruction);
     const openBuildingModal = useGameStore(s => s.openBuildingModal);
 
-    // Load from DB on mount
+    // Load from DB on mount, then start auto-save
     useEffect(() => {
         loadGame('default_player').then(data => {
             if (data) {
                 applyLoadedData(data);
                 console.log('[App] Loaded game state from DB');
             }
+            startAutoSave();
         });
+        return () => { stopAutoSave(); };
     }, []);
 
     // Handle tile tap from Phaser (build mode)

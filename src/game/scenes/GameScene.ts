@@ -129,11 +129,11 @@ export class GameScene extends Scene {
     private occupiedTiles: Set<string> = new Set();
     private buildModeAtPointerDown = false;
     private activeTouchCount = 0; // track real touch count via native events
+    private pinchedThisGesture = false; // sticky: any 2-finger touch this gesture
 
     // Harvest bubbles
     private harvestBubbles: Map<string, HarvestBubble> = new Map();
     private tappedObject: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox'; id: string } | null = null;
-    private bubbleTappedBuildingId: string | null = null; // set on bubble pointerdown, suppresses tile tap
     private harvestTickEvent: Phaser.Time.TimerEvent | null = null;
 
     constructor() {
@@ -491,18 +491,16 @@ export class GameScene extends Scene {
         if (!resId) return;
 
         // Position from config (per-building offset)
-        const off = BUBBLE_OFFSETS[buildingId] ?? { offX: 30, offY: -36 };
+        const off = BUBBLE_OFFSETS[buildingId] ?? { offX: 0, offY: -20 };
         const bx = x + off.offX * DPR;
         const by = topY + off.offY * DPR;
 
         const container = this.add.container(bx, by);
-        container.setDepth(depth + 8);
+        container.setDepth(9000 + depth);
 
-        // Bubble background (drawn dynamically in renderBubble)
         const bg = this.add.graphics();
         container.add(bg);
 
-        // Resource icon (position set dynamically in renderBubble)
         const iconKey = `res_${resId}`;
         let icon: Phaser.GameObjects.Image | null = null;
         if (this.textures.exists(iconKey)) {
@@ -511,7 +509,6 @@ export class GameScene extends Scene {
             container.add(icon);
         }
 
-        // Amount text (position set dynamically in renderBubble)
         const text = this.add.text(0, 0, '', {
             fontSize: `${BUBBLE_CONFIG.fontSize * DPR}px`,
             fontStyle: 'bold',
@@ -523,20 +520,8 @@ export class GameScene extends Scene {
         }).setOrigin(0, 0.5);
         container.add(text);
 
-        // Interactive hit area: generous default, updated in renderBubble to match actual bubble
-        const hitW = 200 * DPR;
-        const hitH = 60 * DPR;
-        container.setSize(hitW, hitH);
-        container.setInteractive(
-            new Phaser.Geom.Rectangle(-hitW / 2, -hitH / 2, hitW, hitH),
-            Phaser.Geom.Rectangle.Contains,
-        );
-
-        // Tap: mark flag so global pointerup knows to handle bubble tap (not tile)
-        container.on('pointerdown', () => {
-            if (useGameStore.getState().buildMode) return;
-            this.bubbleTappedBuildingId = buildingId;
-        });
+        // Visual-only: bubble does NOT receive input. Harvest happens
+        // exclusively through the building tap → modal → hold-button flow.
 
         const bubble: HarvestBubble = {
             buildingId,
@@ -551,7 +536,6 @@ export class GameScene extends Scene {
         };
         this.harvestBubbles.set(buildingId, bubble);
 
-        // Initial render
         this.renderBubble(bubble);
     }
 
@@ -642,12 +626,6 @@ export class GameScene extends Scene {
         drawBubblePath(0, 0);
         bubble.bg.strokePath();
 
-        // Update hit area (include tail) — use setTo for reliable Phaser update
-        if (bubble.container.input) {
-            const ha = bubble.container.input.hitArea as Phaser.Geom.Rectangle;
-            ha.setTo(-bgW / 2, -bgH / 2, bgW, bgH + tailH);
-        }
-
         // Pulse animation when ready; stop when not
         if (ready && bubble.lastState !== 'ready') {
             // Start pulse
@@ -678,43 +656,6 @@ export class GameScene extends Scene {
         }
     }
 
-    private handleBubbleTap(buildingId: string) {
-        const bubble = this.harvestBubbles.get(buildingId);
-        if (!bubble) return;
-
-        const hs = useGameStore.getState().harvestStates[buildingId];
-        const resId = HARVESTABLE_BUILDINGS[buildingId];
-        if (!hs || !resId) return;
-        const prod = PRODUCTION[resId as keyof typeof PRODUCTION];
-        if (!prod) return;
-
-        // Current rest scale (zoom-aware) so we don't fight updateLabels
-        const restScale = bubble.container.scale;
-
-        const info = computeHarvest(hs.lastHarvestAt, Date.now(), prod.cycle, prod.perCycle);
-        if (info.percent >= 1) {
-            // Harvest!
-            useGameStore.getState().harvestBuilding(buildingId);
-            this.renderBubble(bubble);
-            this.tweens.add({
-                targets: bubble.container,
-                scaleX: { from: restScale * 1.2, to: restScale },
-                scaleY: { from: restScale * 1.2, to: restScale },
-                duration: 250,
-                ease: 'Back.easeOut',
-            });
-        } else {
-            // Not ready: small shake/feedback
-            this.tweens.add({
-                targets: bubble.container,
-                scaleX: { from: restScale * 0.9, to: restScale },
-                scaleY: { from: restScale * 0.9, to: restScale },
-                duration: 180,
-                ease: 'Sine.easeOut',
-            });
-        }
-    }
-
     private updateLabels(zoom: number) {
         const visible = zoom >= LABEL_HIDE_ZOOM;
 
@@ -738,11 +679,10 @@ export class GameScene extends Scene {
             }
         }
 
+        // Bubbles stay at world scale (no zoom compensation) — they
+        // naturally grow/shrink with pinch-zoom like the buildings do.
         for (const bubble of this.harvestBubbles.values()) {
             bubble.container.setVisible(visible);
-            if (visible) {
-                bubble.container.setScale(1 / Math.pow(zoom, 0.5));
-            }
         }
     }
 
@@ -1147,9 +1087,22 @@ export class GameScene extends Scene {
 
         // Track real touch count via native events (Phaser pointers get stuck)
         const canvas = this.game.canvas;
-        canvas.addEventListener('touchstart', (e) => { this.activeTouchCount = e.touches.length; }, { passive: true });
-        canvas.addEventListener('touchend', (e) => { this.activeTouchCount = e.touches.length; }, { passive: true });
-        canvas.addEventListener('touchcancel', (e) => { this.activeTouchCount = e.touches.length; }, { passive: true });
+        const updateTouchCount = (e: TouchEvent) => {
+            this.activeTouchCount = e.touches.length;
+            if (this.activeTouchCount >= 2) {
+                // Sticky: any time two fingers are down, mark this gesture as a pinch
+                // so it never turns into a tap when the user releases.
+                this.pinchedThisGesture = true;
+                this.tappedObject = null;
+            }
+            if (this.activeTouchCount === 0) {
+                // Gesture fully ended
+                this.pinchedThisGesture = false;
+            }
+        };
+        canvas.addEventListener('touchstart', updateTouchCount, { passive: true });
+        canvas.addEventListener('touchend', updateTouchCount, { passive: true });
+        canvas.addEventListener('touchcancel', updateTouchCount, { passive: true });
         let velocityY = 0;
 
         const MIN_ZOOM = 0.55;
@@ -1214,24 +1167,20 @@ export class GameScene extends Scene {
         this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             lastPinchDist = 0;
 
+            // Suppress tap when this gesture ever had 2+ fingers (pinch),
+            // even if it currently has 0 or 1.
+            if (this.pinchedThisGesture) {
+                this.tappedObject = null;
+                return;
+            }
+
             if (this.isDragging) {
                 // Clear any pending taps since this was a drag
-                this.bubbleTappedBuildingId = null;
                 this.tappedObject = null;
                 return;
             }
 
             const bm = useGameStore.getState().buildMode;
-
-            // Bubble tap takes precedence when not in build mode
-            if (!bm && this.bubbleTappedBuildingId) {
-                const bid = this.bubbleTappedBuildingId;
-                this.bubbleTappedBuildingId = null;
-                this.tappedObject = null;
-                this.handleBubbleTap(bid);
-                return;
-            }
-            this.bubbleTappedBuildingId = null;
 
             // Sprite-based object tap (pixel-perfect building/terrain)
             if (!bm && this.tappedObject) {
