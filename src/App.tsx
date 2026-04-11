@@ -92,6 +92,22 @@ function App() {
         <div className="relative w-full overflow-hidden" style={{ height: '100dvh' }}>
             <PhaserGame ref={phaserRef} />
 
+            {/* Debug build tag */}
+            <div style={{
+                position: 'absolute',
+                top: '2px',
+                right: '4px',
+                fontSize: '9px',
+                fontFamily: 'monospace',
+                color: 'rgba(255,255,255,0.55)',
+                textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                zIndex: 9999,
+                pointerEvents: 'none',
+                userSelect: 'none',
+            }}>
+                {__BUILD_SHA__} · {__BUILD_TIME__.slice(5, 16).replace('T', ' ')}
+            </div>
+
             {/* UI Overlay */}
             <div className="absolute inset-0 pointer-events-none flex flex-col">
                 <TopBar />
