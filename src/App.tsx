@@ -62,6 +62,7 @@ function App() {
         packagingStartedAt,
         boxHarvested,
         activeModal,
+        buildMode,
     };
 
     // Dialog auto-trigger. When the store state changes, check the rule
@@ -89,7 +90,7 @@ function App() {
         showDialog, currentDay, tutorialStep, shownDialogs, showBuildMenu,
         buildings, partsCompleted, partsAttached, woodshopCrafting,
         jewelshopCrafting, resources, packagingStartedAt, boxHarvested,
-        activeModal,
+        activeModal, buildMode,
     ]);
 
     // Auto-dismiss: while a scene is open, check its `until` predicate and
@@ -106,7 +107,7 @@ function App() {
     }, [
         showDialog, dialogSceneId, currentDay, showBuildMenu, buildings,
         partsCompleted, partsAttached, woodshopCrafting, jewelshopCrafting,
-        resources, packagingStartedAt, boxHarvested, activeModal,
+        resources, packagingStartedAt, boxHarvested, activeModal, buildMode,
     ]);
 
     // Also tick once a minute so time-based triggers (e.g. packaging done)
@@ -259,10 +260,12 @@ function App() {
                 <BottomBar
                     onGoToBox={goToBox}
                     onBuild={() => {
-                        // Tutorial gate: block the BUILD button unless the
-                        // current tutorial scene specifically allows it.
+                        // Tutorial gate: BUILD is usable under 'build_button'
+                        // (explicit prompt) AND 'build_woodshop' (so the
+                        // player can re-open the menu if they accidentally
+                        // closed it mid-select).
                         const lock = useGameStore.getState().tutorialLock;
-                        if (lock != null && lock !== 'build_button') return;
+                        if (lock != null && lock !== 'build_button' && lock !== 'build_woodshop') return;
                         // Open/close the menu. seenNewDay is bumped on CLOSE only,
                         // so NEW stays visible (and indicator cards inside the menu
                         // keep their NEW dots) for the duration of the session.

@@ -21,6 +21,8 @@ export interface DialogContext {
     boxHarvested: boolean;
     // UI slice: which building modal is open (if any)
     activeModal: { category: string; id: string } | null;
+    // UI slice: which building is being placed (build mode active)
+    buildMode: { buildingId: string } | null;
 }
 
 export interface DialogueScene {
@@ -126,13 +128,28 @@ export const DIALOGUES: DialogueScene[] = [
     {
         id: 'day1_build_menu_opened',
         when: (ctx) => ctx.currentDay === 1 && ctx.showBuildMenu && hasShown(ctx, 'day1_after_first_harvest'),
-        // Action-blocking: closes once the woodshop enters construction.
-        until: (ctx) => !!ctx.buildings.woodshop?.constructionStartedAt || !!ctx.buildings.woodshop?.built,
+        // Closes the instant the player picks the woodshop card (enters
+        // build mode for woodshop specifically).
+        until: (ctx) => ctx.buildMode?.buildingId === 'woodshop'
+            || !!ctx.buildings.woodshop?.constructionStartedAt
+            || !!ctx.buildings.woodshop?.built,
         lock: 'build_woodshop',
         lines: [
             { text: '이곳에서 건물을 지을 수 있습니다.' },
-            { text: '목공방 카드를 눌러 주세요.' },
-            { text: '그다음, 원하시는 빈 타일을 터치하시면 그 자리에 공방이 지어집니다.', action: '목공방 → 원하는 빈 타일' },
+            { text: '목록에서 목공방 카드를 눌러 주세요.', action: '목공방 카드를 누르세요' },
+        ],
+    },
+    {
+        id: 'day1_place_woodshop',
+        // Fires once build mode targets the woodshop. Tells the player
+        // where to tap. Closes when construction starts.
+        when: (ctx) => ctx.currentDay === 1
+            && ctx.buildMode?.buildingId === 'woodshop'
+            && hasShown(ctx, 'day1_build_menu_opened'),
+        until: (ctx) => !!ctx.buildings.woodshop?.constructionStartedAt || !!ctx.buildings.woodshop?.built,
+        lock: 'build_woodshop',
+        lines: [
+            { text: '원하시는 빈 타일을 터치하여 목공방을 세워 주세요.', action: '빈 타일을 터치하세요' },
         ],
     },
     {
@@ -144,30 +161,16 @@ export const DIALOGUES: DialogueScene[] = [
         lock: 'woodshop',
         lines: [
             { text: '목공방이 완성되었습니다.' },
-            { text: '목공방을 터치하여 제작 메뉴를 열어 주세요.', action: '목공방을 터치하세요' },
-        ],
-    },
-    {
-        id: 'day1_craft_pick',
-        // Fires once the player is inside the woodshop modal with no craft
-        // slot in progress yet. Tells them which part to start.
-        when: (ctx) => ctx.currentDay === 1
-            && hasShown(ctx, 'day1_woodshop_done')
-            && ctx.activeModal?.category === 'workshop'
-            && ctx.activeModal.id === 'woodshop'
-            && ctx.woodshopCrafting.partId == null,
-        // Dismiss the instant the player starts any craft.
-        until: (ctx) => ctx.woodshopCrafting.partId != null,
-        lock: 'dialog_only',
-        lines: [
-            { text: '오늘 만들 파츠 목록이 아래에 표시됩니다.' },
-            { text: '첫 번째 파츠인 "상자 바닥판"을 눌러 제작을 시작해 주세요.', action: '상자 바닥판 카드를 누르세요' },
+            { text: '목공방을 터치해서 제작 메뉴를 열어 주세요.' },
+            { text: '목록에서 원하는 파츠를 눌러 제작을 시작할 수 있습니다.', action: '목공방을 터치하세요' },
         ],
     },
     {
         id: 'day1_craft_started',
-        when: (ctx) => ctx.currentDay === 1 && ctx.woodshopCrafting.partId != null && hasShown(ctx, 'day1_craft_pick'),
-        lock: 'dialog_only',
+        // After the woodshop modal opens, the tutorial lock is released and
+        // the player can pick any part. This scene fires once the first
+        // craft begins to confirm the flow.
+        when: (ctx) => ctx.currentDay === 1 && ctx.woodshopCrafting.partId != null && hasShown(ctx, 'day1_woodshop_done'),
         lines: [
             { text: '제작이 시작되었습니다.' },
             { text: '파츠 제작에는 시간이 걸립니다.' },
