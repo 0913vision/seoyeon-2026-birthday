@@ -16,11 +16,14 @@ export const INITIAL_RESOURCES: ResourceState = {
     gem: { amount: 0, unlocked: false },
 };
 
-// Production rates (model B++: tap harvest + 200% accumulation)
+// Production rates (model B++: tap harvest + 200% accumulation).
+// Tuned for a casual 1–2 logins/day player. Higher than balance_5day.md's
+// original assumption (which expected 4–5 logins/day). See the Day 2–5
+// balance audit in the release notes.
 export const PRODUCTION = {
-    wood:   { cycle: 60, perCycle: 250, cap: 500 },   // 1h
-    flower: { cycle: 60, perCycle: 200, cap: 400 },   // 1h
-    stone:  { cycle: 60, perCycle: 350, cap: 700 },   // 1h
-    metal:  { cycle: 90, perCycle: 350, cap: 700 },   // 1.5h
-    gem:    { cycle: 90, perCycle: 300, cap: 600 },   // 1.5h
+    wood:   { cycle: 60, perCycle: 300, cap: 600 },   // 1h
+    flower: { cycle: 60, perCycle: 300, cap: 600 },   // 1h
+    stone:  { cycle: 60, perCycle: 500, cap: 1000 },  // 1h
+    metal:  { cycle: 90, perCycle: 550, cap: 1100 },  // 1.5h
+    gem:    { cycle: 90, perCycle: 500, cap: 1000 },  // 1.5h
 };
