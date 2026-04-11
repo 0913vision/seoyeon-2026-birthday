@@ -110,7 +110,7 @@ function ModalContent({ category, id }: { category: string; id: string }) {
     if (category === 'harvest') return <HarvestInfo id={id} />;
     if (category === 'construction') return <ConstructionInfo id={id} />;
     if (category === 'workshop') return <WorkshopPanel id={id} />;
-    if (category === 'giftbox') return <GenericInfo title="\uC120\uBB3C\uC0C1\uC790" body="\uC0C1\uC790 \uC0C1\uD638\uC791\uC6A9\uC740 \uC544\uC9C1 \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4." />;
+    if (category === 'giftbox') return <GenericInfo title="선물상자" body="상자 상호작용은 아직 준비 중입니다." />;
     return null;
 }
 

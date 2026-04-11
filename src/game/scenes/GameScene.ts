@@ -237,8 +237,8 @@ export class GameScene extends Scene {
 
         // Camera bounds - tight around grid center
         const gridCenter = this.toScreen(GRID_SIZE / 2, GRID_SIZE / 2);
-        const halfW = 9 * TILE_W;
-        const halfH = 10 * TILE_H;
+        const halfW = 7 * TILE_W;
+        const halfH = 12 * TILE_H;
         this.cameras.main.setBounds(
             gridCenter.x - halfW,
             gridCenter.y - halfH,
