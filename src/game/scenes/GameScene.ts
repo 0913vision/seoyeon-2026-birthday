@@ -650,6 +650,49 @@ export class GameScene extends Scene {
         EventBus.emit('tile-tapped', { buildingId: state.buildMode.buildingId, row, col });
     }
 
+    private handleObjectTap(worldX: number, worldY: number) {
+        const { row, col } = this.toGrid(worldX, worldY);
+        if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return;
+
+        // 1) Check terrain (multi-tile aware)
+        for (const t of TERRAIN) {
+            for (const c of terrainCells(t)) {
+                if (c.row === row && c.col === col) {
+                    EventBus.emit('building-tapped', { category: 'terrain', id: t.id });
+                    return;
+                }
+            }
+        }
+
+        // 2) Check buildings from store (built or under construction)
+        const storeBuildings = useGameStore.getState().buildings;
+        for (const [id, bs] of Object.entries(storeBuildings)) {
+            if (!bs.position) continue;
+            if (bs.position.row !== row || bs.position.col !== col) continue;
+
+            // Under construction
+            if (!bs.built && bs.constructionStartedAt) {
+                EventBus.emit('building-tapped', { category: 'construction', id });
+                return;
+            }
+
+            if (bs.built) {
+                // Categorize built buildings
+                if (id === 'box') {
+                    EventBus.emit('building-tapped', { category: 'giftbox', id });
+                    return;
+                }
+                if (id === 'woodshop' || id === 'jewelshop') {
+                    EventBus.emit('building-tapped', { category: 'workshop', id });
+                    return;
+                }
+                // All other built buildings = harvestable resource buildings
+                EventBus.emit('building-tapped', { category: 'harvest', id });
+                return;
+            }
+        }
+    }
+
     public placeConstructionPlaceholder(buildingId: string, row: number, col: number) {
         // Mark tile as occupied
         this.occupiedTiles.add(`${row},${col}`);
@@ -932,11 +975,19 @@ export class GameScene extends Scene {
         this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             lastPinchDist = 0;
 
-            // In build mode: treat as tap if not dragging and enough time since entering build mode
+            if (this.isDragging) return;
+
             const bm = useGameStore.getState().buildMode;
-            if (!this.isDragging && bm && (Date.now() - bm.enteredAt > 500)) {
-                const worldPoint = cam.getWorldPoint(pointer.x, pointer.y);
-                this.handleTileTap(worldPoint.x, worldPoint.y);
+            const worldPoint = cam.getWorldPoint(pointer.x, pointer.y);
+
+            if (bm) {
+                // In build mode: treat as tap if enough time since entering build mode
+                if (Date.now() - bm.enteredAt > 500) {
+                    this.handleTileTap(worldPoint.x, worldPoint.y);
+                }
+            } else {
+                // Not in build mode: detect building/terrain tap
+                this.handleObjectTap(worldPoint.x, worldPoint.y);
             }
         });
 

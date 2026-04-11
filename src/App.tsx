@@ -4,6 +4,7 @@ import { useGameStore } from './store/useGameStore';
 import { TopBar } from './components/TopBar';
 import { BottomBar } from './components/BottomBar';
 import { BuildMenu } from './components/BuildMenu';
+import { BuildingModal } from './components/BuildingModal';
 import { DialogBox } from './components/DialogBox';
 import { DIALOGUES } from './data/dialogues';
 import { loadGame, applyLoadedData } from './services/db';
@@ -21,6 +22,7 @@ function App() {
     const buildMode = useGameStore(s => s.buildMode);
     const exitBuildMode = useGameStore(s => s.exitBuildMode);
     const startConstruction = useGameStore(s => s.startConstruction);
+    const openBuildingModal = useGameStore(s => s.openBuildingModal);
 
     // Load from DB on mount
     useEffect(() => {
@@ -49,6 +51,15 @@ function App() {
         EventBus.on('tile-tapped', handler);
         return () => { EventBus.off('tile-tapped', handler); };
     }, [startConstruction]);
+
+    // Handle building/terrain tap from Phaser (open modal)
+    useEffect(() => {
+        const handler = ({ category, id }: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox'; id: string }) => {
+            openBuildingModal(category, id);
+        };
+        EventBus.on('building-tapped', handler);
+        return () => { EventBus.off('building-tapped', handler); };
+    }, [openBuildingModal]);
 
     // Expose for console/test
     useEffect(() => {
@@ -124,6 +135,9 @@ function App() {
                 )}
 
                 <BottomBar onGoToBox={goToBox} onBuild={() => setShowBuildMenu(prev => !prev)} buildOpen={showBuildMenu} />
+
+                {/* Building/Terrain interaction modal */}
+                <BuildingModal />
             </div>
 
             {/* Debug: toggle dialog floating button */}

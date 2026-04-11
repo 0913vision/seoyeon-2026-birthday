@@ -44,6 +44,7 @@ interface GameState {
     showBuildMenu: boolean;
     resDelta: { id: string; delta: number; key: number } | null;
     buildMode: { buildingId: string; enteredAt: number } | null;
+    activeModal: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox'; id: string } | null;
 
     // Actions
     addResource: (id: string, amount: number) => void;
@@ -71,6 +72,8 @@ interface GameState {
     closeDialog: () => void;
     toggleBuildMenu: () => void;
     closeBuildMenu: () => void;
+    openBuildingModal: (category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox', id: string) => void;
+    closeBuildingModal: () => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -107,6 +110,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     showBuildMenu: false,
     resDelta: null,
     buildMode: null,
+    activeModal: null,
 
     // Resource actions
     addResource: (id, amount) => {
@@ -233,6 +237,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     closeDialog: () => set({ showDialog: false, dialogSceneId: null, dialogLineIndex: 0 }),
     toggleBuildMenu: () => set(state => ({ showBuildMenu: !state.showBuildMenu })),
     closeBuildMenu: () => set({ showBuildMenu: false }),
+    openBuildingModal: (category, id) => set({ activeModal: { category, id } }),
+    closeBuildingModal: () => set({ activeModal: null }),
 }));
 
 // Serializable state for DB (excludes UI and functions)
