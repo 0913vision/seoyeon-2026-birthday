@@ -14,7 +14,7 @@ export interface BubbleGlobalConfig {
 }
 
 export const BUBBLE_CONFIG: BubbleGlobalConfig = {
-    tailH: 14,
+    tailH: 10,
     tailW: 12,
     padX: 12,
     padY: 7,
