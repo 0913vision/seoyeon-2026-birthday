@@ -1,8 +1,10 @@
 import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 import { useGameStore } from '../../store/useGameStore';
-import { BUILDINGS as DATA_BUILDINGS } from '../../data/buildings';
+import { BUILDINGS as DATA_BUILDINGS, HARVESTABLE_BUILDINGS } from '../../data/buildings';
 import { TERRAIN, BUILDING_TERRAIN_REQUIRE, isAdjacentToTerrain, terrainCells } from '../../data/terrain';
+import { PRODUCTION } from '../../data/resources';
+import { computeHarvest, formatRemaining } from '../harvestCalc';
 
 const DPR = window.devicePixelRatio || 1;
 const TILE_W = 110 * DPR;
@@ -75,7 +77,7 @@ interface BuildingDef {
 const BUILDINGS: BuildingDef[] = [
     { row: 8, col: 8, label: '선물상자', spriteKey: 'box_empty', isGiftBox: true,
       originY: 0.6, scale: 1.3, offX: 1.5, offY: 0 },
-    { row: 3, col: 4, label: '나무밭', spriteKey: 'woodfarm', showExclaim: true,
+    { row: 3, col: 4, label: '나무밭', spriteKey: 'woodfarm',
       originY: 0.71, scale: 1.2, offX: 0, offY: 0 },
     { row: 4, col: 12, label: '꽃밭', spriteKey: 'flowerfarm',
       originY: 0.56, scale: 1.1, offX: 0, offY: -2 },
@@ -100,6 +102,17 @@ interface LabelEntry {
     baseFontSize: number;
 }
 
+interface HarvestBubble {
+    buildingId: string;
+    resId: string;
+    container: Phaser.GameObjects.Container;
+    bg: Phaser.GameObjects.Graphics;
+    text: Phaser.GameObjects.Text;
+    readyPulse: Phaser.Tweens.Tween | null;
+    baseY: number;
+    lastState: 'ready' | 'waiting';
+}
+
 export class GameScene extends Scene {
     private isDragging = false;
     private dragStartX = 0;
@@ -114,6 +127,11 @@ export class GameScene extends Scene {
     private occupiedTiles: Set<string> = new Set();
     private buildModeAtPointerDown = false;
     private activeTouchCount = 0; // track real touch count via native events
+
+    // Harvest bubbles
+    private harvestBubbles: Map<string, HarvestBubble> = new Map();
+    private bubbleTappedBuildingId: string | null = null; // set on bubble pointerdown, suppresses tile tap
+    private harvestTickEvent: Phaser.Time.TimerEvent | null = null;
 
     constructor() {
         super('GameScene');
@@ -134,11 +152,20 @@ export class GameScene extends Scene {
         this.restoreConstructions();
         this.updateLabels(0.5);
 
+        // Tick harvest bubbles every 500ms
+        this.harvestTickEvent = this.time.addEvent({
+            delay: 500,
+            loop: true,
+            callback: () => this.updateHarvestBubbles(),
+        });
+        this.updateHarvestBubbles();
+
         EventBus.emit('current-scene-ready', this);
     }
 
     destroy() {
         if (this.storeUnsub) this.storeUnsub();
+        if (this.harvestTickEvent) this.harvestTickEvent.destroy();
     }
 
     private toScreen(row: number, col: number): { x: number; y: number } {
@@ -446,39 +473,192 @@ export class GameScene extends Scene {
 
             this.labels.push({ text: labelText, x, y: labelPosY, baseFontSize });
 
-            // Harvest exclamation
-            if (b.showExclaim) {
-                const exContainer = this.add.container(x + 35 * DPR, topY - 30 * DPR);
-                exContainer.setDepth(depth + 7);
-
-                const exBg = this.add.graphics();
-                exBg.fillStyle(0xff3b30, 1);
-                const er = 15 * DPR;
-                exBg.fillRoundedRect(-er, -er, er * 2, er * 2, er);
-                exBg.lineStyle(2.5 * DPR, 0xffffff, 0.9);
-                exBg.strokeRoundedRect(-er, -er, er * 2, er * 2, er);
-
-                const exText = this.add.text(0, -1 * DPR, '!', {
-                    fontSize: `${20 * DPR}px`,
-                    fontStyle: 'bold',
-                    color: '#ffffff',
-                    fontFamily: 'system-ui, sans-serif',
-                    resolution: window.devicePixelRatio || 3,
-                }).setOrigin(0.5);
-
-                exContainer.add([exBg, exText]);
-                this.exclaimContainers.push(exContainer);
-
-                const baseY = exContainer.y;
-                this.tweens.add({
-                    targets: exContainer,
-                    y: baseY - 8 * DPR,
-                    duration: 600,
-                    yoyo: true,
-                    repeat: -1,
-                    ease: 'Sine.easeInOut',
-                });
+            // Harvest bubble for harvestable buildings
+            const dataDef = DATA_BUILDINGS.find(d => d.spriteKey === b.spriteKey);
+            if (dataDef && HARVESTABLE_BUILDINGS[dataDef.id]) {
+                this.createHarvestBubble(dataDef.id, x, topY, depth);
             }
+        }
+    }
+
+    private createHarvestBubble(buildingId: string, x: number, topY: number, depth: number) {
+        // Avoid duplicates
+        if (this.harvestBubbles.has(buildingId)) return;
+
+        const resId = HARVESTABLE_BUILDINGS[buildingId];
+        if (!resId) return;
+
+        // Position: right of top, slightly above building
+        const bx = x + 30 * DPR;
+        const by = topY - 36 * DPR;
+
+        const container = this.add.container(bx, by);
+        container.setDepth(depth + 8);
+
+        // Bubble background
+        const bg = this.add.graphics();
+        container.add(bg);
+
+        // Resource icon
+        const iconKey = `res_${resId}`;
+        if (this.textures.exists(iconKey)) {
+            const icon = this.add.image(-14 * DPR, 0, iconKey);
+            const iconSize = 20 * DPR;
+            icon.setDisplaySize(iconSize, iconSize);
+            container.add(icon);
+        }
+
+        // Amount text
+        const text = this.add.text(6 * DPR, 0, '', {
+            fontSize: `${13 * DPR}px`,
+            fontStyle: 'bold',
+            color: '#ffffff',
+            fontFamily: 'Fredoka, system-ui, sans-serif',
+            stroke: '#000000',
+            strokeThickness: 3 * DPR,
+            resolution: window.devicePixelRatio || 3,
+        }).setOrigin(0, 0.5);
+        container.add(text);
+
+        // Interactive hit area: rounded rect centered on container (w≈60, h≈32 in pixels pre-DPR)
+        const hitW = 72 * DPR;
+        const hitH = 36 * DPR;
+        container.setSize(hitW, hitH);
+        container.setInteractive(
+            new Phaser.Geom.Rectangle(-hitW / 2, -hitH / 2, hitW, hitH),
+            Phaser.Geom.Rectangle.Contains,
+        );
+
+        // Tap: mark flag so global pointerup knows to handle bubble tap (not tile)
+        container.on('pointerdown', () => {
+            // Only consume if not in build mode and not dragging
+            if (useGameStore.getState().buildMode) return;
+            this.bubbleTappedBuildingId = buildingId;
+        });
+
+        const bubble: HarvestBubble = {
+            buildingId,
+            resId,
+            container,
+            bg,
+            text,
+            readyPulse: null,
+            baseY: by,
+            lastState: 'waiting',
+        };
+        this.harvestBubbles.set(buildingId, bubble);
+
+        // Initial render
+        this.renderBubble(bubble);
+    }
+
+    private renderBubble(bubble: HarvestBubble) {
+        const hs = useGameStore.getState().harvestStates[bubble.buildingId];
+        if (!hs) return;
+        const prod = PRODUCTION[bubble.resId as keyof typeof PRODUCTION];
+        if (!prod) return;
+
+        const info = computeHarvest(hs.lastHarvestAt, Date.now(), prod.cycle, prod.perCycle);
+        const ready = info.percent >= 1;
+
+        // Update text
+        if (ready) {
+            bubble.text.setText(`+${info.amount}`);
+        } else {
+            bubble.text.setText(formatRemaining(info.msUntil100));
+        }
+
+        // Draw background (resize to fit text)
+        const textW = bubble.text.width;
+        const padX = 10 * DPR;
+        const iconSpace = 22 * DPR; // icon + gap
+        const bgW = Math.max(60 * DPR, iconSpace + textW + padX * 2);
+        const bgH = 30 * DPR;
+        const r = 14 * DPR;
+
+        bubble.bg.clear();
+        if (ready) {
+            // Yellow ready state
+            bubble.bg.fillStyle(0xfbbf24, 0.95);
+            bubble.bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
+            bubble.bg.lineStyle(2.5 * DPR, 0xffffff, 0.95);
+            bubble.bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
+        } else {
+            // Gray waiting state
+            bubble.bg.fillStyle(0x2a2018, 0.82);
+            bubble.bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
+            bubble.bg.lineStyle(2 * DPR, 0x8a7358, 0.9);
+            bubble.bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
+        }
+
+        // Update hit area
+        bubble.container.input?.hitArea && Object.assign(bubble.container.input.hitArea, {
+            x: -bgW / 2, y: -bgH / 2, width: bgW, height: bgH,
+        });
+
+        // Pulse animation when ready; stop when not
+        if (ready && bubble.lastState !== 'ready') {
+            // Start pulse
+            if (bubble.readyPulse) bubble.readyPulse.stop();
+            bubble.container.y = bubble.baseY;
+            bubble.readyPulse = this.tweens.add({
+                targets: bubble.container,
+                y: bubble.baseY - 6 * DPR,
+                duration: 600,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+            bubble.lastState = 'ready';
+        } else if (!ready && bubble.lastState !== 'waiting') {
+            if (bubble.readyPulse) {
+                bubble.readyPulse.stop();
+                bubble.readyPulse = null;
+            }
+            bubble.container.y = bubble.baseY;
+            bubble.lastState = 'waiting';
+        }
+    }
+
+    private updateHarvestBubbles() {
+        for (const bubble of this.harvestBubbles.values()) {
+            this.renderBubble(bubble);
+        }
+    }
+
+    private handleBubbleTap(buildingId: string) {
+        const bubble = this.harvestBubbles.get(buildingId);
+        if (!bubble) return;
+
+        const hs = useGameStore.getState().harvestStates[buildingId];
+        const resId = HARVESTABLE_BUILDINGS[buildingId];
+        if (!hs || !resId) return;
+        const prod = PRODUCTION[resId as keyof typeof PRODUCTION];
+        if (!prod) return;
+
+        const info = computeHarvest(hs.lastHarvestAt, Date.now(), prod.cycle, prod.perCycle);
+        if (info.percent >= 1) {
+            // Harvest!
+            useGameStore.getState().harvestBuilding(buildingId);
+            // Immediate refresh
+            this.renderBubble(bubble);
+            // Pop feedback
+            this.tweens.add({
+                targets: bubble.container,
+                scaleX: { from: 1.2, to: 1 },
+                scaleY: { from: 1.2, to: 1 },
+                duration: 250,
+                ease: 'Back.easeOut',
+            });
+        } else {
+            // Not ready: small shake/feedback
+            this.tweens.add({
+                targets: bubble.container,
+                scaleX: { from: 0.9, to: 1 },
+                scaleY: { from: 0.9, to: 1 },
+                duration: 180,
+                ease: 'Sine.easeOut',
+            });
         }
     }
 
@@ -502,6 +682,13 @@ export class GameScene extends Scene {
             ex.setVisible(visible);
             if (visible) {
                 ex.setScale(1 / Math.pow(zoom, 0.5));
+            }
+        }
+
+        for (const bubble of this.harvestBubbles.values()) {
+            bubble.container.setVisible(visible);
+            if (visible) {
+                bubble.container.setScale(1 / Math.pow(zoom, 0.5));
             }
         }
     }
@@ -860,6 +1047,12 @@ export class GameScene extends Scene {
 
             this.labels.push({ text: labelText, x, y: labelPosY, baseFontSize });
             this.updateLabels(this.cameras.main.zoom);
+
+            // Harvest bubble for newly-built harvestable buildings
+            if (HARVESTABLE_BUILDINGS[buildingId]) {
+                this.createHarvestBubble(buildingId, x, topY, depth);
+                this.updateHarvestBubbles();
+            }
         }
     }
 
@@ -976,9 +1169,23 @@ export class GameScene extends Scene {
         this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
             lastPinchDist = 0;
 
-            if (this.isDragging) return;
+            if (this.isDragging) {
+                // Clear any pending bubble tap since this was a drag
+                this.bubbleTappedBuildingId = null;
+                return;
+            }
 
             const bm = useGameStore.getState().buildMode;
+
+            // Bubble tap takes precedence when not in build mode
+            if (!bm && this.bubbleTappedBuildingId) {
+                const bid = this.bubbleTappedBuildingId;
+                this.bubbleTappedBuildingId = null;
+                this.handleBubbleTap(bid);
+                return;
+            }
+            this.bubbleTappedBuildingId = null;
+
             const worldPoint = cam.getWorldPoint(pointer.x, pointer.y);
 
             if (bm) {

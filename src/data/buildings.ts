@@ -53,3 +53,12 @@ export const BUILDINGS: BuildingDef[] = [
 
 // Buildable buildings (exclude box and wood_farm which are free/pre-placed)
 export const BUILDABLE = BUILDINGS.filter(b => b.cost.length > 0);
+
+// Harvestable buildings -> resource id they produce
+export const HARVESTABLE_BUILDINGS: Record<string, string> = {
+    wood_farm: 'wood',
+    flower_farm: 'flower',
+    quarry: 'stone',
+    mine: 'metal',
+    gem_cave: 'gem',
+};

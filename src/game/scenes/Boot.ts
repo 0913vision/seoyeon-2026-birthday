@@ -25,6 +25,13 @@ export class Boot extends Scene {
         this.load.image('crystal_cluster', 'crystal_cluster.png');
         this.load.image('flower_patch', 'flower_patch.png');
         this.load.image('cave_entrance', 'cave_entrance.png');
+        // Resource icons (for harvest bubbles)
+        this.load.setPath('assets/generated/resources');
+        this.load.image('res_wood', 'wood.png');
+        this.load.image('res_flower', 'flower.png');
+        this.load.image('res_stone', 'stone.png');
+        this.load.image('res_metal', 'metal.png');
+        this.load.image('res_gem', 'gem.png');
     }
 
     create() {

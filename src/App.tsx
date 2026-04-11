@@ -65,6 +65,8 @@ function App() {
     useEffect(() => {
         (window as any).__addResource = addResource;
         (window as any).__getResources = () => resources;
+        (window as any).__harvest = (buildingId: string) => useGameStore.getState().harvestBuilding(buildingId);
+        (window as any).__getHarvestStates = () => useGameStore.getState().harvestStates;
     }, [resources, addResource]);
 
     // Use first dialogue scene as sample

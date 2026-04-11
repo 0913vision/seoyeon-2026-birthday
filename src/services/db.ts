@@ -21,6 +21,7 @@ export interface SaveData {
     partsAttached: number[];
     woodshopCrafting: { partId: number | null; startedAt: number | null };
     jewelshopCrafting: { partId: number | null; startedAt: number | null };
+    harvestStates?: Record<string, { lastHarvestAt: number }>;
     savedAt: number;
 }
 
@@ -67,6 +68,16 @@ const MOCK_SAVE: SaveData = {
     partsAttached: [],
     woodshopCrafting: { partId: null, startedAt: null },
     jewelshopCrafting: { partId: null, startedAt: null },
+    // Debug: each harvestable building starts ~50% of its cycle elapsed.
+    // wood_farm/flower_farm/quarry cycle=60min → lastHarvestAt = now - 30min
+    // mine/gem_cave cycle=90min → lastHarvestAt = now - 45min
+    harvestStates: {
+        wood_farm:   { lastHarvestAt: Date.now() - 30 * 60_000 },
+        flower_farm: { lastHarvestAt: Date.now() - 30 * 60_000 },
+        quarry:      { lastHarvestAt: Date.now() - 30 * 60_000 },
+        mine:        { lastHarvestAt: Date.now() - 45 * 60_000 },
+        gem_cave:    { lastHarvestAt: Date.now() - 45 * 60_000 },
+    },
     savedAt: Date.now(),
 };
 
@@ -99,7 +110,7 @@ export async function resetAllSaves(): Promise<void> {
 
 export function applyLoadedData(data: SaveData): void {
     // currentDay is date-based, don't override from saved data
-    useGameStore.setState({
+    const patch: Partial<ReturnType<typeof useGameStore.getState>> = {
         tutorialStep: data.tutorialStep,
         boxStage: data.boxStage,
         packagingStartedAt: data.packagingStartedAt,
@@ -110,7 +121,9 @@ export function applyLoadedData(data: SaveData): void {
         partsAttached: data.partsAttached,
         woodshopCrafting: data.woodshopCrafting,
         jewelshopCrafting: data.jewelshopCrafting,
-    });
+    };
+    if (data.harvestStates) patch.harvestStates = data.harvestStates;
+    useGameStore.setState(patch);
 }
 
 // ============================================================

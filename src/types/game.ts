@@ -69,3 +69,7 @@ export interface CraftingState {
     partId: number | null;
     startedAt: number | null;
 }
+
+export interface HarvestState {
+    lastHarvestAt: number;
+}

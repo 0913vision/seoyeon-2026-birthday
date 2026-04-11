@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { ResourceState, BuildingState, CraftingState } from '../types/game';
-import { INITIAL_RESOURCES } from '../data/resources';
-import { BUILDINGS } from '../data/buildings';
+import { ResourceState, BuildingState, CraftingState, HarvestState } from '../types/game';
+import { INITIAL_RESOURCES, PRODUCTION } from '../data/resources';
+import { BUILDINGS, HARVESTABLE_BUILDINGS } from '../data/buildings';
+import { computeHarvest } from '../game/harvestCalc';
 
 const CONSTRUCTION_TIME_MS = 10_000; // 10 seconds for debug
 
@@ -37,6 +38,9 @@ interface GameState {
     woodshopCrafting: CraftingState;
     jewelshopCrafting: CraftingState;
 
+    // Harvest accumulation per harvestable building
+    harvestStates: Record<string, HarvestState>;
+
     // UI (not persisted to DB)
     showDialog: boolean;
     dialogSceneId: string | null;
@@ -65,6 +69,9 @@ interface GameState {
     exitBuildMode: () => void;
     startConstruction: (buildingId: string, row: number, col: number) => void;
     completeConstruction: (buildingId: string) => void;
+
+    // Harvest actions
+    harvestBuilding: (buildingId: string) => number;
 
     // UI actions
     openDialog: (sceneId: string) => void;
@@ -102,6 +109,19 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     woodshopCrafting: { partId: null, startedAt: null },
     jewelshopCrafting: { partId: null, startedAt: null },
+
+    // Debug: each harvestable building starts with ~50% of its cycle already elapsed
+    harvestStates: (() => {
+        const now = Date.now();
+        const out: Record<string, HarvestState> = {};
+        for (const [bid, resId] of Object.entries(HARVESTABLE_BUILDINGS)) {
+            const prod = PRODUCTION[resId as keyof typeof PRODUCTION];
+            if (!prod) continue;
+            // 50% of cycle already elapsed
+            out[bid] = { lastHarvestAt: now - prod.cycle * 60_000 * 0.5 };
+        }
+        return out;
+    })(),
 
     // UI
     showDialog: false,
@@ -198,16 +218,50 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     completeConstruction: (buildingId) => {
-        set(state => ({
-            buildings: {
-                ...state.buildings,
-                [buildingId]: {
-                    ...state.buildings[buildingId],
-                    built: true,
-                    constructionStartedAt: null,
+        set(state => {
+            // Initialize harvest state for newly built harvestable buildings
+            const newHarvestStates = { ...state.harvestStates };
+            if (HARVESTABLE_BUILDINGS[buildingId] && !newHarvestStates[buildingId]) {
+                newHarvestStates[buildingId] = { lastHarvestAt: Date.now() };
+            }
+            return {
+                buildings: {
+                    ...state.buildings,
+                    [buildingId]: {
+                        ...state.buildings[buildingId],
+                        built: true,
+                        constructionStartedAt: null,
+                    },
                 },
+                harvestStates: newHarvestStates,
+            };
+        });
+    },
+
+    // Harvest: compute accumulated amount, add to resources, reset timer
+    harvestBuilding: (buildingId) => {
+        const state = get();
+        const resId = HARVESTABLE_BUILDINGS[buildingId];
+        if (!resId) return 0;
+        const prod = PRODUCTION[resId as keyof typeof PRODUCTION];
+        if (!prod) return 0;
+        const hs = state.harvestStates[buildingId];
+        if (!hs) return 0;
+
+        const info = computeHarvest(hs.lastHarvestAt, Date.now(), prod.cycle, prod.perCycle);
+        if (info.amount <= 0) return 0;
+
+        // Use addResource so the ResourceBar delta animation fires
+        get().addResource(resId, info.amount);
+
+        set(s => ({
+            harvestStates: {
+                ...s.harvestStates,
+                [buildingId]: { lastHarvestAt: Date.now() },
             },
         }));
+
+        return info.amount;
     },
 
     // Part actions
@@ -256,5 +310,6 @@ export function getSerializableState() {
         partsAttached: state.partsAttached,
         woodshopCrafting: state.woodshopCrafting,
         jewelshopCrafting: state.jewelshopCrafting,
+        harvestStates: state.harvestStates,
     };
 }
