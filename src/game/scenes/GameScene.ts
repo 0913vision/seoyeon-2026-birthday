@@ -235,15 +235,16 @@ export class GameScene extends Scene {
         }
 
 
-        // Camera bounds - tight around grid center
+        // Camera bounds - tight, asymmetric (more up, less down)
         const gridCenter = this.toScreen(GRID_SIZE / 2, GRID_SIZE / 2);
-        const halfW = 7 * TILE_W;
-        const halfH = 12 * TILE_H;
+        const halfW = 6 * TILE_W;
+        const upReach = 14 * TILE_H;
+        const downReach = 10 * TILE_H;
         this.cameras.main.setBounds(
             gridCenter.x - halfW,
-            gridCenter.y - halfH,
+            gridCenter.y - upReach,
             halfW * 2,
-            halfH * 2
+            upReach + downReach
         );
     }
 
