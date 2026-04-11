@@ -148,8 +148,25 @@ export const DIALOGUES: DialogueScene[] = [
         ],
     },
     {
+        id: 'day1_craft_pick',
+        // Fires once the player is inside the woodshop modal with no craft
+        // slot in progress yet. Tells them which part to start.
+        when: (ctx) => ctx.currentDay === 1
+            && hasShown(ctx, 'day1_woodshop_done')
+            && ctx.activeModal?.category === 'workshop'
+            && ctx.activeModal.id === 'woodshop'
+            && ctx.woodshopCrafting.partId == null,
+        // Dismiss the instant the player starts any craft.
+        until: (ctx) => ctx.woodshopCrafting.partId != null,
+        lock: 'dialog_only',
+        lines: [
+            { text: '오늘 만들 파츠 목록이 아래에 표시됩니다.' },
+            { text: '첫 번째 파츠인 "상자 바닥판"을 눌러 제작을 시작해 주세요.', action: '상자 바닥판 카드를 누르세요' },
+        ],
+    },
+    {
         id: 'day1_craft_started',
-        when: (ctx) => ctx.currentDay === 1 && ctx.woodshopCrafting.partId != null && hasShown(ctx, 'day1_woodshop_done'),
+        when: (ctx) => ctx.currentDay === 1 && ctx.woodshopCrafting.partId != null && hasShown(ctx, 'day1_craft_pick'),
         lock: 'dialog_only',
         lines: [
             { text: '제작이 시작되었습니다.' },
