@@ -1,12 +1,40 @@
+import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { BUILDINGS } from '../data/buildings';
 import { TERRAIN } from '../data/terrain';
 
+const CLOSE_MS = 180;
+
 export function BuildingModal() {
     const activeModal = useGameStore(s => s.activeModal);
     const closeBuildingModal = useGameStore(s => s.closeBuildingModal);
+    const [renderedModal, setRenderedModal] = useState(activeModal);
+    const [phase, setPhase] = useState<'closed' | 'entering' | 'open' | 'closing'>('closed');
 
-    if (!activeModal) return null;
+    useEffect(() => {
+        if (activeModal) {
+            // Opening
+            setRenderedModal(activeModal);
+            setPhase('entering');
+            const t = requestAnimationFrame(() => setPhase('open'));
+            return () => cancelAnimationFrame(t);
+        } else if (renderedModal) {
+            // Closing
+            setPhase('closing');
+            const t = setTimeout(() => {
+                setRenderedModal(null);
+                setPhase('closed');
+            }, CLOSE_MS);
+            return () => clearTimeout(t);
+        }
+    }, [activeModal]);
+
+    if (!renderedModal) return null;
+
+    const visible = phase === 'open';
+    const backdropOpacity = visible ? 1 : 0;
+    const cardScale = phase === 'entering' ? 0.85 : visible ? 1 : 0.9;
+    const cardOpacity = visible ? 1 : 0;
 
     return (
         <>
@@ -18,6 +46,8 @@ export function BuildingModal() {
                     position: 'absolute', inset: 0,
                     background: 'rgba(0,0,0,0.55)',
                     zIndex: 100,
+                    opacity: backdropOpacity,
+                    transition: `opacity ${CLOSE_MS}ms ease-out`,
                 }}
             />
 
@@ -27,7 +57,7 @@ export function BuildingModal() {
                 style={{
                     position: 'absolute',
                     top: '50%', left: '50%',
-                    transform: 'translate(-50%, -50%)',
+                    transform: `translate(-50%, -50%) scale(${cardScale})`,
                     width: 'min(86vw, 360px)',
                     background: 'linear-gradient(180deg, #5a3a1e 0%, #3a220e 100%)',
                     border: '3px solid #7a5a30',
@@ -38,10 +68,12 @@ export function BuildingModal() {
                     color: '#fff',
                     zIndex: 101,
                     overflow: 'hidden',
+                    opacity: cardOpacity,
+                    transition: `transform ${CLOSE_MS}ms cubic-bezier(0.34, 1.3, 0.64, 1), opacity ${CLOSE_MS}ms ease-out`,
                 }}
             >
                 {/* Title bar */}
-                <ModalContent category={activeModal.category} id={activeModal.id} />
+                <ModalContent category={renderedModal.category} id={renderedModal.id} />
 
                 {/* Close button */}
                 <button
@@ -125,7 +157,7 @@ function TerrainHelp({ id }: { id: string }) {
         <CardBody title={name}>
             <div>{hints[id] ?? '\uD2B9\uC218 \uC9C0\uD615\uC785\uB2C8\uB2E4.'}</div>
             <div style={{ marginTop: '10px', fontSize: '12px', color: '#c8a888', fontStyle: 'italic' }}>
-                {'\uAC74\uC124 \uBA54\uB274\uC5D0\uC11C \uAC74\uBB3C\uC744 \uC120\uD0DD \uD6C4 \uC774 \uC9C0\uD615\uC758 8\uBC29\uD5A5 \uC774\uC6C3\uC5D0 \uBC30\uCE58\uD558\uC138\uC694.'}
+                {'\uAC74\uC124 \uBA54\uB274\uC5D0\uC11C \uAC74\uBB3C\uC744 \uACE0\uB978 \uB2E4\uC74C, \uC774 \uC9C0\uD615 \uADFC\uCC98\uC5D0 \uBC30\uCE58\uD574 \uC8FC\uC138\uC694.'}
             </div>
         </CardBody>
     );
