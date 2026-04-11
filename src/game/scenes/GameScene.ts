@@ -1355,37 +1355,51 @@ export class GameScene extends Scene {
         shadow.setDepth(depth);
 
         // Building sprite
-        if (this.textures.exists(def.spriteKey)) {
-            const bx = x + (def.offX || 0) * DPR;
-            const by = y + (def.offY || 0) * DPR;
-            const sprite = this.add.image(bx, by, def.spriteKey);
-            const scale = TILE_W * def.scale / sprite.width;
-            sprite.setScale(scale);
-            sprite.setOrigin(0.5, def.originY);
-            sprite.setDepth(depth + 2);
+        if (!this.textures.exists(def.spriteKey)) return;
+        const bx = x + (def.offX || 0) * DPR;
+        const by = y + (def.offY || 0) * DPR;
+        const sprite = this.add.image(bx, by, def.spriteKey);
+        const scale = TILE_W * def.scale / sprite.width;
+        sprite.setScale(scale);
+        sprite.setOrigin(0.5, def.originY);
+        sprite.setDepth(depth + 2);
 
-            // Capture full-size displayHeight BEFORE pop-in scale reset
-            const fullDisplayHeight = sprite.displayHeight;
+        // Capture full-size displayHeight BEFORE pop-in scale reset
+        const fullDisplayHeight = sprite.displayHeight;
+        const topY = y - fullDisplayHeight * 0.5;
 
-            // Pop-in animation
-            sprite.setScale(0);
-            this.tweens.add({
-                targets: sprite,
-                scaleX: scale,
-                scaleY: scale,
-                duration: 400,
-                ease: 'Back.easeOut',
-            });
+        // Pop-in animation
+        sprite.setScale(0);
+        this.tweens.add({
+            targets: sprite,
+            scaleX: scale,
+            scaleY: scale,
+            duration: 400,
+            ease: 'Back.easeOut',
+        });
 
-            // Label (clean Fredoka style, matches initial placement)
-            const topY = y - fullDisplayHeight * 0.5;
+        // Tap handler — same categorization as initial placeBuildings.
+        // Without this the newly-built sprite would be inert.
+        sprite.setInteractive(this.input.makePixelPerfect());
+        sprite.on('pointerdown', () => {
+            if (useGameStore.getState().buildMode) return;
+            if (this.activeTouchCount >= 2) return;
+            const id = def.id;
+            let cat: 'giftbox' | 'workshop' | 'harvest';
+            if (id === 'box') cat = 'giftbox';
+            else if (id === 'woodshop' || id === 'jewelshop') cat = 'workshop';
+            else cat = 'harvest';
+            this.tappedObject = { category: cat, id };
+        });
 
-            // Harvest bubble for newly-built harvestable buildings
-            if (HARVESTABLE_BUILDINGS[buildingId]) {
-                this.createHarvestBubble(buildingId, x, topY, depth);
-                this.updateHarvestBubbles();
-            }
+        // Floating bubble + NEW badge hookup (matches placeBuildings)
+        if (HARVESTABLE_BUILDINGS[buildingId]) {
+            this.createHarvestBubble(buildingId, x, topY, depth);
+        } else if (buildingId === 'woodshop' || buildingId === 'jewelshop') {
+            this.createWorkshopBubble(buildingId, x, topY, depth);
+            this.createWorkshopNewBadge(buildingId, x, topY, depth);
         }
+        this.updateHarvestBubbles();
     }
 
     private restoreConstructions() {
