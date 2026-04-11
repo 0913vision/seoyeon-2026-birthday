@@ -13,11 +13,17 @@ export function BuildingModal() {
 
     useEffect(() => {
         if (activeModal) {
-            // Opening
+            // Opening: first render in 'entering' state, then switch to 'open'
             setRenderedModal(activeModal);
             setPhase('entering');
-            const t = requestAnimationFrame(() => setPhase('open'));
-            return () => cancelAnimationFrame(t);
+            let r1 = 0, r2 = 0;
+            r1 = requestAnimationFrame(() => {
+                r2 = requestAnimationFrame(() => setPhase('open'));
+            });
+            return () => {
+                cancelAnimationFrame(r1);
+                cancelAnimationFrame(r2);
+            };
         } else if (renderedModal) {
             // Closing
             setPhase('closing');
