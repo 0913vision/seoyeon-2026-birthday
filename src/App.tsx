@@ -7,11 +7,13 @@ import { BuildMenu } from './components/BuildMenu';
 import { BuildingModal } from './components/BuildingModal';
 import { DebugPanel } from './components/DebugPanel';
 import { DialogBox } from './components/DialogBox';
+import { RevealOverlay } from './components/RevealOverlay';
 import { DIALOGUES, findNextDialog, DialogContext } from './data/dialogues';
 import { loadGame, applyLoadedData, startAutoSave, stopAutoSave } from './services/db';
 import { EventBus } from './game/EventBus';
 import { GameScene } from './game/scenes/GameScene';
 import { hasBuildMenuNew } from './store/badges';
+import { calcDayFromDate } from './store/useGameStore';
 
 function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
@@ -142,6 +144,28 @@ function App() {
             setDbLoaded(true);
         });
         return () => { stopAutoSave(); };
+    }, []);
+
+    // Recompute currentDay on a fresh tick so a long-running session
+    // crosses the 06:00 KST day boundary without a page reload. Also
+    // recomputes when the tab regains focus (phone wakes, app switches
+    // back). The store's own day value is the authoritative one.
+    useEffect(() => {
+        const refresh = () => {
+            const next = calcDayFromDate();
+            if (next !== useGameStore.getState().currentDay) {
+                useGameStore.setState({ currentDay: next });
+            }
+        };
+        refresh();
+        const interval = setInterval(refresh, 60_000);
+        window.addEventListener('focus', refresh);
+        document.addEventListener('visibilitychange', refresh);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('focus', refresh);
+            document.removeEventListener('visibilitychange', refresh);
+        };
     }, []);
 
     // Handle tile tap from Phaser (build mode)
@@ -293,6 +317,9 @@ function App() {
                 {/* Building/Terrain interaction modal */}
                 <BuildingModal />
             </div>
+
+            {/* Full-screen celebration on first boxHarvested transition */}
+            <RevealOverlay />
 
             {/* Debug admin panel — only on /debug path */}
             {typeof window !== 'undefined' && window.location.pathname === '/debug' && (
