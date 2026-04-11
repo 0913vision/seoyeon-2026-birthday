@@ -28,6 +28,7 @@
     },
     "dependencies": {
         "@imgly/background-removal-node": "^1.4.5",
+        "@supabase/supabase-js": "^2.103.0",
         "@tailwindcss/vite": "^4.2.2",
         "canvas": "^3.2.3",
         "jimp": "^0.16.13",

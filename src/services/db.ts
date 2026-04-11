@@ -6,24 +6,47 @@
  * upsert, which is atomic on the Postgres side. This guarantees no
  * partial-write races (e.g., resources deducted but building not added).
  *
- * Entry points below are currently MOCKED — the implementation just
- * logs + simulates network latency — but the API shape, concurrency
- * handling, and transaction guarantees match the Supabase target.
+ * Dual-mode:
+ *   - If VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are configured
+ *     (via .env), supabaseClient exposes a real client and every entry
+ *     point below talks to Postgres.
+ *   - If either env var is missing, supabaseClient is `null` and this
+ *     module transparently falls back to an in-memory mock so the game
+ *     still runs in local dev without a database.
  *
- * Switching to real Supabase later = filling in the three `// TODO:
- * supabase.*` lines inside this file. Nothing else in the app needs
- * to change.
+ * The concurrency layer (in-flight coalescing, debounce, retry) is the
+ * same in both modes.
  */
 
 import { useGameStore, getSerializableState } from '../store/useGameStore';
+import { supabase } from './supabaseClient';
 
-const PLAYER_ID = 'default_player';
+/**
+ * Current save schema version. Bump when SaveData changes shape and
+ * add a migrator branch in `migrateSaveData` below.
+ */
+export const CURRENT_SCHEMA_VERSION = 1;
+
+/**
+ * Player id is derived from the URL path, resolved once at module load:
+ *   /        → 'seoyeon'  (real game)
+ *   /debug   → 'debug'    (debug save)
+ *
+ * Routing for the /debug path is handled by vercel.json (rewrite to
+ * /index.html) so the same SPA bundle is served.
+ */
+const PLAYER_ID: string =
+    typeof window !== 'undefined' && window.location.pathname === '/debug'
+        ? 'debug'
+        : 'seoyeon';
 
 // ============================================================
 // Types
 // ============================================================
 
 export interface SaveData {
+    /** Schema version. Bump on shape changes + add a migrator branch. */
+    schemaVersion?: number;
     currentDay: number;
     tutorialStep: number;
     boxStage: number;
@@ -45,15 +68,37 @@ export interface SaveData {
     savedAt: number;
 }
 
+/**
+ * Upgrade a loaded SaveData across schema versions. Currently a
+ * no-op because only version 1 exists. When bumping the schema,
+ * add a branch per version and always flow through to the latest.
+ *
+ * Rows written before schemaVersion existed are treated as v1.
+ */
+function migrateSaveData(data: SaveData): SaveData {
+    const version = data.schemaVersion ?? 1;
+    switch (version) {
+        case 1:
+            // no-op — already current
+            break;
+        default:
+            // Unknown future version — leave untouched, warn.
+            // eslint-disable-next-line no-console
+            console.warn('[DB] unknown schemaVersion', version);
+    }
+    return { ...data, schemaVersion: CURRENT_SCHEMA_VERSION };
+}
+
 // ============================================================
 // Mock storage + transaction simulation
 // ============================================================
 //
-// In production, this state lives in a single Postgres row:
+// When Supabase is not configured, we keep the current player's save
+// in this single in-memory slot. Schema authored in supabase/schema.sql:
 //
 //   CREATE TABLE player_saves (
-//     player_id uuid PRIMARY KEY,
-//     state jsonb NOT NULL,
+//     player_id  text PRIMARY KEY,
+//     state      jsonb NOT NULL,
 //     updated_at timestamptz NOT NULL DEFAULT now()
 //   );
 //
@@ -80,21 +125,34 @@ let flightPromise: Promise<void> | null = null;
 let pendingTrigger = false;
 
 async function doUpsert(data: SaveData): Promise<void> {
-    // === Real Supabase call would go here ===
-    // const { error } = await supabase
-    //     .from('player_saves')
-    //     .upsert({
-    //         player_id: PLAYER_ID,
-    //         state: data,
-    //         updated_at: new Date().toISOString(),
-    //     }, { onConflict: 'player_id' });
-    // if (error) throw error;
+    const stamped: SaveData = {
+        ...data,
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        savedAt: Date.now(),
+    };
 
-    // Mock: simulate ~20ms network latency + in-memory overwrite
+    if (supabase) {
+        const { error } = await supabase
+            .from('player_saves')
+            .upsert(
+                {
+                    player_id: PLAYER_ID,
+                    state: stamped,
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'player_id' },
+            );
+        if (error) throw error;
+        // eslint-disable-next-line no-console
+        console.debug('[DB] upsert ok', { player: PLAYER_ID, day: stamped.currentDay, savedAt: stamped.savedAt });
+        return;
+    }
+
+    // Mock fallback: simulate ~20ms network latency + in-memory overwrite
     await new Promise(r => setTimeout(r, 20));
-    mockRow = { ...data, savedAt: Date.now() };
+    mockRow = stamped;
     // eslint-disable-next-line no-console
-    console.debug('[DB] upsert ok', { day: data.currentDay, savedAt: mockRow.savedAt });
+    console.debug('[DB] upsert ok (mock)', { player: PLAYER_ID, day: stamped.currentDay, savedAt: stamped.savedAt });
 }
 
 /**
@@ -150,15 +208,20 @@ async function doUpsertWithRetry(data: SaveData): Promise<void> {
 // ============================================================
 
 export async function loadGame(playerId: string): Promise<SaveData | null> {
+    // playerId arg is accepted for API compatibility but the real id
+    // used is always the module-level PLAYER_ID (path-derived).
     void playerId;
-    // === Real Supabase call would go here ===
-    // const { data, error } = await supabase
-    //     .from('player_saves')
-    //     .select('state')
-    //     .eq('player_id', PLAYER_ID)
-    //     .maybeSingle();
-    // if (error) throw error;
-    // return (data?.state as SaveData) ?? null;
+
+    if (supabase) {
+        const { data, error } = await supabase
+            .from('player_saves')
+            .select('state')
+            .eq('player_id', PLAYER_ID)
+            .maybeSingle();
+        if (error) throw error;
+        if (!data) return null;
+        return migrateSaveData(data.state as SaveData);
+    }
 
     // Mock: first load returns the seed, subsequent loads return
     // whatever was last written in this session.
@@ -169,17 +232,43 @@ export async function loadGame(playerId: string): Promise<SaveData | null> {
 
 export async function deleteSave(playerId: string): Promise<void> {
     void playerId;
-    // === Real Supabase call would go here ===
-    // await supabase.from('player_saves').delete().eq('player_id', PLAYER_ID);
+    if (supabase) {
+        const { error } = await supabase
+            .from('player_saves')
+            .delete()
+            .eq('player_id', PLAYER_ID);
+        if (error) throw error;
+        return;
+    }
     mockRow = null;
 }
 
 export async function hasSave(playerId: string): Promise<boolean> {
     void playerId;
+    if (supabase) {
+        const { data, error } = await supabase
+            .from('player_saves')
+            .select('player_id')
+            .eq('player_id', PLAYER_ID)
+            .maybeSingle();
+        if (error) throw error;
+        return data !== null;
+    }
     return mockRow !== null;
 }
 
 export async function resetAllSaves(): Promise<void> {
+    if (supabase) {
+        // Only clears the current PLAYER_ID row. Resetting "all"
+        // saves would require deleting both 'seoyeon' and 'debug',
+        // which is not a useful operation in practice.
+        const { error } = await supabase
+            .from('player_saves')
+            .delete()
+            .eq('player_id', PLAYER_ID);
+        if (error) throw error;
+        return;
+    }
     mockRow = null;
 }
 
@@ -191,6 +280,7 @@ export async function resetAllSaves(): Promise<void> {
 // and "brand new player" converge. currentDay is NOT serialized (the app
 // recomputes from the real date at load time).
 const MOCK_SEED: SaveData = {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     currentDay: 1,
     tutorialStep: 0,
     boxStage: 1,

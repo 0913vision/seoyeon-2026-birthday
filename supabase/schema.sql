@@ -1,45 +1,39 @@
 -- ============================================================
 -- Supabase schema for Birthday Gift Box Game
--- Run this in Supabase SQL Editor to set up the database.
+-- Run this in Supabase SQL Editor (copy/paste the whole file).
+-- ============================================================
+--
+-- Design: single JSONB blob per player_id.
+--
+-- The entire client state (resources, buildings, crafting,
+-- harvest timers, parts, etc.) is stored as one JSONB column.
+-- This matches the save/load code in src/services/db.ts, which
+-- serializes the Zustand store to a single object and upserts
+-- it as one row. Postgres guarantees single-row atomicity for
+-- UPSERT, so there's no way to partially apply a state change.
+--
+-- Only two player_ids are used in production:
+--   - 'seoyeon'  — the real game, served at the root path /
+--   - 'debug'    — the debug save, served at /debug
+--
+-- The path-based routing is wired via vercel.json (rewrites
+-- /debug → /index.html) and src/services/db.ts (reads
+-- window.location.pathname at module load).
 -- ============================================================
 
--- Game saves table
--- Each row = one player's complete game state
-CREATE TABLE IF NOT EXISTS game_saves (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    player_id TEXT NOT NULL UNIQUE,  -- URL param or anonymous ID
-    current_day INTEGER NOT NULL DEFAULT 1,
-    tutorial_step INTEGER NOT NULL DEFAULT 0,
-    box_stage INTEGER NOT NULL DEFAULT 1,
-    packaging_started_at BIGINT,  -- Unix timestamp ms
-    box_harvested BOOLEAN NOT NULL DEFAULT FALSE,
-    resources JSONB NOT NULL DEFAULT '{
-        "wood": {"amount": 2000, "unlocked": true},
-        "flower": {"amount": 0, "unlocked": false},
-        "stone": {"amount": 0, "unlocked": false},
-        "metal": {"amount": 0, "unlocked": false},
-        "gem": {"amount": 0, "unlocked": false}
-    }'::jsonb,
-    buildings JSONB NOT NULL DEFAULT '{
-        "box": {"built": true, "position": {"row": 8, "col": 8}},
-        "wood_farm": {"built": true, "position": {"row": 3, "col": 4}},
-        "woodshop": {"built": false},
-        "flower_farm": {"built": false},
-        "quarry": {"built": false},
-        "mine": {"built": false},
-        "jewelshop": {"built": false},
-        "gem_cave": {"built": false}
-    }'::jsonb,
-    parts_completed INTEGER[] NOT NULL DEFAULT '{}',
-    parts_attached INTEGER[] NOT NULL DEFAULT '{}',
-    woodshop_crafting JSONB NOT NULL DEFAULT '{"partId": null, "startedAt": null}'::jsonb,
-    jewelshop_crafting JSONB NOT NULL DEFAULT '{"partId": null, "startedAt": null}'::jsonb,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+-- Drop the old stale table from the previous column-per-field
+-- design if it's still around. Safe to run on a fresh project.
+DROP TABLE IF EXISTS game_saves CASCADE;
+
+-- Main save table: one row per player.
+CREATE TABLE IF NOT EXISTS player_saves (
+    player_id  TEXT PRIMARY KEY,
+    state      JSONB NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Auto-update updated_at on save
-CREATE OR REPLACE FUNCTION update_updated_at()
+-- Auto-bump updated_at on every UPDATE.
+CREATE OR REPLACE FUNCTION player_saves_touch_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
@@ -47,39 +41,72 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER game_saves_updated_at
-    BEFORE UPDATE ON game_saves
+DROP TRIGGER IF EXISTS player_saves_updated_at ON player_saves;
+CREATE TRIGGER player_saves_updated_at
+    BEFORE UPDATE ON player_saves
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at();
+    EXECUTE FUNCTION player_saves_touch_updated_at();
 
--- Index for fast player lookup
-CREATE INDEX IF NOT EXISTS idx_game_saves_player_id ON game_saves(player_id);
+-- ============================================================
+-- Row Level Security
+-- ============================================================
+--
+-- This is a single-recipient birthday gift. We don't have real
+-- user auth — the client uses the Supabase anon key directly.
+-- Anyone with the anon key and knowledge of a player_id can
+-- read/write that row. That is acceptable here because:
+--   (1) the deployment URL is private (only the recipient has
+--       the link),
+--   (2) there are exactly two hardcoded player_ids ('seoyeon',
+--       'debug') — no enumeration of strangers' saves,
+--   (3) the worst-case blast radius is "someone overwrites the
+--       birthday save", which is recoverable from backups.
+--
+-- If this project were ever reused for anything sensitive, the
+-- right fix is to switch to Supabase Auth and scope policies by
+-- auth.uid(). For this gift, wide-open anon policies are fine.
+-- ============================================================
 
--- Row Level Security (optional, for multi-player)
-ALTER TABLE game_saves ENABLE ROW LEVEL SECURITY;
+ALTER TABLE player_saves ENABLE ROW LEVEL SECURITY;
 
--- Allow anonymous access (for URL-based player IDs)
-CREATE POLICY "Anyone can read their own save"
-    ON game_saves FOR SELECT
+DROP POLICY IF EXISTS "anon read"   ON player_saves;
+DROP POLICY IF EXISTS "anon insert" ON player_saves;
+DROP POLICY IF EXISTS "anon update" ON player_saves;
+DROP POLICY IF EXISTS "anon delete" ON player_saves;
+
+CREATE POLICY "anon read"
+    ON player_saves FOR SELECT
     USING (true);
 
-CREATE POLICY "Anyone can insert their own save"
-    ON game_saves FOR INSERT
+CREATE POLICY "anon insert"
+    ON player_saves FOR INSERT
     WITH CHECK (true);
 
-CREATE POLICY "Anyone can update their own save"
-    ON game_saves FOR UPDATE
+CREATE POLICY "anon update"
+    ON player_saves FOR UPDATE
+    USING (true)
+    WITH CHECK (true);
+
+CREATE POLICY "anon delete"
+    ON player_saves FOR DELETE
     USING (true);
 
 -- ============================================================
--- Usage from Supabase JS client:
+-- Usage from the client (see src/services/db.ts):
 --
--- Save:
---   supabase.from('game_saves').upsert({ player_id: 'xxx', ...state })
+--   // upsert
+--   await supabase
+--       .from('player_saves')
+--       .upsert({ player_id, state, updated_at: new Date().toISOString() },
+--               { onConflict: 'player_id' });
 --
--- Load:
---   supabase.from('game_saves').select('*').eq('player_id', 'xxx').single()
+--   // load
+--   const { data } = await supabase
+--       .from('player_saves')
+--       .select('state')
+--       .eq('player_id', player_id)
+--       .maybeSingle();
 --
--- Delete:
---   supabase.from('game_saves').delete().eq('player_id', 'xxx')
+--   // delete
+--   await supabase.from('player_saves').delete().eq('player_id', player_id);
 -- ============================================================
