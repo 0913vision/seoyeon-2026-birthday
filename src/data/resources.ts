@@ -9,7 +9,7 @@ export const RESOURCE_DEFS = [
 ];
 
 export const INITIAL_RESOURCES: ResourceState = {
-    wood: { amount: 2500, unlocked: true },
+    wood: { amount: 4000, unlocked: true },
     flower: { amount: 0, unlocked: false },
     stone: { amount: 0, unlocked: false },
     metal: { amount: 0, unlocked: false },
