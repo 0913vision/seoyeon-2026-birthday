@@ -27,9 +27,11 @@ const ASSETS = [
         dir: 'parts',
         name: 'part_14_button',
         prompt:
-            'Cute cartoon 3D small round game controller button, pastel pink or coral top, '
-            + 'glossy plastic finish, golden metal ring base, single isolated button, '
-            + 'not a whole controller, just one round press-button, '
+            'Cute cartoon 3D small round pure white gamepad face button, '
+            + 'pure white glossy plastic top, bold black capital letter "Y" '
+            + 'printed in the center of the button, '
+            + 'white rim and base, NO gold, NO metal trim, NO pink, '
+            + 'single isolated button on white background, '
             + 'centered single item, '
             + BASE
             + ', transparent background',
@@ -38,11 +40,12 @@ const ASSETS = [
         dir: 'parts',
         name: 'part_15_leather',
         prompt:
-            'Cute cartoon 3D small square piece of tan brown leather patch, '
-            + 'warm honey-brown color with visible leather grain texture, '
-            + 'delicate pink thread stitching around the edges, '
+            'Cute cartoon 3D small square piece of black leather patch, '
+            + 'deep matte black color with subtle leather grain texture, '
+            + 'delicate cream white thread stitching around the edges, '
             + 'slight rolled corner, soft and handmade feel, '
             + 'centered single item on transparent background, '
+            + 'NO brown, NO tan, only black leather, '
             + BASE
             + ', transparent background',
     },
@@ -50,9 +53,11 @@ const ASSETS = [
         dir: 'parts',
         name: 'part_23_plastic',
         prompt:
-            'Cute cartoon 3D small glossy pastel plastic component, '
-            + 'rounded corners, pink and mint color, looks like a small piece of '
-            + 'molded plastic casing with 2 tiny mounting holes, single isolated piece, '
+            'Cute cartoon 3D small glossy plastic component, '
+            + 'solid medium steel blue color (hex approximately #4a6bb5), '
+            + 'rounded corners, single uniform blue color throughout, '
+            + 'a small piece of molded plastic casing with 2 tiny mounting holes, '
+            + 'single isolated piece, NO pink, NO mint, only blue, '
             + 'centered single item, '
             + BASE
             + ', transparent background',
