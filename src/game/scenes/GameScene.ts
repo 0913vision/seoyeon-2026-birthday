@@ -108,6 +108,7 @@ interface HarvestBubble {
     container: Phaser.GameObjects.Container;
     bg: Phaser.GameObjects.Graphics;
     text: Phaser.GameObjects.Text;
+    icon: Phaser.GameObjects.Image | null;
     readyPulse: Phaser.Tweens.Tween | null;
     baseY: number;
     lastState: 'ready' | 'waiting';
@@ -495,21 +496,21 @@ export class GameScene extends Scene {
         const container = this.add.container(bx, by);
         container.setDepth(depth + 8);
 
-        // Bubble background
+        // Bubble background (drawn dynamically in renderBubble)
         const bg = this.add.graphics();
         container.add(bg);
 
-        // Resource icon
+        // Resource icon (position set dynamically in renderBubble)
         const iconKey = `res_${resId}`;
+        let icon: Phaser.GameObjects.Image | null = null;
         if (this.textures.exists(iconKey)) {
-            const icon = this.add.image(-14 * DPR, 0, iconKey);
-            const iconSize = 20 * DPR;
-            icon.setDisplaySize(iconSize, iconSize);
+            icon = this.add.image(0, 0, iconKey);
+            icon.setDisplaySize(18 * DPR, 18 * DPR);
             container.add(icon);
         }
 
-        // Amount text
-        const text = this.add.text(6 * DPR, 0, '', {
+        // Amount text (position set dynamically in renderBubble)
+        const text = this.add.text(0, 0, '', {
             fontSize: `${13 * DPR}px`,
             fontStyle: 'bold',
             color: '#ffffff',
@@ -520,7 +521,7 @@ export class GameScene extends Scene {
         }).setOrigin(0, 0.5);
         container.add(text);
 
-        // Interactive hit area: rounded rect centered on container (w≈60, h≈32 in pixels pre-DPR)
+        // Interactive hit area: will be resized in renderBubble
         const hitW = 72 * DPR;
         const hitH = 36 * DPR;
         container.setSize(hitW, hitH);
@@ -531,7 +532,6 @@ export class GameScene extends Scene {
 
         // Tap: mark flag so global pointerup knows to handle bubble tap (not tile)
         container.on('pointerdown', () => {
-            // Only consume if not in build mode and not dragging
             if (useGameStore.getState().buildMode) return;
             this.bubbleTappedBuildingId = buildingId;
         });
@@ -542,6 +542,7 @@ export class GameScene extends Scene {
             container,
             bg,
             text,
+            icon,
             readyPulse: null,
             baseY: by,
             lastState: 'waiting',
@@ -561,39 +562,78 @@ export class GameScene extends Scene {
         const info = computeHarvest(hs.lastHarvestAt, Date.now(), prod.cycle, prod.perCycle);
         const ready = info.percent >= 1;
 
-        // Update text
+        // Update text content first (so we can measure)
         if (ready) {
             bubble.text.setText(`+${info.amount}`);
         } else {
             bubble.text.setText(formatRemaining(info.msUntil100));
         }
 
-        // Draw background (resize to fit text)
+        // Layout: [iconW][gap][textW] centered within the bubble
+        const iconW = bubble.icon ? 18 * DPR : 0;
+        const gap = bubble.icon ? 5 * DPR : 0;
         const textW = bubble.text.width;
-        const padX = 10 * DPR;
-        const iconSpace = 22 * DPR; // icon + gap
-        const bgW = Math.max(60 * DPR, iconSpace + textW + padX * 2);
-        const bgH = 30 * DPR;
-        const r = 14 * DPR;
+        const contentW = iconW + gap + textW;
+
+        // Icon centered vertically, placed on the left
+        if (bubble.icon) {
+            bubble.icon.setPosition(-contentW / 2 + iconW / 2, 0);
+        }
+        // Text left-aligned starts right after icon+gap
+        bubble.text.setPosition(-contentW / 2 + iconW + gap, 0);
+
+        // Bubble dimensions
+        const padX = 12 * DPR;
+        const padY = 7 * DPR;
+        const bgW = contentW + padX * 2;
+        const bgH = Math.max(18 * DPR, textW > 0 ? bubble.text.height : 18 * DPR) + padY * 2;
+        const r = bgH / 2;
+        const tailW = 10 * DPR;
+        const tailH = 7 * DPR;
 
         bubble.bg.clear();
+        // Shadow
+        bubble.bg.fillStyle(0x000000, 0.25);
+        bubble.bg.fillRoundedRect(-bgW / 2 + 1 * DPR, -bgH / 2 + 3 * DPR, bgW, bgH, r);
+
         if (ready) {
             // Yellow ready state
-            bubble.bg.fillStyle(0xfbbf24, 0.95);
+            bubble.bg.fillStyle(0xfbbf24, 1);
             bubble.bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            bubble.bg.lineStyle(2.5 * DPR, 0xffffff, 0.95);
+            // Tail
+            bubble.bg.fillTriangle(
+                -tailW / 2, bgH / 2 - 0.5 * DPR,
+                tailW / 2, bgH / 2 - 0.5 * DPR,
+                0, bgH / 2 + tailH,
+            );
+            // Border
+            bubble.bg.lineStyle(2.5 * DPR, 0xffffff, 1);
             bubble.bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
+            // Border on tail (left + right strokes)
+            bubble.bg.lineStyle(2.5 * DPR, 0xffffff, 1);
+            bubble.bg.lineBetween(-tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
+            bubble.bg.lineBetween(tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
         } else {
-            // Gray waiting state
-            bubble.bg.fillStyle(0x2a2018, 0.82);
+            // Dark waiting state
+            bubble.bg.fillStyle(0x2a2018, 0.92);
             bubble.bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
-            bubble.bg.lineStyle(2 * DPR, 0x8a7358, 0.9);
+            // Tail
+            bubble.bg.fillTriangle(
+                -tailW / 2, bgH / 2 - 0.5 * DPR,
+                tailW / 2, bgH / 2 - 0.5 * DPR,
+                0, bgH / 2 + tailH,
+            );
+            // Border
+            bubble.bg.lineStyle(2 * DPR, 0xc0a880, 0.95);
             bubble.bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, r);
+            bubble.bg.lineStyle(2 * DPR, 0xc0a880, 0.95);
+            bubble.bg.lineBetween(-tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
+            bubble.bg.lineBetween(tailW / 2, bgH / 2, 0, bgH / 2 + tailH);
         }
 
-        // Update hit area
+        // Update hit area (include tail)
         bubble.container.input?.hitArea && Object.assign(bubble.container.input.hitArea, {
-            x: -bgW / 2, y: -bgH / 2, width: bgW, height: bgH,
+            x: -bgW / 2, y: -bgH / 2, width: bgW, height: bgH + tailH,
         });
 
         // Pulse animation when ready; stop when not
