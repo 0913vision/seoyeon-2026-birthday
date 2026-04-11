@@ -267,7 +267,7 @@ export class GameScene extends Scene {
             }
 
             // Label (same style as buildings)
-            const labelPosY = topY - 18 * DPR;
+            const labelPosY = topY - 18 * DPR + (t.labelOffY || 0) * DPR;
             const baseFontSize = 13 * DPR;
             const labelText = this.add.text(labelX, labelPosY, t.name, {
                 fontSize: `${baseFontSize}px`,

@@ -13,6 +13,7 @@ export interface TerrainDef {
     scale: number;
     offX: number;
     offY: number;
+    labelOffY?: number; // extra Y offset for label (positive = lower, default 0)
 }
 
 // Initial pre-placed terrain.
@@ -29,6 +30,7 @@ export const TERRAIN: TerrainDef[] = [
         id: 'rock_outcrop', name: '바위', spriteKey: 'rock_outcrop',
         row: 5, col: 10, width: 2, height: 2,
         originY: 0.58, scale: 2.4, offX: 6, offY: 0,
+        labelOffY: 60,
     },
     {
         id: 'cave_entrance', name: '동굴', spriteKey: 'cave_entrance',
