@@ -132,6 +132,7 @@ export class GameScene extends Scene {
 
     // Harvest bubbles
     private harvestBubbles: Map<string, HarvestBubble> = new Map();
+    private tappedObject: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox'; id: string } | null = null;
     private bubbleTappedBuildingId: string | null = null; // set on bubble pointerdown, suppresses tile tap
     private harvestTickEvent: Phaser.Time.TimerEvent | null = null;
 
@@ -326,6 +327,13 @@ export class GameScene extends Scene {
                 sprite.setScale(scale);
                 sprite.setOrigin(0.5, t.originY);
                 sprite.setDepth(depth + 2);
+                // Make terrain sprite tappable
+                sprite.setInteractive();
+                const tid = t.id;
+                sprite.on('pointerdown', () => {
+                    if (useGameStore.getState().buildMode) return;
+                    this.tappedObject = { category: 'terrain', id: tid };
+                });
                 // Match building label style: use displayHeight * 0.5 (visual top of content)
                 topY = ty - sprite.displayHeight * 0.5;
                 labelX = tx;
@@ -382,6 +390,21 @@ export class GameScene extends Scene {
                 sprite.setOrigin(0.5, b.originY);
                 sprite.setDepth(depth + 2);
                 topY = y - sprite.displayHeight * 0.5;
+
+                // Make sprite tappable (sprite pixel area, not just tile)
+                const dataDef = DATA_BUILDINGS.find(d => d.spriteKey === b.spriteKey);
+                if (dataDef) {
+                    sprite.setInteractive();
+                    sprite.on('pointerdown', () => {
+                        if (useGameStore.getState().buildMode) return;
+                        const id = dataDef.id;
+                        let cat: 'giftbox' | 'workshop' | 'harvest';
+                        if (id === 'box') cat = 'giftbox';
+                        else if (id === 'woodshop' || id === 'jewelshop') cat = 'workshop';
+                        else cat = 'harvest';
+                        this.tappedObject = { category: cat, id };
+                    });
+                }
 
                 // Gift box sparkles
                 if (b.isGiftBox) {
@@ -934,6 +957,12 @@ export class GameScene extends Scene {
             preview.setScale(scale);
             preview.setOrigin(0.5, def.originY);
             preview.setAlpha(0.4);
+            // Make preview sprite tappable (for "construction" modal)
+            preview.setInteractive();
+            preview.on('pointerdown', () => {
+                if (useGameStore.getState().buildMode) return;
+                this.tappedObject = { category: 'construction', id: buildingId };
+            });
             container.add(preview);
         }
 
@@ -1121,7 +1150,7 @@ export class GameScene extends Scene {
         let velocityY = 0;
 
         const MIN_ZOOM = 0.55;
-        const MAX_ZOOM = 1.3;
+        const MAX_ZOOM = 2.0;
 
         cam.setZoom(0.9);
         this.updateLabels(0.9);
@@ -1183,8 +1212,9 @@ export class GameScene extends Scene {
             lastPinchDist = 0;
 
             if (this.isDragging) {
-                // Clear any pending bubble tap since this was a drag
+                // Clear any pending taps since this was a drag
                 this.bubbleTappedBuildingId = null;
+                this.tappedObject = null;
                 return;
             }
 
@@ -1194,10 +1224,20 @@ export class GameScene extends Scene {
             if (!bm && this.bubbleTappedBuildingId) {
                 const bid = this.bubbleTappedBuildingId;
                 this.bubbleTappedBuildingId = null;
+                this.tappedObject = null;
                 this.handleBubbleTap(bid);
                 return;
             }
             this.bubbleTappedBuildingId = null;
+
+            // Sprite-based object tap (pixel-perfect building/terrain)
+            if (!bm && this.tappedObject) {
+                const target = this.tappedObject;
+                this.tappedObject = null;
+                EventBus.emit('building-tapped', target);
+                return;
+            }
+            this.tappedObject = null;
 
             const worldPoint = cam.getWorldPoint(pointer.x, pointer.y);
 
@@ -1206,19 +1246,17 @@ export class GameScene extends Scene {
                 if (Date.now() - bm.enteredAt > 500) {
                     this.handleTileTap(worldPoint.x, worldPoint.y);
                 }
-            } else {
-                // Not in build mode: detect building/terrain tap
-                this.handleObjectTap(worldPoint.x, worldPoint.y);
             }
+            // Note: empty-tile tap outside build mode does nothing (no fallback)
         });
 
-        // Inertia - smooth deceleration after drag
+        // Inertia - smooth deceleration after drag (lower factor = snappier stop)
         this.events.on('update', () => {
             if (!this.input.activePointer.isDown && (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5)) {
-                cam.scrollX -= velocityX;
-                cam.scrollY -= velocityY;
-                velocityX *= 0.92;
-                velocityY *= 0.92;
+                cam.scrollX -= velocityX * 0.5;
+                cam.scrollY -= velocityY * 0.5;
+                velocityX *= 0.80;
+                velocityY *= 0.80;
             }
         });
 

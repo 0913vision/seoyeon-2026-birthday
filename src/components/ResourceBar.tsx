@@ -40,8 +40,10 @@ export function ResourceBar(props?: { resources?: any; resDelta?: any }) {
                 return (
                     <div
                         key={r.id}
-                        className="flex-1 flex items-center justify-center gap-1 py-2"
+                        className="flex-1 flex items-center justify-center gap-1"
                         style={{
+                            paddingTop: '4px',
+                            paddingBottom: '4px',
                             background: res.unlocked
                                 ? 'linear-gradient(180deg, #4a3520 0%, #3a2815 100%)'
                                 : 'rgba(30,20,10,0.5)',
