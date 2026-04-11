@@ -16,6 +16,11 @@ import { hasBuildMenuNew } from './store/badges';
 function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
     const [showBuildMenu, setShowBuildMenu] = useState(false);
+    // True once loadGame().then(applyLoadedData) has finished. The dialog
+    // rule engine MUST NOT run before this — otherwise it would open
+    // day1_intro against the empty initial shownDialogs and the player
+    // would see the same tutorial every time they refreshed.
+    const [dbLoaded, setDbLoaded] = useState(false);
 
     const addResource = useGameStore(s => s.addResource);
     const resources = useGameStore(s => s.resources);
@@ -68,7 +73,10 @@ function App() {
     // Dialog auto-trigger. When the store state changes, check the rule
     // engine and open the first unshown scene whose `when` is satisfied.
     // Guarded by showDialog so we never interrupt a scene that is open.
+    // Also gated on dbLoaded so the engine doesn't run against the
+    // empty initial shownDialogs before the saved row is applied.
     useEffect(() => {
+        if (!dbLoaded) return;
         if (showDialog) return;
         const next = findNextDialog(ctx);
         if (next) {
@@ -87,7 +95,7 @@ function App() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
-        showDialog, currentDay, tutorialStep, shownDialogs, showBuildMenu,
+        dbLoaded, showDialog, currentDay, tutorialStep, shownDialogs, showBuildMenu,
         buildings, partsCompleted, partsAttached, woodshopCrafting,
         jewelshopCrafting, resources, packagingStartedAt, boxHarvested,
         activeModal, buildMode,
@@ -131,6 +139,7 @@ function App() {
                 console.log('[App] Loaded game state from DB');
             }
             startAutoSave();
+            setDbLoaded(true);
         });
         return () => { stopAutoSave(); };
     }, []);
