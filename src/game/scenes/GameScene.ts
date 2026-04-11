@@ -252,6 +252,7 @@ export class GameScene extends Scene {
             shadow.setDepth(depth);
 
             let topY = y - 30 * DPR;
+            let labelX = x;
             if (this.textures.exists(t.spriteKey)) {
                 const tx = x + (t.offX || 0) * DPR;
                 const ty = y + (t.offY || 0) * DPR;
@@ -260,13 +261,15 @@ export class GameScene extends Scene {
                 sprite.setScale(scale);
                 sprite.setOrigin(0.5, t.originY);
                 sprite.setDepth(depth + 2);
-                topY = y - sprite.displayHeight * 0.5;
+                // True top edge: origin point ty minus displayHeight * originY
+                topY = ty - sprite.displayHeight * t.originY;
+                labelX = tx;
             }
 
             // Label (same style as buildings)
             const labelPosY = topY - 18 * DPR;
             const baseFontSize = 13 * DPR;
-            const labelText = this.add.text(x, labelPosY, t.name, {
+            const labelText = this.add.text(labelX, labelPosY, t.name, {
                 fontSize: `${baseFontSize}px`,
                 color: '#ffffff',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -275,7 +278,7 @@ export class GameScene extends Scene {
                 strokeThickness: 3 * DPR,
                 resolution: window.devicePixelRatio || 3,
             }).setOrigin(0.5).setDepth(depth + 6);
-            this.labels.push({ text: labelText, x, y: labelPosY, baseFontSize });
+            this.labels.push({ text: labelText, x: labelX, y: labelPosY, baseFontSize });
         }
     }
 
