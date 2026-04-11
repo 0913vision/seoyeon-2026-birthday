@@ -1258,38 +1258,22 @@ export class GameScene extends Scene {
         const container = this.add.container(x, y);
         container.setDepth(depth + 2);
 
-        // Construction-site stub. Uses the dedicated `construction` texture
-        // (scaffold/site sprite), NOT a faded copy of the finished building.
+        // Semi-transparent building preview
         const scaffoldH = TILE_H * 1.2;
+        // For test entries without a real def, fall back to woodshop sprite
         const def = DATA_BUILDINGS.find(b => b.id === buildingId)
             || DATA_BUILDINGS.find(b => b.id === 'woodshop');
-        if (this.textures.exists('construction')) {
-            const preview = this.add.image(0, 0, 'construction');
-            // Match the footprint roughly to a normal building (~1 tile wide).
-            const scale = TILE_W * 1.0 / preview.width;
-            preview.setScale(scale);
-            preview.setOrigin(0.5, 0.75);
-            preview.setDepth(0);
-            // Tappable so the player can see the "under construction" modal.
-            preview.setInteractive(this.input.makePixelPerfect());
-            preview.on('pointerdown', () => {
-                if (useGameStore.getState().buildMode) return;
-                if (this.activeTouchCount >= 2) return;
-                this.tappedObject = { category: 'construction', id: buildingId };
-            });
-            container.add(preview);
-        } else if (def && this.textures.exists(def.spriteKey)) {
-            // Fallback: faded building sprite if the construction asset is
-            // missing (shouldn't happen in normal builds).
+        if (def && this.textures.exists(def.spriteKey)) {
             const preview = this.add.image(
                 (def.offX || 0) * DPR,
                 (def.offY || 0) * DPR,
-                def.spriteKey,
+                def.spriteKey
             );
             const scale = TILE_W * def.scale / preview.width;
             preview.setScale(scale);
             preview.setOrigin(0.5, def.originY);
             preview.setAlpha(0.4);
+            // Make preview sprite tappable (pixel-perfect, for "construction" modal)
             preview.setInteractive(this.input.makePixelPerfect());
             preview.on('pointerdown', () => {
                 if (useGameStore.getState().buildMode) return;

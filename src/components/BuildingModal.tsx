@@ -377,15 +377,102 @@ function formatCycle(minutes: number): string {
     return `${minutes}분`;
 }
 
-// === Construction Info (stub) ===
+// === Construction Info ===
+// Total wall-clock for a construction. Must match CONSTRUCTION_TIME_MS in
+// GameScene.ts / useGameStore.ts. Keep in sync until we hoist a shared constant.
+const CONSTRUCTION_TIME_MS = 10_000;
+
 function ConstructionInfo({ id }: { id: string }) {
     const def = BUILDINGS.find(b => b.id === id);
     const name = def?.name ?? id;
+    const buildings = useGameStore(s => s.buildings);
+    const bs = buildings[id];
+    const startedAt = bs?.constructionStartedAt ?? null;
+
+    // Live countdown tick
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const t = setInterval(() => setTick(n => n + 1), 500);
+        return () => clearInterval(t);
+    }, []);
+
+    // If the build finished while the modal was open, close it.
+    const closeBuildingModal = useGameStore(s => s.closeBuildingModal);
+    useEffect(() => {
+        if (bs?.built) closeBuildingModal();
+    }, [bs?.built, closeBuildingModal]);
+
+    const elapsed = startedAt && startedAt > 0
+        ? Math.min(CONSTRUCTION_TIME_MS, Math.max(0, Date.now() - startedAt))
+        : 0;
+    const remainingMs = Math.max(0, CONSTRUCTION_TIME_MS - elapsed);
+    const pct = Math.min(1, elapsed / CONSTRUCTION_TIME_MS);
+    const mins = Math.floor(remainingMs / 60000);
+    const secs = Math.floor((remainingMs % 60000) / 1000);
+    const clock = `${mins}:${secs.toString().padStart(2, '0')}`;
+
     return (
-        <CardBody title={`${name} (\uAC74\uC124 \uC911)`}>
-            <div>{'\uD604\uC7AC \uAC74\uC124 \uC911\uC778 \uAC74\uBB3C\uC785\uB2C8\uB2E4.'}</div>
-            <div style={{ marginTop: '10px', fontSize: '12px', color: '#c8a888' }}>
-                {'TODO: \uB0A8\uC740 \uC2DC\uAC04, \uC989\uC2DC \uC644\uB8CC \uC635\uC158 \uB4F1'}
+        <CardBody title={`${name} \u00b7 \uAC74\uC124 \uC911`}>
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '10px',
+                background: 'linear-gradient(180deg, #3a2810 0%, #2a1808 100%)',
+                border: '2px solid #c8a060',
+                borderRadius: '10px',
+            }}>
+                <img
+                    src={`assets/generated/buildings/${id}.png`}
+                    alt={name}
+                    style={{
+                        width: '64px', height: '64px',
+                        objectFit: 'contain',
+                        opacity: 0.6,
+                        filter: 'grayscale(0.4)',
+                        flexShrink: 0,
+                    }}
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', color: '#c8a888', marginBottom: '4px' }}>남은 시간</div>
+                    <div style={{
+                        fontSize: '22px',
+                        fontWeight: 700,
+                        color: '#fbbf24',
+                        fontFamily: 'monospace',
+                        letterSpacing: '0.04em',
+                    }}>
+                        {clock}
+                    </div>
+                    {/* Progress bar */}
+                    <div style={{
+                        height: '8px',
+                        background: '#1a1208',
+                        borderRadius: '4px',
+                        overflow: 'hidden',
+                        border: '1px solid #3a2a15',
+                        marginTop: '8px',
+                    }}>
+                        <div style={{
+                            height: '100%',
+                            width: `${pct * 100}%`,
+                            background: 'linear-gradient(90deg, #44cc66 0%, #2a8040 100%)',
+                            transition: 'width 400ms ease-out',
+                        }} />
+                    </div>
+                </div>
+            </div>
+
+            <div style={{
+                marginTop: '12px',
+                fontSize: '12px',
+                color: '#c8a888',
+                lineHeight: 1.6,
+                textAlign: 'center',
+                fontStyle: 'italic',
+            }}>
+                건설이 완료될 때까지 기다려 주세요.
             </div>
         </CardBody>
     );
