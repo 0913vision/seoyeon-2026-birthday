@@ -331,19 +331,8 @@ export class GameScene extends Scene {
                 labelX = tx;
             }
 
-            // Label (clean Fredoka style)
-            const labelPosY = topY - 18 * DPR + (t.labelOffY || 0) * DPR;
-            const baseFontSize = 12 * DPR;
-            const labelText = this.add.text(labelX, labelPosY, t.name, {
-                fontSize: `${baseFontSize}px`,
-                color: '#ffffff',
-                fontFamily: 'Fredoka, system-ui, sans-serif',
-                fontStyle: 'bold',
-                stroke: '#1a1208',
-                strokeThickness: 2 * DPR,
-                resolution: window.devicePixelRatio || 3,
-            }).setOrigin(0.5).setDepth(depth + 6);
-            this.labels.push({ text: labelText, x: labelX, y: labelPosY, baseFontSize });
+            // (Building/terrain labels removed — sprites + tap modal convey identity)
+            void labelX; void topY;
         }
     }
 
@@ -459,21 +448,7 @@ export class GameScene extends Scene {
                 topY = y - 30 * DPR;
             }
 
-            // Label (clean Fredoka style)
-            const labelPosY = topY - 18 * DPR;
-            const baseFontSize = (b.isGiftBox ? 14 : 12) * DPR;
-
-            const labelText = this.add.text(x, labelPosY, b.label, {
-                fontSize: `${baseFontSize}px`,
-                color: '#ffffff',
-                fontFamily: 'Fredoka, system-ui, sans-serif',
-                fontStyle: 'bold',
-                stroke: '#1a1208',
-                strokeThickness: 2 * DPR,
-                resolution: window.devicePixelRatio || 3,
-            }).setOrigin(0.5).setDepth(depth + 6);
-
-            this.labels.push({ text: labelText, x, y: labelPosY, baseFontSize });
+            // (Label removed)
 
             // Harvest bubble for harvestable buildings
             const dataDef = DATA_BUILDINGS.find(d => d.spriteKey === b.spriteKey);
@@ -1083,21 +1058,6 @@ export class GameScene extends Scene {
 
             // Label (clean Fredoka style, matches initial placement)
             const topY = y - fullDisplayHeight * 0.5;
-            const labelPosY = topY - 18 * DPR;
-            const baseFontSize = 12 * DPR;
-
-            const labelText = this.add.text(x, labelPosY, def.name, {
-                fontSize: `${baseFontSize}px`,
-                color: '#ffffff',
-                fontFamily: 'Fredoka, system-ui, sans-serif',
-                fontStyle: 'bold',
-                stroke: '#1a1208',
-                strokeThickness: 2 * DPR,
-                resolution: window.devicePixelRatio || 3,
-            }).setOrigin(0.5).setDepth(depth + 6);
-
-            this.labels.push({ text: labelText, x, y: labelPosY, baseFontSize });
-            this.updateLabels(this.cameras.main.zoom);
 
             // Harvest bubble for newly-built harvestable buildings
             if (HARVESTABLE_BUILDINGS[buildingId]) {
