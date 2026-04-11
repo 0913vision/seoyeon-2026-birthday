@@ -20,20 +20,20 @@ export interface TerrainDef {
 //   - Spread across the 16x16 grid
 export const TERRAIN: TerrainDef[] = [
     {
-        id: 'rock_outcrop', name: '바위', spriteKey: 'rock_outcrop',
-        row: 4, col: 13, originY: 0.7, scale: 1.0, offX: 0, offY: 0,
-    },
-    {
-        id: 'crystal_cluster', name: '수정', spriteKey: 'crystal_cluster',
-        row: 12, col: 12, originY: 0.7, scale: 1.0, offX: 0, offY: 0,
-    },
-    {
         id: 'flower_patch', name: '꽃', spriteKey: 'flower_patch',
-        row: 5, col: 2, originY: 0.7, scale: 1.0, offX: 0, offY: 0,
+        row: 5, col: 6, originY: 0.64, scale: 1.6, offX: 0, offY: 0,
+    },
+    {
+        id: 'rock_outcrop', name: '바위', spriteKey: 'rock_outcrop',
+        row: 6, col: 11, originY: 0.58, scale: 1.2, offX: 6, offY: 0,
     },
     {
         id: 'cave_entrance', name: '동굴', spriteKey: 'cave_entrance',
-        row: 12, col: 4, originY: 0.7, scale: 1.0, offX: 0, offY: 0,
+        row: 11, col: 5, originY: 0.61, scale: 1.0, offX: -2.5, offY: -1,
+    },
+    {
+        id: 'crystal_cluster', name: '수정', spriteKey: 'crystal_cluster',
+        row: 11, col: 11, originY: 0.72, scale: 1.7, offX: 0, offY: 0,
     },
 ];
 
