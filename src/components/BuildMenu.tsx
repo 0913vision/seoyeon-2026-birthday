@@ -11,13 +11,19 @@ export function BuildMenu({ onClose }: { onClose: () => void }) {
     const currentDay = useGameStore(s => s.currentDay);
 
     const enterBuildMode = useGameStore(s => s.enterBuildMode);
+    const tutorialLock = useGameStore(s => s.tutorialLock);
 
     // Snapshot seenNewDay.buildMenu at mount so indicator dots stay stable
     // while the menu is open (seen day is bumped by the App on close).
     const [seenSnapshot] = useState(() => useGameStore.getState().seenNewDay.buildMenu);
 
+    // Tutorial gate: during the build_woodshop lock only the woodshop card
+    // is tappable. Other cards are rendered but appear disabled.
+    const isLockedOut = (id: string) => tutorialLock === 'build_woodshop' && id !== 'woodshop';
+
     const handleCardTap = (item: typeof BUILDABLE[0], affordable: boolean, available: boolean) => {
         if (!available) return;
+        if (isLockedOut(item.id)) return;
         if (!affordable) {
             setToast('\uC790\uC6D0\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4');
             setTimeout(() => setToast(''), 2000);
@@ -84,6 +90,8 @@ export function BuildMenu({ onClose }: { onClose: () => void }) {
                             cardBorder = '3px solid #c8a060';
                             cardOpacity = 1;
                         }
+                        // Tutorial gate fades out non-target cards further.
+                        if (isLockedOut(item.id)) cardOpacity = Math.min(cardOpacity, 0.35);
 
                         return (
                             <div key={item.id}

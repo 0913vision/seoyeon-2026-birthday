@@ -8,6 +8,18 @@ import { computeHarvest } from '../game/harvestCalc';
 const CONSTRUCTION_TIME_MS = 10_000; // 10 seconds for debug
 
 /**
+ * Tutorial action lock targets. `dialog_only` blocks every in-world
+ * interaction (only the dialog itself is tappable). The rest allow one
+ * specific UI element to stay interactive.
+ */
+export type TutorialLock =
+    | 'dialog_only'      // narrative; nothing in-world is interactive
+    | 'wood_farm'        // tap wood farm → open harvest modal
+    | 'build_button'     // tap BUILD button
+    | 'build_woodshop'   // woodshop build card + tile placement for woodshop
+    | 'woodshop';        // tap woodshop (built) → open workshop modal
+
+/**
  * Box stage (1..7) for a given number of attached parts. Matches the 7
  * stage sprites in public/assets/generated/giftbox/. 0 parts → stage 1,
  * all 24 → stage 7.
@@ -70,6 +82,12 @@ interface GameState {
     // Dialogue scenes the player has already seen. The dialog rule engine
     // skips any scene whose id is in this list.
     shownDialogs: string[];
+
+    // Tutorial action lock. While non-null, all non-matching interactions
+    // are blocked (other building taps, BUILD button, non-target cards,
+    // non-target tile placements). Cleared by the dialog engine when the
+    // current scene closes.
+    tutorialLock: TutorialLock | null;
 
     // UI (not persisted to DB)
     showDialog: boolean;
@@ -156,6 +174,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     seenNewDay: { buildMenu: 0, woodshop: 0, jewelshop: 0 },
     shownDialogs: [],
+    tutorialLock: null,
 
     // wood_farm starts ready to harvest so the Day 1 tutorial hint can fire
     // immediately. Others seed an empty record; harvestStates for later
@@ -468,5 +487,7 @@ export function getSerializableState() {
         harvestStates: state.harvestStates,
         seenNewDay: state.seenNewDay,
         shownDialogs: state.shownDialogs,
+        // tutorialLock is UI state — intentionally NOT persisted. It's
+        // recomputed when a scene opens and cleared when it closes.
     };
 }

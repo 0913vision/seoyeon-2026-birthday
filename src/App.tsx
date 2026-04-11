@@ -72,9 +72,16 @@ function App() {
         const next = findNextDialog(ctx);
         if (next) {
             openDialog(next.id);
+            // Apply tutorial action lock if the scene declared one.
+            useGameStore.setState({ tutorialLock: next.lock ?? null });
             if (next.camera && phaserRef.current?.scene) {
                 const sceneInst = phaserRef.current.scene as GameScene;
                 sceneInst.panToBuilding?.(next.camera);
+            }
+        } else {
+            // No scene open and none eligible → clear any stale lock.
+            if (useGameStore.getState().tutorialLock != null) {
+                useGameStore.setState({ tutorialLock: null });
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,7 +98,10 @@ function App() {
         if (!showDialog || !dialogSceneId) return;
         const scene = DIALOGUES.find(d => d.id === dialogSceneId);
         if (!scene?.until) return;
-        if (scene.until(ctx)) closeDialog();
+        if (scene.until(ctx)) {
+            closeDialog();
+            useGameStore.setState({ tutorialLock: null });
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         showDialog, dialogSceneId, currentDay, showBuildMenu, buildings,
@@ -249,6 +259,10 @@ function App() {
                 <BottomBar
                     onGoToBox={goToBox}
                     onBuild={() => {
+                        // Tutorial gate: block the BUILD button unless the
+                        // current tutorial scene specifically allows it.
+                        const lock = useGameStore.getState().tutorialLock;
+                        if (lock != null && lock !== 'build_button') return;
                         // Open/close the menu. seenNewDay is bumped on CLOSE only,
                         // so NEW stays visible (and indicator cards inside the menu
                         // keep their NEW dots) for the duration of the session.

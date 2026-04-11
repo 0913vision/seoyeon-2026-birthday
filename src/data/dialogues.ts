@@ -43,6 +43,12 @@ export interface DialogueScene {
      * Either a building key (e.g. 'wood_farm', 'box', 'woodshop') or null.
      */
     camera?: string;
+    /**
+     * Optional action lock. While the scene is open, every in-world
+     * interaction except the lock's target is disabled. See TutorialLock
+     * in useGameStore for the allowed values.
+     */
+    lock?: 'dialog_only' | 'wood_farm' | 'build_button' | 'build_woodshop' | 'woodshop';
     lines: DialogLine[];
 }
 
@@ -60,6 +66,7 @@ export const DIALOGUES: DialogueScene[] = [
         id: 'day1_intro',
         when: (ctx) => ctx.currentDay === 1,
         camera: 'box',
+        lock: 'dialog_only',
         lines: [
             { text: '안녕하세요.' },
             { text: '저는 김유찬님의 비서 로봇 콜드유입니다.' },
@@ -73,6 +80,7 @@ export const DIALOGUES: DialogueScene[] = [
         id: 'day1_map_guide',
         when: (ctx) => ctx.currentDay === 1 && hasShown(ctx, 'day1_intro'),
         camera: 'box',
+        lock: 'dialog_only',
         lines: [
             { text: '이곳이 작업장입니다.' },
             { text: '화면을 드래그하시면 주변을 둘러보실 수 있습니다.' },
@@ -88,6 +96,7 @@ export const DIALOGUES: DialogueScene[] = [
         // close it. The ONLY way to dismiss it is to open the harvest modal.
         until: (ctx) => ctx.activeModal?.category === 'harvest' && ctx.activeModal.id === 'wood_farm',
         camera: 'wood_farm',
+        lock: 'wood_farm',
         lines: [
             { text: '위쪽에 나무밭이 있습니다.' },
             { text: '나무밭을 터치해서 자원 창을 열어 주세요.' },
@@ -99,11 +108,14 @@ export const DIALOGUES: DialogueScene[] = [
         // Fires only after the player harvested AND closed the modal so the
         // dialog never competes with the harvest modal for screen space.
         when: (ctx) => ctx.currentDay === 1
-            && (ctx.resources.wood?.amount ?? 0) > 2500
+            // Starter wood is now 4000, so treat "any harvest has happened"
+            // as resources having exceeded the starter amount.
+            && (ctx.resources.wood?.amount ?? 0) > 4000
             && ctx.activeModal == null
             && hasShown(ctx, 'day1_harvest_guide'),
         // Action-blocking: closes only when the player opens the BUILD menu.
         until: (ctx) => ctx.showBuildMenu,
+        lock: 'build_button',
         lines: [
             { text: '자원 수확이 완료되었습니다.' },
             { text: '수확한 자원은 화면 상단에서 확인하실 수 있습니다.' },
@@ -117,6 +129,7 @@ export const DIALOGUES: DialogueScene[] = [
         when: (ctx) => ctx.currentDay === 1 && ctx.showBuildMenu && hasShown(ctx, 'day1_after_first_harvest'),
         // Action-blocking: closes once the woodshop enters construction.
         until: (ctx) => !!ctx.buildings.woodshop?.constructionStartedAt || !!ctx.buildings.woodshop?.built,
+        lock: 'build_woodshop',
         lines: [
             { text: '이곳에서 건물을 지을 수 있습니다.' },
             { text: '목공방 카드를 눌러 주세요.' },
@@ -129,6 +142,7 @@ export const DIALOGUES: DialogueScene[] = [
         // Action-blocking: closes only when the player opens the woodshop modal.
         until: (ctx) => ctx.activeModal?.category === 'workshop' && ctx.activeModal.id === 'woodshop',
         camera: 'woodshop',
+        lock: 'woodshop',
         lines: [
             { text: '목공방이 완성되었습니다.' },
             { text: '목공방을 터치하여 제작 메뉴를 열어 주세요.', action: '목공방을 터치하세요' },
@@ -137,6 +151,7 @@ export const DIALOGUES: DialogueScene[] = [
     {
         id: 'day1_craft_started',
         when: (ctx) => ctx.currentDay === 1 && ctx.woodshopCrafting.partId != null && hasShown(ctx, 'day1_woodshop_done'),
+        lock: 'dialog_only',
         lines: [
             { text: '제작이 시작되었습니다.' },
             { text: '파츠 제작에는 시간이 걸립니다.' },

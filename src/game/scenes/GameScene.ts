@@ -1157,9 +1157,36 @@ export class GameScene extends Scene {
         this.buildHighlights.setVisible(false);
     }
 
+    /**
+     * Tutorial gate: decide whether a building/terrain tap should be
+     * allowed through to the React layer. While `tutorialLock` is set,
+     * only the one target specified by the current lock is interactive.
+     */
+    private tutorialAllowsTap(target: { category: string; id: string }): boolean {
+        const lock = useGameStore.getState().tutorialLock;
+        if (lock == null) return true;
+        switch (lock) {
+            case 'dialog_only':
+            case 'build_button':
+            case 'build_woodshop':
+                // None of these allow arbitrary building taps.
+                return false;
+            case 'wood_farm':
+                return target.category === 'harvest' && target.id === 'wood_farm';
+            case 'woodshop':
+                return target.category === 'workshop' && target.id === 'woodshop';
+        }
+    }
+
     private handleTileTap(worldX: number, worldY: number) {
         const state = useGameStore.getState();
         if (!state.buildMode) return;
+
+        // Tutorial gate: in build mode, only let the player place the
+        // tutorial-mandated building (woodshop) while lock is set.
+        const lock = state.tutorialLock;
+        if (lock != null && lock !== 'build_woodshop') return;
+        if (lock === 'build_woodshop' && state.buildMode.buildingId !== 'woodshop') return;
 
         const { row, col } = this.toGrid(worldX, worldY);
 
@@ -1570,7 +1597,9 @@ export class GameScene extends Scene {
             if (!bm && this.tappedObject) {
                 const target = this.tappedObject;
                 this.tappedObject = null;
-                EventBus.emit('building-tapped', target);
+                if (this.tutorialAllowsTap(target)) {
+                    EventBus.emit('building-tapped', target);
+                }
                 return;
             }
             this.tappedObject = null;
