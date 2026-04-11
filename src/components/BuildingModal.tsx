@@ -496,13 +496,16 @@ function ConstructionInfo({ id }: { id: string }) {
     );
 }
 
-// Part image filename map (matches files in public/assets/generated/parts/)
+// Part image filename map (matches files in public/assets/generated/parts/).
+// 14, 15, 23 were renamed when the theme shifted toward the physical gift
+// (joystick button, leather piece, plastic component). The old names live
+// under public/assets/generated/parts/_archive/ per the no-delete policy.
 const PART_FILE_NAMES: Record<number, string> = {
     1: 'base', 2: 'body', 3: 'front', 4: 'back', 5: 'lid', 6: 'flower_a',
     7: 'wreath', 8: 'number2', 9: 'number4', 10: 'pedestal', 11: 'handle',
-    12: 'buckle', 13: 'trim', 14: 'crystal_star', 15: 'gem_deco',
+    12: 'buckle', 13: 'trim', 14: 'button', 15: 'leather',
     16: 'metal_frame', 17: 'flower_crown', 18: 'gem_ribbon', 19: 'carved_plate',
-    20: 'crystal_crown', 21: 'main_ribbon', 22: 'happy24_banner', 23: 'firework',
+    20: 'crystal_crown', 21: 'main_ribbon', 22: 'happy24_banner', 23: 'plastic',
     24: 'final_knot',
 };
 function partImageSrc(partId: number): string {
