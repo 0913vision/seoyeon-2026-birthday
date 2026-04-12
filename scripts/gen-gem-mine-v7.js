@@ -24,37 +24,29 @@ async function download(assetId, out) {
 
 (async () => {
     const prompts = [
-        // V2: big drill, prominent crystals
-        'Cute cartoon 3D crystal mining drill on grass tile, '
-        + 'large prominent steel drill machine in the center pointing into a hole in the ground, '
-        + 'big glowing pink and purple crystals sticking out of the ground around the drill, '
-        + 'small wooden crate overflowing with raw gemstones next to it, '
+        // v7: tall vertical drill tower (derrick style)
+        'Cute cartoon 3D tall vertical mining drill tower on grass tile, '
+        + 'tall upright wooden and metal derrick tower with a drill going STRAIGHT DOWN into the ground vertically, '
+        + 'the drill tower stands tall like a small oil derrick, '
+        + 'a few collected purple crystals in a small crate beside the tower, '
+        + 'NOT bent or angled, perfectly vertical drill, '
         + 'isometric view, sitting on grass, '
         + BASE
         + ', transparent background',
-        // V3: open pit with crystals + crane
-        'Cute cartoon 3D open crystal mine pit on grass tile, '
-        + 'small open pit in the ground revealing large sparkling purple pink crystals inside, '
-        + 'a small wooden crane with rope and bucket hovering over the pit, '
-        + 'a few loose crystals and gems scattered on the grass surface, '
-        + 'isometric view, sitting on grass, '
-        + BASE
-        + ', transparent background',
-        // V4: conveyor + drill combo
-        'Cute cartoon 3D gem excavation site on grass tile, '
-        + 'compact metal drill rig boring into rocky ground, '
-        + 'small conveyor belt carrying bright colorful raw gems, '
-        + 'pile of large glowing purple and pink crystals next to the machine, '
-        + 'isometric view, sitting on grass, '
+        // v8: enhanced v3 — bigger open pit, more detail
+        'Cute cartoon 3D crystal excavation pit on grass tile, '
+        + 'open rectangular pit dug into the ground revealing beautiful glowing purple and pink crystals on the walls inside, '
+        + 'a tall wooden crane with a thick rope and bucket hovering above the pit, '
+        + 'wooden scaffolding and ladder going down into the pit, '
+        + 'a wheelbarrow with collected gems on the surface, '
+        + 'detailed and prominent, isometric view, sitting on grass, '
         + BASE
         + ', transparent background',
     ];
-    const dir = path.resolve('public/assets/generated/buildings');
-    const archDir = path.join(dir, '_archive');
-    if (!fs.existsSync(archDir)) fs.mkdirSync(archDir, { recursive: true });
 
+    const dir = path.resolve('public/assets/generated/buildings');
     for (let i = 0; i < prompts.length; i++) {
-        const label = 'v' + (i + 2);
+        const label = 'v' + (i + 7);
         const rawPath = path.join(dir, `gem_cave_${label}_raw.png`);
         const finalPath = path.join(dir, `gem_cave_${label}.png`);
 
@@ -64,7 +56,6 @@ async function download(assetId, out) {
         const genId = await waitForJob(gen.job.jobId);
         console.log(' ok');
         await download(genId, rawPath);
-        console.log('raw:', rawPath);
 
         process.stdout.write('bria ');
         const rembg = await apiCall('POST', ROOT + '/generate/custom/model_bria-remove-background', { image: genId });
@@ -72,7 +63,6 @@ async function download(assetId, out) {
         console.log(' ok');
         await download(rembgId, finalPath);
         console.log('final:', finalPath);
-
         await new Promise(r => setTimeout(r, 800));
     }
 })().catch(e => { console.error(e); process.exit(1); });

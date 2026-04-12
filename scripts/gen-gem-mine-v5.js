@@ -23,38 +23,32 @@ async function download(assetId, out) {
 }
 
 (async () => {
+    // The building sits NEXT TO a big crystal cluster terrain tile.
+    // So the building should be mostly EQUIPMENT (drill, machinery, cart)
+    // with only a hint of raw crystals — the big crystals are already
+    // visible from the adjacent terrain.
     const prompts = [
-        // V2: big drill, prominent crystals
-        'Cute cartoon 3D crystal mining drill on grass tile, '
-        + 'large prominent steel drill machine in the center pointing into a hole in the ground, '
-        + 'big glowing pink and purple crystals sticking out of the ground around the drill, '
-        + 'small wooden crate overflowing with raw gemstones next to it, '
+        // v5: equipment-focused, minimal crystals
+        'Cute cartoon 3D small mining drill station on grass tile, '
+        + 'prominent steel drill machine with a large visible drill bit drilling into the ground, '
+        + 'wooden support frame and metal gears, small wooden mining cart with a few raw gems inside, '
+        + 'focus on the EQUIPMENT not the crystals, only 1-2 small crystal pieces on the ground, '
         + 'isometric view, sitting on grass, '
         + BASE
         + ', transparent background',
-        // V3: open pit with crystals + crane
-        'Cute cartoon 3D open crystal mine pit on grass tile, '
-        + 'small open pit in the ground revealing large sparkling purple pink crystals inside, '
-        + 'a small wooden crane with rope and bucket hovering over the pit, '
-        + 'a few loose crystals and gems scattered on the grass surface, '
-        + 'isometric view, sitting on grass, '
-        + BASE
-        + ', transparent background',
-        // V4: conveyor + drill combo
-        'Cute cartoon 3D gem excavation site on grass tile, '
-        + 'compact metal drill rig boring into rocky ground, '
-        + 'small conveyor belt carrying bright colorful raw gems, '
-        + 'pile of large glowing purple and pink crystals next to the machine, '
-        + 'isometric view, sitting on grass, '
+        // v6: workbench + tools style
+        'Cute cartoon 3D small gem mining workstation on grass tile, '
+        + 'sturdy wooden workbench with pickaxes hammers and mining tools, '
+        + 'a large mechanical drill mounted on a tripod aimed at a small rocky patch, '
+        + 'one small crate of collected raw purple gems, very few crystals visible, '
+        + 'focus on tools and machinery, isometric view, sitting on grass, '
         + BASE
         + ', transparent background',
     ];
-    const dir = path.resolve('public/assets/generated/buildings');
-    const archDir = path.join(dir, '_archive');
-    if (!fs.existsSync(archDir)) fs.mkdirSync(archDir, { recursive: true });
 
+    const dir = path.resolve('public/assets/generated/buildings');
     for (let i = 0; i < prompts.length; i++) {
-        const label = 'v' + (i + 2);
+        const label = 'v' + (i + 5);
         const rawPath = path.join(dir, `gem_cave_${label}_raw.png`);
         const finalPath = path.join(dir, `gem_cave_${label}.png`);
 
@@ -72,7 +66,6 @@ async function download(assetId, out) {
         console.log(' ok');
         await download(rembgId, finalPath);
         console.log('final:', finalPath);
-
         await new Promise(r => setTimeout(r, 800));
     }
 })().catch(e => { console.error(e); process.exit(1); });

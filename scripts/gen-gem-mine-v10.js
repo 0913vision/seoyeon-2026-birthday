@@ -23,38 +23,37 @@ async function download(assetId, out) {
 }
 
 (async () => {
+    // Reference style: mine.png = wooden+stone structure, no grass base,
+    // freestanding. crystal_cluster = blue-purple crystals.
+    // The building should: crane holding a large blue-purple crystal
+    // sideways tied with ropes, small conveyor belt with smaller crystals.
+    // NO grass tile, NO ground platform, NO octagonal base.
     const prompts = [
-        // V2: big drill, prominent crystals
-        'Cute cartoon 3D crystal mining drill on grass tile, '
-        + 'large prominent steel drill machine in the center pointing into a hole in the ground, '
-        + 'big glowing pink and purple crystals sticking out of the ground around the drill, '
-        + 'small wooden crate overflowing with raw gemstones next to it, '
-        + 'isometric view, sitting on grass, '
+        // v10: freestanding like mine.png
+        'Cute cartoon 3D crystal mining crane station, '
+        + 'wooden and stone structure similar to a Clash of Clans mine building, '
+        + 'tall wooden crane holding ONE large blue-purple crystal sideways tied with thick ropes, '
+        + 'small conveyor belt on the ground carrying small blue-purple crystals, '
+        + 'wooden support beams, metal bolts, stone base blocks, '
+        + 'NO grass tile underneath, NO green platform, NO ground base, '
+        + 'freestanding building structure only, isometric view, '
         + BASE
         + ', transparent background',
-        // V3: open pit with crystals + crane
-        'Cute cartoon 3D open crystal mine pit on grass tile, '
-        + 'small open pit in the ground revealing large sparkling purple pink crystals inside, '
-        + 'a small wooden crane with rope and bucket hovering over the pit, '
-        + 'a few loose crystals and gems scattered on the grass surface, '
-        + 'isometric view, sitting on grass, '
-        + BASE
-        + ', transparent background',
-        // V4: conveyor + drill combo
-        'Cute cartoon 3D gem excavation site on grass tile, '
-        + 'compact metal drill rig boring into rocky ground, '
-        + 'small conveyor belt carrying bright colorful raw gems, '
-        + 'pile of large glowing purple and pink crystals next to the machine, '
-        + 'isometric view, sitting on grass, '
+        // v11: similar but slightly different composition
+        'Cute cartoon 3D gem excavation crane, '
+        + 'sturdy wooden frame structure with a rotating crane arm, '
+        + 'the crane is lifting a large glowing blue-purple crystal tied horizontally with ropes, '
+        + 'a small metal conveyor belt beside the structure moves small raw crystals, '
+        + 'wooden beams, stone foundation blocks, metal gears and bolts, '
+        + 'style matches Clash of Clans mine building, '
+        + 'NO grass platform, NO green tile base, freestanding, isometric view, '
         + BASE
         + ', transparent background',
     ];
-    const dir = path.resolve('public/assets/generated/buildings');
-    const archDir = path.join(dir, '_archive');
-    if (!fs.existsSync(archDir)) fs.mkdirSync(archDir, { recursive: true });
 
+    const dir = path.resolve('public/assets/generated/buildings');
     for (let i = 0; i < prompts.length; i++) {
-        const label = 'v' + (i + 2);
+        const label = 'v' + (i + 10);
         const rawPath = path.join(dir, `gem_cave_${label}_raw.png`);
         const finalPath = path.join(dir, `gem_cave_${label}.png`);
 
@@ -64,7 +63,6 @@ async function download(assetId, out) {
         const genId = await waitForJob(gen.job.jobId);
         console.log(' ok');
         await download(genId, rawPath);
-        console.log('raw:', rawPath);
 
         process.stdout.write('bria ');
         const rembg = await apiCall('POST', ROOT + '/generate/custom/model_bria-remove-background', { image: genId });
@@ -72,7 +70,6 @@ async function download(assetId, out) {
         console.log(' ok');
         await download(rembgId, finalPath);
         console.log('final:', finalPath);
-
         await new Promise(r => setTimeout(r, 800));
     }
 })().catch(e => { console.error(e); process.exit(1); });
