@@ -46,7 +46,7 @@ export function DialogBox({ text, action, onTap, isLast }: { text: string; actio
         <div
             className="pointer-events-auto mx-3 mb-2"
             onClick={handleTap}
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: 'pointer', position: 'relative', zIndex: 150 }}
         >
             <div
                 style={{
