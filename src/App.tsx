@@ -77,18 +77,16 @@ function App() {
     // Guarded by showDialog so we never interrupt a scene that is open.
     // Also gated on dbLoaded so the engine doesn't run against the
     // empty initial shownDialogs before the saved row is applied.
-    const markDialogShown = useGameStore(s => s.markDialogShown);
     useEffect(() => {
         if (!dbLoaded) return;
         if (showDialog) return;
         const next = findNextDialog(ctx);
         if (next) {
             openDialog(next.id);
-            // Mark the scene shown the instant it opens, not on close.
-            // This prevents the scene from re-firing if the player
-            // refreshes, navigates away, or drives new state changes
-            // before tapping through all lines.
-            markDialogShown(next.id);
+            // NOTE: do NOT mark the scene shown here. A scene is only
+            // "done" once the player taps through to the last line and
+            // closeDialog fires. Marking on open would let a quick
+            // refresh wipe a dialog the player never actually read.
             // Apply tutorial action lock if the scene declared one.
             useGameStore.setState({ tutorialLock: next.lock ?? null });
             if (next.camera && phaserRef.current?.scene) {

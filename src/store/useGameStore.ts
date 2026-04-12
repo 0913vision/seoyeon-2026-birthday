@@ -523,6 +523,12 @@ export function getSerializableState() {
         harvestStates: state.harvestStates,
         seenNewDay: state.seenNewDay,
         shownDialogs: state.shownDialogs,
+        // Dialog UI state IS persisted so refreshing mid-read drops the
+        // player back at the same scene + line. A scene is only marked
+        // as "done" when the player taps through to the last line.
+        showDialog: state.showDialog,
+        dialogSceneId: state.dialogSceneId,
+        dialogLineIndex: state.dialogLineIndex,
         // tutorialLock is UI state — intentionally NOT persisted. It's
         // recomputed when a scene opens and cleared when it closes.
     };

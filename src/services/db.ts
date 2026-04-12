@@ -65,6 +65,9 @@ export interface SaveData {
     harvestStates?: Record<string, { lastHarvestAt: number }>;
     seenNewDay?: { buildMenu: number; woodshop: number; jewelshop: number };
     shownDialogs?: string[];
+    showDialog?: boolean;
+    dialogSceneId?: string | null;
+    dialogLineIndex?: number;
     savedAt: number;
 }
 
@@ -340,6 +343,9 @@ export function applyLoadedData(data: SaveData): void {
     if (data.harvestStates) patch.harvestStates = data.harvestStates;
     if (data.seenNewDay) patch.seenNewDay = data.seenNewDay;
     if (data.shownDialogs) patch.shownDialogs = data.shownDialogs;
+    if (data.showDialog !== undefined) patch.showDialog = data.showDialog;
+    if (data.dialogSceneId !== undefined) patch.dialogSceneId = data.dialogSceneId;
+    if (data.dialogLineIndex !== undefined) patch.dialogLineIndex = data.dialogLineIndex;
     useGameStore.setState(patch);
 }
 
@@ -400,6 +406,9 @@ type PersistentSlice = {
     tutorialStep: unknown;
     seenNewDay: unknown;
     shownDialogs: unknown;
+    showDialog: unknown;
+    dialogSceneId: unknown;
+    dialogLineIndex: unknown;
 };
 
 function pickPersistent(s: ReturnType<typeof useGameStore.getState>): PersistentSlice {
@@ -417,6 +426,9 @@ function pickPersistent(s: ReturnType<typeof useGameStore.getState>): Persistent
         tutorialStep: s.tutorialStep,
         seenNewDay: s.seenNewDay,
         shownDialogs: s.shownDialogs,
+        showDialog: s.showDialog,
+        dialogSceneId: s.dialogSceneId,
+        dialogLineIndex: s.dialogLineIndex,
     };
 }
 
@@ -437,6 +449,9 @@ function persistentEqual(a: PersistentSlice, b: PersistentSlice): boolean {
         a.jewelshopCrafting === b.jewelshopCrafting &&
         a.tutorialStep === b.tutorialStep &&
         a.seenNewDay === b.seenNewDay &&
-        a.shownDialogs === b.shownDialogs
+        a.shownDialogs === b.shownDialogs &&
+        a.showDialog === b.showDialog &&
+        a.dialogSceneId === b.dialogSceneId &&
+        a.dialogLineIndex === b.dialogLineIndex
     );
 }
