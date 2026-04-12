@@ -195,7 +195,7 @@ function MerchantPanel() {
     };
 
     return (
-        <CardBody title={'이동 상인'}>
+        <CardBody title={'가죽 상인'}>
             <div style={{ textAlign: 'center', marginBottom: '12px' }}>
                 <img
                     src="assets/generated/terrain/merchant_truck.png"
@@ -227,7 +227,7 @@ function MerchantPanel() {
                         lineHeight: 1.6,
                         marginBottom: '12px',
                     }}>
-                        가죽 원단 팝니다. 나무로 구매 가능합니다.
+                        가죽 원단 팝니다! 나무 600개 정도면 하나 드릴 수 있어요~
                     </div>
 
                     <div style={{

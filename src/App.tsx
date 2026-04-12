@@ -79,28 +79,40 @@ function App() {
     // Guarded by showDialog so we never interrupt a scene that is open.
     // Also gated on dbLoaded so the engine doesn't run against the
     // empty initial shownDialogs before the saved row is applied.
+    const autoOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
         if (!dbLoaded) return;
         if (showDialog) return;
-        const next = findNextDialog(ctx);
-        if (next) {
-            openDialog(next.id);
-            // NOTE: do NOT mark the scene shown here. A scene is only
-            // "done" once the player taps through to the last line and
-            // closeDialog fires. Marking on open would let a quick
-            // refresh wipe a dialog the player never actually read.
-            // Apply tutorial action lock if the scene declared one.
-            useGameStore.setState({ tutorialLock: next.lock ?? null });
-            if (next.camera && phaserRef.current?.scene) {
-                const sceneInst = phaserRef.current.scene as GameScene;
-                sceneInst.panToBuilding?.(next.camera);
-            }
-        } else {
-            // No scene open and none eligible → clear any stale lock.
-            if (useGameStore.getState().tutorialLock != null) {
+        // Small delay between closing one scene and opening the next so
+        // the dialog chain doesn't feel like a non-stop slideshow.
+        if (autoOpenTimer.current) clearTimeout(autoOpenTimer.current);
+        autoOpenTimer.current = setTimeout(() => {
+            autoOpenTimer.current = null;
+            if (useGameStore.getState().showDialog) return;
+            const s = useGameStore.getState();
+            const freshCtx: DialogContext = {
+                currentDay: s.currentDay, tutorialStep: s.tutorialStep,
+                shownDialogs: s.shownDialogs, showBuildMenu: s.showBuildMenu,
+                buildings: s.buildings, partsCompleted: s.partsCompleted,
+                partsAttached: s.partsAttached, woodshopCrafting: s.woodshopCrafting,
+                jewelshopCrafting: s.jewelshopCrafting, resources: s.resources,
+                packagingStartedAt: s.packagingStartedAt, boxHarvested: s.boxHarvested,
+                activeModal: s.activeModal, buildMode: s.buildMode,
+                merchantTruck: s.merchantTruck,
+            };
+            const next = findNextDialog(freshCtx);
+            if (next) {
+                openDialog(next.id);
+                useGameStore.setState({ tutorialLock: next.lock ?? null });
+                if (next.camera && phaserRef.current?.scene) {
+                    const sceneInst = phaserRef.current.scene as GameScene;
+                    sceneInst.panToBuilding?.(next.camera);
+                }
+            } else if (useGameStore.getState().tutorialLock != null) {
                 useGameStore.setState({ tutorialLock: null });
             }
-        }
+        }, 400);
+        return () => { if (autoOpenTimer.current) clearTimeout(autoOpenTimer.current); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         dbLoaded, showDialog, currentDay, tutorialStep, shownDialogs, showBuildMenu,

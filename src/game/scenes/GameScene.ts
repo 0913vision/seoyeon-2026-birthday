@@ -933,6 +933,13 @@ export class GameScene extends Scene {
         const { x, y } = this.toScreen(chosen.row, chosen.col);
         const depth = (chosen.row + chosen.col) * 10;
 
+        // Shadow (same radial gradient as buildings)
+        if (!this.textures.exists('shadow_gradient')) this.createShadowTexture();
+        const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
+        shadow.setDisplaySize(TILE_W * 1.6, TILE_H * 0.9);
+        shadow.setAlpha(0.85);
+        shadow.setDepth(depth);
+
         const sprite = this.add.image(x, y - 20 * DPR, 'merchant_truck');
         const scale = TILE_W * 1.6 / sprite.width;
         sprite.setScale(scale);
