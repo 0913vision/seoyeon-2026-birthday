@@ -975,12 +975,16 @@ export class GameScene extends Scene {
                 if (!this.occupiedTiles.has(`${r},${c}`)) outerTiles.push({ row: r, col: c });
             }
         }
-        // eslint-disable-next-line no-console
-        console.log('[SecretDoc] spawn', docId, 'outerTiles:', outerTiles.length);
-        if (outerTiles.length === 0) return;
-        // Deterministic-ish pick based on docId hash so same doc lands in same spot
-        const idx = (docId === 'day3' ? 7 : 13) % outerTiles.length;
+        if (outerTiles.length === 0) {
+            // eslint-disable-next-line no-console
+            console.log('[SecretDoc] FAIL: no outer tiles for', docId);
+            return;
+        }
+        // Use well-separated indices so two docs never collide
+        const idx = (docId === 'day3' ? 3 : Math.max(outerTiles.length - 5, 0)) % outerTiles.length;
         const chosen = outerTiles[idx];
+        // eslint-disable-next-line no-console
+        console.log('[SecretDoc] spawn', docId, 'at', chosen.row, chosen.col, 'idx', idx, 'of', outerTiles.length);
 
         const { x, y } = this.toScreen(chosen.row, chosen.col);
         const depth = (chosen.row + chosen.col) * 10;
