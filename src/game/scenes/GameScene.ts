@@ -980,8 +980,8 @@ export class GameScene extends Scene {
             console.log('[SecretDoc] FAIL: no outer tiles for', docId);
             return;
         }
-        // Use well-separated indices so two docs never collide
-        const idx = (docId === 'day3' ? 3 : Math.max(outerTiles.length - 5, 0)) % outerTiles.length;
+        // Random pick among available outer tiles
+        const idx = Math.floor(Math.random() * outerTiles.length);
         const chosen = outerTiles[idx];
         // eslint-disable-next-line no-console
         console.log('[SecretDoc] spawn', docId, 'at', chosen.row, chosen.col, 'idx', idx, 'of', outerTiles.length);
