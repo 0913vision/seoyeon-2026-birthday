@@ -16,6 +16,19 @@ const TILE_H = Math.round(110 * 0.58) * DPR; // calibrated ratio 0.58
 const GRID_SIZE = 16;
 const CONSTRUCTION_TIME_MS = 10_000; // 10 seconds for debug
 
+// Per-stage calibration for the gift box sprite (from calibrate.html).
+// Each stage image has different proportions so origin/scale vary.
+const BOX_STAGE_CAL: Record<number, { originY: number; scale: number; offX: number; offY: number }> = {
+    1: { originY: 0.55, scale: 1.25, offX: 0.5, offY: -4 },
+    2: { originY: 0.64, scale: 1.25, offX: 0.5, offY: -4 },
+    3: { originY: 0.63, scale: 1.25, offX: 0.5, offY: -4 },
+    4: { originY: 0.64, scale: 1.25, offX: 0.5, offY: -4 },
+    5: { originY: 0.67, scale: 1.25, offX: 0.5, offY: -4 },
+    6: { originY: 0.65, scale: 1.05, offX: 0.5, offY: -4 },
+    7: { originY: 0.63, scale: 1.15, offX: -0.5, offY: -4 },
+    8: { originY: 0.65, scale: 1.05, offX: 0.5, offY: -4 },
+};
+
 const GRASS_LIGHT = [0x6dbe82, 0x70c386, 0x6bba7e, 0x75c88a, 0x68b67a];
 const GRASS_DARK = [0x5aaa6e, 0x5dae72, 0x58a66a, 0x62b276, 0x56a266];
 const DIRT_COLORS = { fill: 0xa08660, highlight: 0xb89870, shadow: 0x886e48 };
@@ -654,13 +667,20 @@ export class GameScene extends Scene {
         sprite.setTexture(key);
         this.giftBoxStage = stage;
 
+        // Apply per-stage calibration so different-sized stage images
+        // sit properly on the same tile.
+        const cal = BOX_STAGE_CAL[stage] ?? BOX_STAGE_CAL[1];
+        const newScale = TILE_W * cal.scale / sprite.width;
+        sprite.setScale(newScale);
+        sprite.setOrigin(0.5, cal.originY);
+        // offX/offY are baked into the initial position in placeBuildings,
+        // so we don't re-position here — the sprite stays at the same x/y.
+
         // Punch feedback
-        const baseScaleX = sprite.scaleX;
-        const baseScaleY = sprite.scaleY;
         this.tweens.add({
             targets: sprite,
-            scaleX: baseScaleX * 1.08,
-            scaleY: baseScaleY * 1.08,
+            scaleX: newScale * 1.08,
+            scaleY: newScale * 1.08,
             duration: 180,
             yoyo: true,
             ease: 'Sine.easeInOut',
@@ -936,14 +956,14 @@ export class GameScene extends Scene {
         // Shadow (same radial gradient as buildings)
         if (!this.textures.exists('shadow_gradient')) this.createShadowTexture();
         const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
-        shadow.setDisplaySize(TILE_W * 1.85, TILE_H * 1.0);
+        shadow.setDisplaySize(TILE_W * 1.6, TILE_H * 0.9);
         shadow.setAlpha(0.85);
         shadow.setDepth(depth);
 
         const sprite = this.add.image(x + 0 * DPR, y + (-20) * DPR, 'merchant_truck');
-        const scale = TILE_W * 1.85 / sprite.width;
+        const scale = TILE_W * 1.6 / sprite.width;
         sprite.setScale(scale);
-        sprite.setOrigin(0.5, 0.56);
+        sprite.setOrigin(0.5, 0.7);
         sprite.setDepth(depth + 2);
         sprite.setInteractive(this.input.makePixelPerfect());
         sprite.on('pointerdown', () => {
