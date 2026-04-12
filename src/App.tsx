@@ -293,7 +293,7 @@ function App() {
                     pointerEvents: 'none',
                     userSelect: 'none',
                 }}>
-                    {__BUILD_SHA__} · {__BUILD_TIME__.slice(5, 16).replace('T', ' ')}
+                    {__BUILD_SHA__} · {(() => { const d = new Date(new Date(__BUILD_TIME__).getTime() + 9 * 3600000); return d.toISOString().slice(5, 16).replace('T', ' '); })()}
                 </div>
             )}
 
