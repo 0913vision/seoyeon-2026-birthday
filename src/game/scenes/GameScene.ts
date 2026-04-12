@@ -203,9 +203,21 @@ export class GameScene extends Scene {
         });
         this.updateHarvestBubbles();
 
-        // Debug: force-spawn secret docs from DebugPanel
+        // Debug: force-spawn secret docs from DebugPanel + pan camera to it
         EventBus.on('debug-spawn-secret-doc', (docId: string) => {
             this.spawnSecretDoc(docId);
+            // Pan to the sprite so the user can see it
+            const sprite = this.secretDocSprites.get(docId);
+            if (sprite) {
+                const cam = this.cameras.main;
+                this.tweens.add({
+                    targets: cam,
+                    scrollX: sprite.x - cam.width / 2,
+                    scrollY: sprite.y - cam.height / 2,
+                    duration: 400,
+                    ease: 'Sine.easeInOut',
+                });
+            }
         });
         // Debug: clear dynamically spawned map objects before wipe/reload
         EventBus.on('debug-clear-map', () => {
@@ -949,7 +961,11 @@ export class GameScene extends Scene {
     }
 
     private spawnSecretDoc(docId: string) {
-        if (this.secretDocSprites.has(docId)) return;
+        if (this.secretDocSprites.has(docId)) {
+            // eslint-disable-next-line no-console
+            console.log('[SecretDoc] already spawned:', docId);
+            return;
+        }
         // Pick a random empty outer tile
         const outerTiles: { row: number; col: number }[] = [];
         for (let r = 0; r < GRID_SIZE; r++) {
@@ -959,6 +975,8 @@ export class GameScene extends Scene {
                 if (!this.occupiedTiles.has(`${r},${c}`)) outerTiles.push({ row: r, col: c });
             }
         }
+        // eslint-disable-next-line no-console
+        console.log('[SecretDoc] spawn', docId, 'outerTiles:', outerTiles.length);
         if (outerTiles.length === 0) return;
         // Deterministic-ish pick based on docId hash so same doc lands in same spot
         const idx = (docId === 'day3' ? 7 : 13) % outerTiles.length;
