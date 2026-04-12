@@ -173,6 +173,9 @@ export class GameScene extends Scene {
     // Merchant truck (Day 4, 14:00 KST event)
     private merchantTruckSprite: Phaser.GameObjects.Image | null = null;
 
+    // Secret document sprites (Day 3 19:00, Day 4 19:00)
+    private secretDocSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+
     constructor() {
         super('GameScene');
     }
@@ -910,6 +913,73 @@ export class GameScene extends Scene {
         this.updateGiftBoxExclaim();
         this.updateGiftBoxStage();
         this.updateMerchantTruck();
+        this.updateSecretDocs();
+    }
+
+    /**
+     * Secret documents spawn at 19:00 KST on Day 3 and Day 4. They sit
+     * on the map permanently once spawned. Tapping opens a dialog → then
+     * an image reveal modal.
+     */
+    private updateSecretDocs() {
+        const s = useGameStore.getState();
+        const now = new Date();
+        const kstMs = now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60000;
+        const kstHour = new Date(kstMs).getHours();
+
+        // Day 3, 19:00+
+        if (s.currentDay >= 3 && kstHour >= 19 && !this.secretDocSprites.has('day3')) {
+            this.spawnSecretDoc('day3');
+        }
+        // Day 4, 19:00+
+        if (s.currentDay >= 4 && kstHour >= 19 && !this.secretDocSprites.has('day4')) {
+            this.spawnSecretDoc('day4');
+        }
+    }
+
+    private spawnSecretDoc(docId: string) {
+        if (this.secretDocSprites.has(docId)) return;
+        // Pick a random empty outer tile
+        const outerTiles: { row: number; col: number }[] = [];
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                // Prefer outer ring (first/last 3 rows/cols)
+                if (r > 2 && r < GRID_SIZE - 3 && c > 2 && c < GRID_SIZE - 3) continue;
+                if (!this.occupiedTiles.has(`${r},${c}`)) outerTiles.push({ row: r, col: c });
+            }
+        }
+        if (outerTiles.length === 0) return;
+        // Deterministic-ish pick based on docId hash so same doc lands in same spot
+        const idx = (docId === 'day3' ? 7 : 13) % outerTiles.length;
+        const chosen = outerTiles[idx];
+
+        const { x, y } = this.toScreen(chosen.row, chosen.col);
+        const depth = (chosen.row + chosen.col) * 10;
+
+        const sprite = this.add.image(x + 0 * DPR, y + (-0.5) * DPR, 'secret_doc');
+        const scale = TILE_W * 0.75 / sprite.width;
+        sprite.setScale(scale);
+        sprite.setOrigin(0.5, 0.5);
+        sprite.setDepth(depth + 2);
+        sprite.setInteractive(this.input.makePixelPerfect());
+        sprite.on('pointerdown', () => {
+            if (useGameStore.getState().buildMode) return;
+            if (this.activeTouchCount >= 2) return;
+            this.tappedObject = { category: 'secret_doc' as any, id: docId };
+        });
+        this.secretDocSprites.set(docId, sprite);
+
+        // Pop-in
+        sprite.setScale(0);
+        this.tweens.add({
+            targets: sprite,
+            scaleX: scale,
+            scaleY: scale,
+            duration: 500,
+            ease: 'Back.easeOut',
+        });
+
+        this.occupiedTiles.add(`${chosen.row},${chosen.col}`);
     }
 
     /**

@@ -53,6 +53,7 @@ function App() {
     const boxHarvested = useGameStore(s => s.boxHarvested);
     const activeModal = useGameStore(s => s.activeModal);
     const merchantTruck = useGameStore(s => s.merchantTruck);
+    const secretDocs = useGameStore(s => s.secretDocs);
 
     // Build the context in a single object so both the auto-open and the
     // auto-dismiss ("until") effects read from the same snapshot.

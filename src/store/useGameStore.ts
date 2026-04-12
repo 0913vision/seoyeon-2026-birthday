@@ -138,6 +138,13 @@ interface GameState {
         purchasedAt: number | null; // timestamp for 15-min despawn timer
     };
 
+    // Secret document events. Each spawns at 19:00 KST on its day and
+    // persists on the map. `found` = the player has tapped it.
+    secretDocs: {
+        day3Found: boolean;
+        day4Found: boolean;
+    };
+
     // UI (not persisted to DB)
     showDialog: boolean;
     dialogSceneId: string | null;
@@ -145,7 +152,7 @@ interface GameState {
     showBuildMenu: boolean;
     resDelta: { id: string; delta: number; key: number } | null;
     buildMode: { buildingId: string; enteredAt: number } | null;
-    activeModal: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox' | 'merchant'; id: string } | null;
+    activeModal: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox' | 'merchant' | 'secret_doc'; id: string } | null;
 
     // Actions
     addResource: (id: string, amount: number) => void;
@@ -190,7 +197,7 @@ interface GameState {
     markDialogShown: (sceneId: string) => void;
     toggleBuildMenu: () => void;
     closeBuildMenu: () => void;
-    openBuildingModal: (category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox' | 'merchant', id: string) => void;
+    openBuildingModal: (category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox' | 'merchant' | 'secret_doc', id: string) => void;
     closeBuildingModal: () => void;
 }
 
@@ -226,6 +233,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     shownDialogs: [],
     tutorialLock: null,
     merchantTruck: { purchased: false, purchasedAt: null },
+    secretDocs: { day3Found: false, day4Found: false },
 
     // wood_farm starts ready to harvest so the Day 1 tutorial hint can fire
     // immediately. Others seed an empty record; harvestStates for later
@@ -555,6 +563,7 @@ export function getSerializableState() {
         seenNewDay: state.seenNewDay,
         shownDialogs: state.shownDialogs,
         merchantTruck: state.merchantTruck,
+        secretDocs: state.secretDocs,
         // Dialog UI state IS persisted so refreshing mid-read drops the
         // player back at the same scene + line. A scene is only marked
         // as "done" when the player taps through to the last line.

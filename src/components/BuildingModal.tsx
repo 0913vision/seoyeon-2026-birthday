@@ -116,6 +116,7 @@ function ModalContent({ category, id }: { category: string; id: string }) {
     if (category === 'workshop') return <WorkshopPanel id={id} />;
     if (category === 'giftbox') return <GiftBoxPanel />;
     if (category === 'merchant') return <MerchantPanel />;
+    if (category === 'secret_doc') return <SecretDocReveal docId={id} />;
     return null;
 }
 
@@ -176,6 +177,48 @@ const TERRAIN_TO_BUILDING: Record<string, { buildingId: string; buildHint: strin
         doneHint: '신비로운 수정이 반짝이며 무리 지어 있습니다. 근처의 수정동굴을 터치하여 보석을 수확해 주세요.',
     },
 };
+
+// === Secret Document Reveal ===
+// Shows a single image with no text — the player discovers what the
+// gift items look like. Day 3 = bag, Day 4 = gamepad.
+function SecretDocReveal({ docId }: { docId: string }) {
+    const imgSrc = docId === 'day3'
+        ? 'assets/generated/parts/bag.png'
+        : 'assets/generated/parts/part_23_plastic.png';
+
+    // Mark as found on mount
+    useEffect(() => {
+        const s = useGameStore.getState();
+        if (docId === 'day3' && !s.secretDocs.day3Found) {
+            useGameStore.setState({ secretDocs: { ...s.secretDocs, day3Found: true } });
+        }
+        if (docId === 'day4' && !s.secretDocs.day4Found) {
+            useGameStore.setState({ secretDocs: { ...s.secretDocs, day4Found: true } });
+        }
+    }, [docId]);
+
+    return (
+        <div style={{
+            padding: '24px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(180deg, #4a2e16 0%, #3a220e 100%)',
+        }}>
+            <img
+                src={imgSrc}
+                alt=""
+                draggable={false}
+                style={{
+                    width: '80%',
+                    maxWidth: '280px',
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.4))',
+                }}
+            />
+        </div>
+    );
+}
 
 // === Merchant Panel ===
 function MerchantPanel() {
