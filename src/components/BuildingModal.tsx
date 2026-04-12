@@ -227,7 +227,7 @@ function MerchantPanel() {
                         lineHeight: 1.6,
                         marginBottom: '12px',
                     }}>
-                        김유찬님이 보내신 가죽 상인입니다. 나무와 교환하여 가죽 원단을 구할 수 있습니다.
+                        가죽 원단 팝니다. 나무로 구매 가능합니다.
                     </div>
 
                     <div style={{
