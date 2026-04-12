@@ -205,17 +205,29 @@ function SecretDocReveal({ docId }: { docId: string }) {
             justifyContent: 'center',
             background: 'linear-gradient(180deg, #4a2e16 0%, #3a220e 100%)',
         }}>
-            <img
-                src={imgSrc}
-                alt=""
-                draggable={false}
-                style={{
-                    width: '80%',
-                    maxWidth: '280px',
-                    objectFit: 'contain',
-                    filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.4))',
-                }}
-            />
+            {/* Polaroid-style photo frame */}
+            <div style={{
+                background: '#ffffff',
+                borderRadius: '4px',
+                padding: '12px 12px 28px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3)',
+                transform: 'rotate(-2deg)',
+                maxWidth: '240px',
+                width: '75%',
+            }}>
+                <img
+                    src={imgSrc}
+                    alt=""
+                    draggable={false}
+                    style={{
+                        width: '100%',
+                        aspectRatio: '1 / 1',
+                        objectFit: 'contain',
+                        borderRadius: '2px',
+                        background: '#f5f0eb',
+                    }}
+                />
+            </div>
         </div>
     );
 }

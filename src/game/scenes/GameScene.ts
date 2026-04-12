@@ -967,6 +967,13 @@ export class GameScene extends Scene {
         const { x, y } = this.toScreen(chosen.row, chosen.col);
         const depth = (chosen.row + chosen.col) * 10;
 
+        // Shadow
+        if (!this.textures.exists('shadow_gradient')) this.createShadowTexture();
+        const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
+        shadow.setDisplaySize(TILE_W * 0.8, TILE_H * 0.5);
+        shadow.setAlpha(0.7);
+        shadow.setDepth(depth);
+
         const sprite = this.add.image(x + 0 * DPR, y + (-0.5) * DPR, 'secret_doc');
         const scale = TILE_W * 0.75 / sprite.width;
         sprite.setScale(scale);
