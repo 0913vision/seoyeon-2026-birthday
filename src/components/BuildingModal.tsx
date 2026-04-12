@@ -923,7 +923,10 @@ function GiftBoxPanel() {
     };
 
     const allDone = attachedCount >= PARTS.length;
+    const readyToPackage = allDone && packagingStartedAt == null && !boxHarvested;
     const blockedHint = unattached.length > 0 && unattached.every(p => !isAttachable(p.id));
+
+    const startPackaging = useGameStore(s => s.startPackaging);
 
     return (
         <CardBody title={'선물상자'}>
@@ -1013,15 +1016,44 @@ function GiftBoxPanel() {
                     ? '포장이 완료되었습니다.'
                     : isPackaging
                     ? '포장이 진행 중입니다.'
-                    : allDone
-                    ? '선물이 준비되고 있습니다.'
+                    : readyToPackage
+                    ? '모든 파츠가 부착되었습니다. 포장을 시작할 수 있습니다.'
                     : unattached.length === 0
                     ? '공방에서 파츠를 먼저 만들어 주세요.'
                     : '파츠를 끌어서 상자 위에 올려 주세요.'}
             </div>
 
+            {/* "Start packaging" button — shown when all 24 parts are
+                attached but packaging hasn't been kicked off yet. */}
+            {readyToPackage && (
+                <button
+                    onClick={() => {
+                        startPackaging();
+                        try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([30, 60, 30]); } catch { /* ignore */ }
+                    }}
+                    style={{
+                        display: 'block',
+                        width: '100%',
+                        marginTop: '12px',
+                        padding: '14px',
+                        border: 'none',
+                        borderRadius: '12px',
+                        background: 'linear-gradient(180deg, #f59e0b 0%, #d97706 100%)',
+                        color: '#3a220e',
+                        fontSize: '16px',
+                        fontWeight: 700,
+                        fontFamily: 'Fredoka, sans-serif',
+                        cursor: 'pointer',
+                        boxShadow: '0 3px 0 #7a4010',
+                        borderTop: '2px solid rgba(255,255,255,0.4)',
+                    }}
+                >
+                    {'\uD83C\uDF81'} 포장 시작하기
+                </button>
+            )}
+
             {/* Packaging countdown panel — shows instead of the parts tray
-                once the 24th part has been attached. */}
+                once packaging has been started. */}
             {(isPackaging || isReadyToOpen || boxHarvested) && (
                 <PackagingPanel
                     remainingMs={packagingRemaining}

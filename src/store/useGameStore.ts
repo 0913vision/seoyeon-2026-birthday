@@ -419,16 +419,14 @@ export const useGameStore = create<GameState>((set, get) => ({
             // Remove from partsCompleted if present (parts move completed → attached)
             const nextCompleted = state.partsCompleted.filter(id => id !== partId);
             // boxStage store field is the "intermediate" stage (1..6).
-            // Stage 7 (wrapped) is computed at render time from packaging
-            // state, so it never shows until the timer has elapsed.
+            // Stages 7-8 are driven by packaging state (see boxStageForDisplay).
+            // Packaging no longer auto-starts on 24th attach — the player
+            // must explicitly press "포장 시작" in the giftbox modal.
             const patch: Partial<GameState> = {
                 partsAttached: nextAttached,
                 partsCompleted: nextCompleted,
                 boxStage: boxStageFromAttachedCount(nextAttached.length),
             };
-            if (nextAttached.length >= PARTS.length && state.packagingStartedAt == null) {
-                patch.packagingStartedAt = Date.now();
-            }
             return patch;
         });
     },
