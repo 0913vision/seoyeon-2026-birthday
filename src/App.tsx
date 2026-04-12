@@ -18,6 +18,9 @@ import { calcDayFromDate } from './store/useGameStore';
 function App() {
     const phaserRef = useRef<IRefPhaserGame | null>(null);
     const [showBuildMenu, setShowBuildMenu] = useState(false);
+    // Stash the secret doc id so we can open the image modal after the
+    // one-time dialog closes.
+    const pendingSecretReveal = useRef<string | null>(null);
     // True once loadGame().then(applyLoadedData) has finished. The dialog
     // rule engine MUST NOT run before this — otherwise it would open
     // day1_intro against the empty initial shownDialogs and the player
@@ -139,6 +142,17 @@ function App() {
         resources, packagingStartedAt, boxHarvested, activeModal, buildMode,
     ]);
 
+    // After a secret-doc dialog closes, open the image reveal modal.
+    useEffect(() => {
+        if (showDialog) return; // dialog still open
+        if (!pendingSecretReveal.current) return;
+        const docId = pendingSecretReveal.current;
+        pendingSecretReveal.current = null;
+        // Small delay so the close animation finishes
+        setTimeout(() => openBuildingModal('secret_doc' as any, docId), 300);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showDialog]);
+
     // Also tick once a minute so time-based triggers (e.g. packaging done)
     // eventually fire even if nothing else in state has changed.
     useEffect(() => {
@@ -207,7 +221,23 @@ function App() {
 
     // Handle building/terrain tap from Phaser (open modal)
     useEffect(() => {
-        const handler = ({ category, id }: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox' | 'merchant'; id: string }) => {
+        const handler = ({ category, id }: { category: string; id: string }) => {
+            // Secret documents: first tap → dialog only (no modal).
+            // After dialog closes, a separate effect opens the image modal.
+            if (category === 'secret_doc') {
+                const dialogId = `secret_doc_${id}`;
+                const s = useGameStore.getState();
+                if (!s.shownDialogs.includes(dialogId)) {
+                    // First time: open dialog, stash which doc to reveal after
+                    openDialog(dialogId);
+                    // Store the pending reveal so the close-effect can open the modal
+                    pendingSecretReveal.current = id;
+                    return;
+                }
+                // Already seen dialog → open image modal directly
+                openBuildingModal('secret_doc' as any, id);
+                return;
+            }
             openBuildingModal(category as any, id);
         };
         EventBus.on('building-tapped', handler);

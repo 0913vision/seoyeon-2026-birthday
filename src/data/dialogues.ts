@@ -271,20 +271,22 @@ export const DIALOGUES: DialogueScene[] = [
         ],
     },
 
-    // Day 3 secret document (19:00 KST — bag photo)
+    // Day 3 & 4 secret document dialogs. These are NOT auto-triggered by
+    // the rule engine — they're opened directly by the building-tapped
+    // handler via openDialog('secret_doc_dayN'). `when` always returns
+    // false so findNextDialog never picks them up.
     {
         id: 'secret_doc_day3',
-        when: (ctx) => ctx.currentDay >= 3 && ctx.activeModal?.category === 'secret_doc' && ctx.activeModal.id === 'day3',
+        when: () => false,
         lock: 'dialog_only',
         lines: [
             { text: '이건... 선물에 들어갈 물건의 사진 데이터로 보입니다.' },
             { text: '전송해 드리겠습니다.' },
         ],
     },
-    // Day 4 secret document (19:00 KST — gamepad photo)
     {
         id: 'secret_doc_day4',
-        when: (ctx) => ctx.currentDay >= 4 && ctx.activeModal?.category === 'secret_doc' && ctx.activeModal.id === 'day4',
+        when: () => false,
         lock: 'dialog_only',
         lines: [
             { text: '이건 또 다른 물건의 사진 데이터입니다.' },
