@@ -161,6 +161,11 @@ export function DebugPanel() {
         });
     };
 
+    // Secret docs: force spawn regardless of time
+    const spawnSecretDoc = (docId: string) => {
+        useGameStore.getState().openBuildingModal('secret_doc', docId);
+    };
+
     const resetSaveAndReload = async () => {
         // Wipe the debug row and start clean.
         try { await deleteSave('debug'); } catch { /* ignore */ }
@@ -310,6 +315,13 @@ export function DebugPanel() {
                     <div style={row}>
                         <button style={btn} onClick={giveLeather}>give leather</button>
                         <button style={btn} onClick={resetMerchant}>reset merchant</button>
+                    </div>
+
+                    {/* Secret Docs */}
+                    <Label>Secret Docs</Label>
+                    <div style={row}>
+                        <button style={btn} onClick={() => spawnSecretDoc('day3')}>D3 가방</button>
+                        <button style={btn} onClick={() => spawnSecretDoc('day4')}>D4 게임패드</button>
                     </div>
 
                     {/* Dialogs */}
