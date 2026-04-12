@@ -9,7 +9,7 @@ const BUILDING_NAMES: Record<string, string> = {
     flower_farm: '꽃밭',
     quarry: '채석장',
     mine: '광산',
-    gem_cave: '수정동굴',
+    gem_cave: '수정 채굴장',
 };
 
 const BUILDING_SPRITE: Record<string, string> = {

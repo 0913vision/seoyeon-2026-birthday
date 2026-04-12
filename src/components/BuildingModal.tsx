@@ -173,8 +173,8 @@ const TERRAIN_TO_BUILDING: Record<string, { buildingId: string; buildHint: strin
     },
     crystal_cluster: {
         buildingId: 'gem_cave',
-        buildHint: '신비로운 수정이 반짝이며 무리 지어 있습니다. 근처에 수정동굴을 지어서 보석을 수확할 수 있습니다.',
-        doneHint: '신비로운 수정이 반짝이며 무리 지어 있습니다. 근처의 수정동굴을 터치하여 보석을 수확해 주세요.',
+        buildHint: '신비로운 수정이 반짝이며 무리 지어 있습니다. 근처에 수정 채굴장을 지어서 보석을 수확할 수 있습니다.',
+        doneHint: '신비로운 수정이 반짝이며 무리 지어 있습니다. 근처의 수정 채굴장을 터치하여 보석을 수확해 주세요.',
     },
 };
 
