@@ -47,7 +47,7 @@ export const BUILDINGS: BuildingDef[] = [
         id: 'gem_cave', name: '수정 채굴장', spriteKey: 'gemcave',
         cost: [{ res: 'stone', amount: 1500 }, { res: 'metal', amount: 500 }],
         unlockDay: 4, row: 11, col: 6,
-        originY: 0.64, scale: 1.1, offX: 0, offY: -3,
+        originY: 0.64, scale: 1.2, offX: -6.5, offY: -3,
     },
 ];
 
