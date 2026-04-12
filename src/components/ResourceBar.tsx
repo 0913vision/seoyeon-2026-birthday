@@ -34,7 +34,7 @@ export function ResourceBar(props?: { resources?: any; resDelta?: any }) {
 
     return (
         <div className="flex gap-1">
-            {RESOURCE_DEFS.map((r) => {
+            {RESOURCE_DEFS.filter(r => r.id !== 'leather').map((r) => {
                 const res = resources[r.id];
                 const showDelta = resDelta && resDelta.id === r.id;
                 return (
