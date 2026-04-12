@@ -15,7 +15,7 @@ export const PARTS: PartDef[] = [
     { id: 12, name: '금속 버클', cost: [{ res: 'metal', amount: 500 }], craftTime: 25, workshop: 'jewelshop', day: 3 },
     { id: 13, name: '금속 테두리', cost: [{ res: 'metal', amount: 700 }, { res: 'wood', amount: 300 }], craftTime: 30, workshop: 'jewelshop', day: 3 },
     { id: 14, name: '버튼', cost: [{ res: 'stone', amount: 700 }, { res: 'metal', amount: 500 }], craftTime: 35, workshop: 'jewelshop', day: 3 },
-    { id: 15, name: '가죽 조각', cost: [{ res: 'flower', amount: 400 }, { res: 'metal', amount: 300 }], craftTime: 30, workshop: 'jewelshop', day: 4 },
+    { id: 15, name: '가죽 장식', cost: [{ res: 'flower', amount: 400 }, { res: 'metal', amount: 300 }, { res: 'leather', amount: 1 }], craftTime: 30, workshop: 'jewelshop', day: 4 },
     { id: 16, name: '보석 장식 A', cost: [{ res: 'gem', amount: 350 }, { res: 'metal', amount: 350 }], craftTime: 30, workshop: 'jewelshop', day: 4 },
     { id: 17, name: '금속 프레임', cost: [{ res: 'metal', amount: 650 }, { res: 'gem', amount: 200 }], craftTime: 35, workshop: 'jewelshop', day: 4 },
     { id: 18, name: '꽃 왕관', cost: [{ res: 'flower', amount: 650 }, { res: 'metal', amount: 500 }, { res: 'gem', amount: 350 }], craftTime: 40, workshop: 'jewelshop', day: 4 },

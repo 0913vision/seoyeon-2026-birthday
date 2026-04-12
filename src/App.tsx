@@ -52,6 +52,7 @@ function App() {
     const packagingStartedAt = useGameStore(s => s.packagingStartedAt);
     const boxHarvested = useGameStore(s => s.boxHarvested);
     const activeModal = useGameStore(s => s.activeModal);
+    const merchantTruck = useGameStore(s => s.merchantTruck);
 
     // Build the context in a single object so both the auto-open and the
     // auto-dismiss ("until") effects read from the same snapshot.
@@ -70,6 +71,7 @@ function App() {
         boxHarvested,
         activeModal,
         buildMode,
+        merchantTruck,
     };
 
     // Dialog auto-trigger. When the store state changes, check the rule
@@ -104,7 +106,7 @@ function App() {
         dbLoaded, showDialog, currentDay, tutorialStep, shownDialogs, showBuildMenu,
         buildings, partsCompleted, partsAttached, woodshopCrafting,
         jewelshopCrafting, resources, packagingStartedAt, boxHarvested,
-        activeModal, buildMode,
+        activeModal, buildMode, merchantTruck,
     ]);
 
     // Auto-dismiss: while a scene is open, check its `until` predicate and
@@ -192,8 +194,8 @@ function App() {
 
     // Handle building/terrain tap from Phaser (open modal)
     useEffect(() => {
-        const handler = ({ category, id }: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox'; id: string }) => {
-            openBuildingModal(category, id);
+        const handler = ({ category, id }: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox' | 'merchant'; id: string }) => {
+            openBuildingModal(category as any, id);
         };
         EventBus.on('building-tapped', handler);
         return () => { EventBus.off('building-tapped', handler); };

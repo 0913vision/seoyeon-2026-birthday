@@ -29,8 +29,9 @@ export class Boot extends Scene {
         this.load.image('box_stage6', 'box_stage6_complete.png');
         this.load.image('box_stage7', 'box_stage7_packaging.png');
         this.load.image('box_stage8', 'box_stage8_wrapped.png');
-        // Pre-placed terrain
+        // Pre-placed terrain + merchant truck
         this.load.setPath('assets/generated/terrain');
+        this.load.image('merchant_truck', 'merchant_truck.png');
         this.load.image('rock_outcrop', 'rock_outcrop.png');
         this.load.image('crystal_cluster', 'crystal_cluster.png');
         this.load.image('flower_patch', 'flower_patch.png');
@@ -42,6 +43,7 @@ export class Boot extends Scene {
         this.load.image('res_stone', 'stone.png');
         this.load.image('res_metal', 'metal.png');
         this.load.image('res_gem', 'gem.png');
+        this.load.image('res_leather', 'leather.png');
     }
 
     create() {

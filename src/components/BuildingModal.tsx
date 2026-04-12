@@ -115,6 +115,7 @@ function ModalContent({ category, id }: { category: string; id: string }) {
     if (category === 'construction') return <ConstructionInfo id={id} />;
     if (category === 'workshop') return <WorkshopPanel id={id} />;
     if (category === 'giftbox') return <GiftBoxPanel />;
+    if (category === 'merchant') return <MerchantPanel />;
     return null;
 }
 
@@ -175,6 +176,120 @@ const TERRAIN_TO_BUILDING: Record<string, { buildingId: string; buildHint: strin
         doneHint: '신비로운 수정이 반짝이며 무리 지어 있습니다. 근처의 수정동굴을 터치하여 보석을 수확해 주세요.',
     },
 };
+
+// === Merchant Panel ===
+function MerchantPanel() {
+    const resources = useGameStore(s => s.resources);
+    const merchantTruck = useGameStore(s => s.merchantTruck);
+    const purchaseFromMerchant = useGameStore(s => s.purchaseFromMerchant);
+    const closeBuildingModal = useGameStore(s => s.closeBuildingModal);
+
+    const woodCost = 600;
+    const canAfford = (resources.wood?.amount ?? 0) >= woodCost;
+    const alreadyBought = merchantTruck.purchased;
+
+    const handleBuy = () => {
+        if (alreadyBought || !canAfford) return;
+        purchaseFromMerchant();
+        try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(30); } catch { /* ignore */ }
+    };
+
+    return (
+        <CardBody title={'이동 상인'}>
+            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                <img
+                    src="assets/generated/terrain/merchant_truck.png"
+                    alt="이동 상인"
+                    style={{ width: '120px', height: '120px', objectFit: 'contain' }}
+                />
+            </div>
+
+            {alreadyBought ? (
+                <div style={{
+                    padding: '14px',
+                    background: 'linear-gradient(180deg, #22c55e 0%, #15803d 100%)',
+                    border: '2px solid #86efac',
+                    borderRadius: '10px',
+                    textAlign: 'center',
+                }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>
+                        거래 완료
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#dcfce7', marginTop: '4px' }}>
+                        가죽 원단을 받았습니다.
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <div style={{
+                        fontSize: '13px',
+                        color: '#c8a888',
+                        lineHeight: 1.6,
+                        marginBottom: '12px',
+                    }}>
+                        김유찬님이 보내신 가죽 상인입니다. 나무와 교환하여 가죽 원단을 구할 수 있습니다.
+                    </div>
+
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '16px',
+                        padding: '12px',
+                        background: 'rgba(0,0,0,0.25)',
+                        borderRadius: '10px',
+                        marginBottom: '12px',
+                    }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <img src="assets/generated/resources/wood.png" alt="나무"
+                                 style={{ width: '36px', height: '36px' }} />
+                            <div style={{
+                                fontSize: '14px', fontWeight: 700,
+                                color: canAfford ? '#fbbf24' : '#ef4444',
+                            }}>
+                                {woodCost}
+                            </div>
+                        </div>
+                        <div style={{ fontSize: '20px', color: '#c8a888' }}>{'\u2192'}</div>
+                        <div style={{ textAlign: 'center' }}>
+                            <img src="assets/generated/resources/leather.png" alt="가죽 원단"
+                                 style={{ width: '36px', height: '36px' }} />
+                            <div style={{
+                                fontSize: '14px', fontWeight: 700, color: '#fbbf24',
+                            }}>
+                                1
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleBuy}
+                        disabled={!canAfford}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '12px',
+                            border: 'none',
+                            borderRadius: '10px',
+                            background: canAfford
+                                ? 'linear-gradient(180deg, #fbbf24 0%, #d97706 100%)'
+                                : 'linear-gradient(180deg, #4a3520 0%, #3a2815 100%)',
+                            color: canAfford ? '#3a220e' : '#8a7358',
+                            fontSize: '15px',
+                            fontWeight: 700,
+                            fontFamily: 'Fredoka, sans-serif',
+                            cursor: canAfford ? 'pointer' : 'not-allowed',
+                            boxShadow: canAfford ? '0 3px 0 #7a4010' : 'none',
+                            borderTop: canAfford ? '2px solid rgba(255,255,255,0.4)' : 'none',
+                        }}
+                    >
+                        {canAfford ? '교환하기' : '나무가 부족합니다'}
+                    </button>
+                </>
+            )}
+        </CardBody>
+    );
+}
 
 // === Terrain Help ===
 function TerrainHelp({ id }: { id: string }) {

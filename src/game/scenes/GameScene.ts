@@ -143,7 +143,7 @@ export class GameScene extends Scene {
 
     // Harvest bubbles
     private harvestBubbles: Map<string, HarvestBubble> = new Map();
-    private tappedObject: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox'; id: string } | null = null;
+    private tappedObject: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox' | 'merchant'; id: string } | null = null;
     private harvestTickEvent: Phaser.Time.TimerEvent | null = null;
 
     // Workshop NEW badges (red pill over woodshop/jewelshop when new parts unlocked)
@@ -156,6 +156,9 @@ export class GameScene extends Scene {
     // attaches parts (stage 1..7 → box_stage1..7).
     private giftBoxSprite: Phaser.GameObjects.Image | null = null;
     private giftBoxStage = 1;
+
+    // Merchant truck (Day 4, 14:00 KST event)
+    private merchantTruckSprite: Phaser.GameObjects.Image | null = null;
 
     constructor() {
         super('GameScene');
@@ -886,6 +889,74 @@ export class GameScene extends Scene {
         this.updateWorkshopNewBadges();
         this.updateGiftBoxExclaim();
         this.updateGiftBoxStage();
+        this.updateMerchantTruck();
+    }
+
+    /**
+     * Merchant truck logic (Day 4, 14:00+ KST):
+     * - Spawn the truck sprite on the map when conditions are met.
+     * - After purchase, despawn 15 minutes later.
+     */
+    private updateMerchantTruck() {
+        const s = useGameStore.getState();
+        const now = new Date();
+        const kstMs = now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60000;
+        const kstHour = new Date(kstMs).getHours();
+        const shouldShow =
+            s.currentDay >= 4 &&
+            kstHour >= 14 &&
+            !(s.merchantTruck.purchased && s.merchantTruck.purchasedAt != null && Date.now() - s.merchantTruck.purchasedAt >= 15 * 60_000);
+
+        if (shouldShow && !this.merchantTruckSprite) {
+            this.spawnMerchantTruck();
+        } else if (!shouldShow && this.merchantTruckSprite) {
+            this.merchantTruckSprite.destroy();
+            this.merchantTruckSprite = null;
+        }
+    }
+
+    private spawnMerchantTruck() {
+        if (this.merchantTruckSprite) return;
+        // Pick an empty outer tile. Try a few candidates.
+        const candidates = [
+            { row: 1, col: 12 },
+            { row: 2, col: 13 },
+            { row: 13, col: 2 },
+            { row: 14, col: 13 },
+            { row: 1, col: 3 },
+        ];
+        let chosen = candidates[0];
+        for (const c of candidates) {
+            if (!this.occupiedTiles.has(`${c.row},${c.col}`)) { chosen = c; break; }
+        }
+
+        const { x, y } = this.toScreen(chosen.row, chosen.col);
+        const depth = (chosen.row + chosen.col) * 10;
+
+        const sprite = this.add.image(x, y - 20 * DPR, 'merchant_truck');
+        const scale = TILE_W * 1.6 / sprite.width;
+        sprite.setScale(scale);
+        sprite.setOrigin(0.5, 0.7);
+        sprite.setDepth(depth + 2);
+        sprite.setInteractive(this.input.makePixelPerfect());
+        sprite.on('pointerdown', () => {
+            if (useGameStore.getState().buildMode) return;
+            if (this.activeTouchCount >= 2) return;
+            this.tappedObject = { category: 'merchant', id: 'merchant_truck' };
+        });
+        this.merchantTruckSprite = sprite;
+
+        // Pop-in animation
+        sprite.setScale(0);
+        this.tweens.add({
+            targets: sprite,
+            scaleX: scale,
+            scaleY: scale,
+            duration: 500,
+            ease: 'Back.easeOut',
+        });
+
+        this.occupiedTiles.add(`${chosen.row},${chosen.col}`);
     }
 
     private renderWorkshopBubble(bubble: HarvestBubble) {

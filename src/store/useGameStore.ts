@@ -124,6 +124,13 @@ interface GameState {
     // current scene closes.
     tutorialLock: TutorialLock | null;
 
+    // Day 4 merchant truck event. The truck spawns at 14:00 KST and
+    // disappears 15 minutes after the player purchases from it.
+    merchantTruck: {
+        purchased: boolean;       // player has bought the leather
+        purchasedAt: number | null; // timestamp for 15-min despawn timer
+    };
+
     // UI (not persisted to DB)
     showDialog: boolean;
     dialogSceneId: string | null;
@@ -131,7 +138,7 @@ interface GameState {
     showBuildMenu: boolean;
     resDelta: { id: string; delta: number; key: number } | null;
     buildMode: { buildingId: string; enteredAt: number } | null;
-    activeModal: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox'; id: string } | null;
+    activeModal: { category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox' | 'merchant'; id: string } | null;
 
     // Actions
     addResource: (id: string, amount: number) => void;
@@ -157,6 +164,7 @@ interface GameState {
     harvestBuilding: (buildingId: string) => number;
 
     // NEW badge actions
+    purchaseFromMerchant: () => void;
     markBuildMenuSeen: () => void;
     markWorkshopSeen: (workshopId: 'woodshop' | 'jewelshop') => void;
 
@@ -175,7 +183,7 @@ interface GameState {
     markDialogShown: (sceneId: string) => void;
     toggleBuildMenu: () => void;
     closeBuildMenu: () => void;
-    openBuildingModal: (category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox', id: string) => void;
+    openBuildingModal: (category: 'terrain' | 'harvest' | 'construction' | 'workshop' | 'giftbox' | 'merchant', id: string) => void;
     closeBuildingModal: () => void;
 }
 
@@ -210,6 +218,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     seenNewDay: { buildMenu: 0, woodshop: 0, jewelshop: 0 },
     shownDialogs: [],
     tutorialLock: null,
+    merchantTruck: { purchased: false, purchasedAt: null },
 
     // wood_farm starts ready to harvest so the Day 1 tutorial hint can fire
     // immediately. Others seed an empty record; harvestStates for later
@@ -357,6 +366,23 @@ export const useGameStore = create<GameState>((set, get) => ({
         }));
 
         return info.amount;
+    },
+
+    // Merchant truck: exchange wood for leather
+    purchaseFromMerchant: () => {
+        set(state => {
+            if (state.merchantTruck.purchased) return {};
+            const woodCost = 600;
+            if ((state.resources.wood?.amount ?? 0) < woodCost) return {};
+            return {
+                resources: {
+                    ...state.resources,
+                    wood: { ...state.resources.wood, amount: state.resources.wood.amount - woodCost },
+                    leather: { amount: 1, unlocked: true },
+                },
+                merchantTruck: { purchased: true, purchasedAt: Date.now() },
+            };
+        });
     },
 
     // NEW badge: record that the user has opened the surface up to currentDay
@@ -523,6 +549,7 @@ export function getSerializableState() {
         harvestStates: state.harvestStates,
         seenNewDay: state.seenNewDay,
         shownDialogs: state.shownDialogs,
+        merchantTruck: state.merchantTruck,
         // Dialog UI state IS persisted so refreshing mid-read drops the
         // player back at the same scene + line. A scene is only marked
         // as "done" when the player taps through to the last line.

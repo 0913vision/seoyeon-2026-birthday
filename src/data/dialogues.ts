@@ -23,6 +23,8 @@ export interface DialogContext {
     activeModal: { category: string; id: string } | null;
     // UI slice: which building is being placed (build mode active)
     buildMode: { buildingId: string } | null;
+    // Merchant truck state
+    merchantTruck: { purchased: boolean; purchasedAt: number | null };
 }
 
 export interface DialogueScene {
@@ -59,6 +61,13 @@ const any = (ctx: DialogContext, fn: (p: DialogContext) => boolean) => fn(ctx);
 const hasShown = (ctx: DialogContext, id: string) => ctx.shownDialogs.includes(id);
 const built = (ctx: DialogContext, id: string) => ctx.buildings[id]?.built === true;
 const isBuilding = (ctx: DialogContext, id: string) => !!ctx.buildings[id]?.constructionStartedAt;
+
+/** Current KST hour (0..23). Used for time-gated dialog triggers. */
+function kstHour(): number {
+    const now = new Date();
+    const kstMs = now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60000;
+    return new Date(kstMs).getHours();
+}
 
 export const DIALOGUES: DialogueScene[] = [
     // ==============
@@ -263,16 +272,55 @@ export const DIALOGUES: DialogueScene[] = [
     },
 
     // ==============
-    // DAY 4
+    // DAY 4 — Merchant truck event
     // ==============
     {
         id: 'day4_start',
         when: (ctx) => ctx.currentDay === 4,
         lines: [
             { text: '좋은 아침입니다.' },
-            { text: '오늘은 수정동굴을 지을 수 있습니다.' },
-            { text: '보석 파츠를 만들기 위해 꼭 필요합니다.' },
+            { text: '오늘은 수정동굴을 지을 수 있습니다. 보석 파츠를 만들기 위해 꼭 필요합니다.' },
             { text: '오늘 만들어야 할 파츠는 5개입니다.' },
+            { text: '그런데 잠깐, 확인해 보니 가죽 재료가 필요한 파츠가 있습니다.' },
+            { text: '이곳에서는 가죽을 구할 수 없네요. 제가 방법을 알아보겠습니다.' },
+        ],
+    },
+    {
+        id: 'day4_merchant_report',
+        // Fires at 12:00 KST or later on Day 4
+        when: (ctx) => ctx.currentDay === 4 && kstHour() >= 12 && hasShown(ctx, 'day4_start'),
+        lines: [
+            { text: '보고드립니다.' },
+            { text: '가죽 재료 건으로 김유찬님께 연락드렸습니다.' },
+            { text: '곧 조치를 취하실 것 같습니다. 조금만 기다려 주세요.' },
+        ],
+    },
+    {
+        id: 'day4_merchant_coming',
+        // Fires at 13:00 KST or later on Day 4
+        when: (ctx) => ctx.currentDay === 4 && kstHour() >= 13 && hasShown(ctx, 'day4_merchant_report'),
+        lines: [
+            { text: '김유찬님에게서 답변이 왔습니다.' },
+            { text: '가죽을 취급하는 이동 상인을 보내주신다고 합니다.' },
+            { text: '한 시간 정도 후에 도착할 것 같습니다.' },
+        ],
+    },
+    {
+        id: 'day4_merchant_arrived',
+        // Fires at 14:00 KST or later on Day 4 AND truck not yet purchased from
+        when: (ctx) => ctx.currentDay === 4 && kstHour() >= 14 && hasShown(ctx, 'day4_merchant_coming') && !ctx.merchantTruck.purchased,
+        lines: [
+            { text: '김유찬님이 보내신 이동 상인이 도착했습니다.' },
+            { text: '지도에서 트럭을 찾아 터치해 주세요.' },
+            { text: '나무를 가져가면 가죽 원단을 받을 수 있을 것 같습니다.', action: '지도에서 트럭을 찾으세요' },
+        ],
+    },
+    {
+        id: 'day4_merchant_purchased',
+        when: (ctx) => ctx.currentDay === 4 && ctx.merchantTruck.purchased && hasShown(ctx, 'day4_merchant_arrived'),
+        lines: [
+            { text: '가죽 원단을 확보했습니다.' },
+            { text: '이제 세공소에서 가죽 장식 파츠를 제작할 수 있습니다.' },
         ],
     },
     {

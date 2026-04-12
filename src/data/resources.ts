@@ -6,6 +6,7 @@ export const RESOURCE_DEFS = [
     { id: 'stone', img: 'assets/generated/resources/stone.png', name: '돌' },
     { id: 'metal', img: 'assets/generated/resources/metal.png', name: '금속' },
     { id: 'gem', img: 'assets/generated/resources/gem.png', name: '보석' },
+    { id: 'leather', img: 'assets/generated/resources/leather.png', name: '가죽 원단' },
 ];
 
 export const INITIAL_RESOURCES: ResourceState = {
@@ -14,6 +15,7 @@ export const INITIAL_RESOURCES: ResourceState = {
     stone: { amount: 0, unlocked: false },
     metal: { amount: 0, unlocked: false },
     gem: { amount: 0, unlocked: false },
+    leather: { amount: 0, unlocked: false },
 };
 
 // Production rates (model B++: tap harvest + 200% accumulation).

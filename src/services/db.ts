@@ -65,6 +65,7 @@ export interface SaveData {
     harvestStates?: Record<string, { lastHarvestAt: number }>;
     seenNewDay?: { buildMenu: number; woodshop: number; jewelshop: number };
     shownDialogs?: string[];
+    merchantTruck?: { purchased: boolean; purchasedAt: number | null };
     showDialog?: boolean;
     dialogSceneId?: string | null;
     dialogLineIndex?: number;
@@ -298,6 +299,7 @@ const MOCK_SEED: SaveData = {
         stone: { amount: 0, unlocked: false },
         metal: { amount: 0, unlocked: false },
         gem: { amount: 0, unlocked: false },
+        leather: { amount: 0, unlocked: false },
     },
     buildings: {
         box: { built: true, position: { row: 8, col: 8 } },
@@ -315,6 +317,7 @@ const MOCK_SEED: SaveData = {
     jewelshopCrafting: { partId: null, startedAt: null },
     seenNewDay: { buildMenu: 0, woodshop: 0, jewelshop: 0 },
     shownDialogs: [],
+    merchantTruck: { purchased: false, purchasedAt: null },
     // wood_farm is instantly ready so the Day 1 harvest tutorial can fire.
     harvestStates: {
         wood_farm: { lastHarvestAt: Date.now() - 90 * 60_000 },
@@ -343,6 +346,7 @@ export function applyLoadedData(data: SaveData): void {
     if (data.harvestStates) patch.harvestStates = data.harvestStates;
     if (data.seenNewDay) patch.seenNewDay = data.seenNewDay;
     if (data.shownDialogs) patch.shownDialogs = data.shownDialogs;
+    if (data.merchantTruck) patch.merchantTruck = data.merchantTruck;
     if (data.showDialog !== undefined) patch.showDialog = data.showDialog;
     if (data.dialogSceneId !== undefined) patch.dialogSceneId = data.dialogSceneId;
     if (data.dialogLineIndex !== undefined) patch.dialogLineIndex = data.dialogLineIndex;
@@ -406,6 +410,7 @@ type PersistentSlice = {
     tutorialStep: unknown;
     seenNewDay: unknown;
     shownDialogs: unknown;
+    merchantTruck: unknown;
     showDialog: unknown;
     dialogSceneId: unknown;
     dialogLineIndex: unknown;
@@ -426,6 +431,7 @@ function pickPersistent(s: ReturnType<typeof useGameStore.getState>): Persistent
         tutorialStep: s.tutorialStep,
         seenNewDay: s.seenNewDay,
         shownDialogs: s.shownDialogs,
+        merchantTruck: s.merchantTruck,
         showDialog: s.showDialog,
         dialogSceneId: s.dialogSceneId,
         dialogLineIndex: s.dialogLineIndex,
@@ -450,6 +456,7 @@ function persistentEqual(a: PersistentSlice, b: PersistentSlice): boolean {
         a.tutorialStep === b.tutorialStep &&
         a.seenNewDay === b.seenNewDay &&
         a.shownDialogs === b.shownDialogs &&
+        a.merchantTruck === b.merchantTruck &&
         a.showDialog === b.showDialog &&
         a.dialogSceneId === b.dialogSceneId &&
         a.dialogLineIndex === b.dialogLineIndex

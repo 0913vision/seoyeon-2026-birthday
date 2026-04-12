@@ -145,6 +145,22 @@ export function DebugPanel() {
         useGameStore.setState({ shownDialogs: [], showDialog: false, dialogSceneId: null, dialogLineIndex: 0 });
     };
 
+    // Merchant truck: give leather + mark purchased (or reset)
+    const giveLeather = () => {
+        const state = useGameStore.getState();
+        useGameStore.setState({
+            resources: { ...state.resources, leather: { amount: 1, unlocked: true } },
+            merchantTruck: { purchased: true, purchasedAt: Date.now() },
+        });
+    };
+    const resetMerchant = () => {
+        const state = useGameStore.getState();
+        useGameStore.setState({
+            resources: { ...state.resources, leather: { amount: 0, unlocked: false } },
+            merchantTruck: { purchased: false, purchasedAt: null },
+        });
+    };
+
     const resetSaveAndReload = async () => {
         // Wipe the debug row and start clean.
         try { await deleteSave('debug'); } catch { /* ignore */ }
@@ -288,6 +304,13 @@ export function DebugPanel() {
                     <Label>Parts</Label>
                     <button style={btnWide} onClick={completeAllParts}>complete all (to tray)</button>
                     <button style={btnWide} onClick={attachAllParts}>attach all → stage 7 + packaging</button>
+
+                    {/* Merchant */}
+                    <Label>Merchant (Day 4)</Label>
+                    <div style={row}>
+                        <button style={btn} onClick={giveLeather}>give leather</button>
+                        <button style={btn} onClick={resetMerchant}>reset merchant</button>
+                    </div>
 
                     {/* Dialogs */}
                     <Label>Dialogs</Label>
