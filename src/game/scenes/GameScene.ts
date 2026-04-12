@@ -203,6 +203,17 @@ export class GameScene extends Scene {
         });
         this.updateHarvestBubbles();
 
+        // Debug: force-spawn secret docs from DebugPanel
+        EventBus.on('debug-spawn-secret-doc', (docId: string) => {
+            this.spawnSecretDoc(docId);
+        });
+        // Debug: clear dynamically spawned map objects before wipe/reload
+        EventBus.on('debug-clear-map', () => {
+            for (const [, s] of this.secretDocSprites) s.destroy();
+            this.secretDocSprites.clear();
+            if (this.merchantTruckSprite) { this.merchantTruckSprite.destroy(); this.merchantTruckSprite = null; }
+        });
+
         EventBus.emit('current-scene-ready', this);
     }
 

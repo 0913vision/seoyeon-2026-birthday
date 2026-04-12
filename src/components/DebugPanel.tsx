@@ -4,6 +4,7 @@ import { PARTS } from '../data/parts';
 import { HARVESTABLE_BUILDINGS } from '../data/buildings';
 import { PRODUCTION } from '../data/resources';
 import { deleteSave } from '../services/db';
+import { EventBus } from '../game/EventBus';
 
 /**
  * Floating debug panel. Rendered only when window.location.pathname === '/debug'
@@ -161,13 +162,15 @@ export function DebugPanel() {
         });
     };
 
-    // Secret docs: force spawn regardless of time
+    // Secret docs: force spawn ON THE MAP regardless of time
     const spawnSecretDoc = (docId: string) => {
-        useGameStore.getState().openBuildingModal('secret_doc', docId);
+        EventBus.emit('debug-spawn-secret-doc', docId);
     };
 
     const resetSaveAndReload = async () => {
-        // Wipe the debug row and start clean.
+        // Wipe the debug row and start clean. Also tell the scene to
+        // remove any spawned secret docs / merchant truck before reload.
+        EventBus.emit('debug-clear-map');
         try { await deleteSave('debug'); } catch { /* ignore */ }
         window.location.reload();
     };
