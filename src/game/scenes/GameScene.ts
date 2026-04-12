@@ -86,7 +86,7 @@ interface BuildingDef {
 
 const BUILDINGS: BuildingDef[] = [
     { row: 8, col: 8, label: '선물상자', spriteKey: 'box_empty', isGiftBox: true,
-      originY: 0.6, scale: 1.3, offX: 1.5, offY: 0 },
+      originY: 0.55, scale: 1.25, offX: 0.5, offY: -4 },
     { row: 3, col: 4, label: '나무밭', spriteKey: 'woodfarm',
       originY: 0.71, scale: 1.2, offX: 0, offY: 0 },
     { row: 4, col: 12, label: '꽃밭', spriteKey: 'flowerfarm',
@@ -936,14 +936,14 @@ export class GameScene extends Scene {
         // Shadow (same radial gradient as buildings)
         if (!this.textures.exists('shadow_gradient')) this.createShadowTexture();
         const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
-        shadow.setDisplaySize(TILE_W * 1.6, TILE_H * 0.9);
+        shadow.setDisplaySize(TILE_W * 1.85, TILE_H * 1.0);
         shadow.setAlpha(0.85);
         shadow.setDepth(depth);
 
-        const sprite = this.add.image(x, y - 20 * DPR, 'merchant_truck');
-        const scale = TILE_W * 1.6 / sprite.width;
+        const sprite = this.add.image(x + 0 * DPR, y + (-20) * DPR, 'merchant_truck');
+        const scale = TILE_W * 1.85 / sprite.width;
         sprite.setScale(scale);
-        sprite.setOrigin(0.5, 0.7);
+        sprite.setOrigin(0.5, 0.56);
         sprite.setDepth(depth + 2);
         sprite.setInteractive(this.input.makePixelPerfect());
         sprite.on('pointerdown', () => {
