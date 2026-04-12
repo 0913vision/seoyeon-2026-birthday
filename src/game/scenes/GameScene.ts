@@ -113,7 +113,7 @@ const BUILDINGS: BuildingDef[] = [
     { row: 6, col: 13, label: '세공소', spriteKey: 'jewelshop',
       originY: 0.69, scale: 1.1, offX: -0.5, offY: -2 },
     { row: 11, col: 6, label: '수정 채굴장', spriteKey: 'gemcave',
-      originY: 0.64, scale: 1.1, offX: 0, offY: -3 },
+      originY: 0.64, scale: 1.2, offX: -6.5, offY: -3 },
 ];
 
 const LABEL_HIDE_ZOOM = 0.35;
