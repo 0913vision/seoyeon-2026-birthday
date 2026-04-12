@@ -34,11 +34,18 @@ export type TutorialLock =
  *            handmade/decorated, but has not been wrapped yet.
  */
 export function boxStageFromAttachedCount(n: number): number {
-    if (n >= 20) return 6;
-    if (n >= 15) return 5;
-    if (n >= 10) return 4;
-    if (n >= 5) return 3;
-    if (n >= 1) return 2;
+    // Stage advances only when an entire day's quota is attached:
+    //   Day 1: 4 parts (1-4)   → stage 2 at 4+
+    //   Day 2: 5 parts (5-9)   → stage 3 at 9+
+    //   Day 3: 5 parts (10-14) → stage 4 at 14+
+    //   Day 4: 5 parts (15-19) → stage 5 at 19+
+    //   Day 5: 5 parts (20-24) → stage 6 at 24+
+    // Stages 7-8 (packaging) are handled by boxStageForDisplay.
+    if (n >= 24) return 6;
+    if (n >= 19) return 5;
+    if (n >= 14) return 4;
+    if (n >= 9) return 3;
+    if (n >= 4) return 2;
     return 1;
 }
 
