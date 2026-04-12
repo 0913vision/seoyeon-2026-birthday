@@ -956,14 +956,14 @@ export class GameScene extends Scene {
         // Shadow (same radial gradient as buildings)
         if (!this.textures.exists('shadow_gradient')) this.createShadowTexture();
         const shadow = this.add.image(x, y + 4 * DPR, 'shadow_gradient');
-        shadow.setDisplaySize(TILE_W * 1.6, TILE_H * 0.9);
+        shadow.setDisplaySize(TILE_W * 1.85, TILE_H * 1.0);
         shadow.setAlpha(0.85);
         shadow.setDepth(depth);
 
         const sprite = this.add.image(x + 0 * DPR, y + (-20) * DPR, 'merchant_truck');
-        const scale = TILE_W * 1.6 / sprite.width;
+        const scale = TILE_W * 1.85 / sprite.width;
         sprite.setScale(scale);
-        sprite.setOrigin(0.5, 0.7);
+        sprite.setOrigin(0.5, 0.56);
         sprite.setDepth(depth + 2);
         sprite.setInteractive(this.input.makePixelPerfect());
         sprite.on('pointerdown', () => {
