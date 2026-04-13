@@ -951,11 +951,11 @@ export class GameScene extends Scene {
         const kstHour = new Date(kstMs).getHours();
 
         // Day 3, 19:00+
-        if (s.currentDay >= 3 && kstHour >= 19 && !s.secretDocs.day3Found && !this.secretDocSprites.has('day3')) {
+        if (s.currentDay >= 3 && kstHour >= 19 && !this.secretDocSprites.has('day3')) {
             this.spawnSecretDoc('day3');
         }
         // Day 4, 19:00+
-        if (s.currentDay >= 4 && kstHour >= 19 && !s.secretDocs.day4Found && !this.secretDocSprites.has('day4')) {
+        if (s.currentDay >= 4 && kstHour >= 19 && !this.secretDocSprites.has('day4')) {
             this.spawnSecretDoc('day4');
         }
     }
