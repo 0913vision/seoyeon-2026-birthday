@@ -18,7 +18,7 @@ export const PARTS: PartDef[] = [
     { id: 15, name: '가죽 장식', cost: [{ res: 'flower', amount: 700 }, { res: 'metal', amount: 300 }, { res: 'wood', amount: 500 }, { res: 'stone', amount: 400 }, { res: 'leather', amount: 1 }], craftTime: 30, workshop: 'jewelshop', day: 4 },
     { id: 16, name: '가방장식', cost: [{ res: 'metal', amount: 500 }, { res: 'stone', amount: 400 }, { res: 'wood', amount: 600 }], craftTime: 30, workshop: 'jewelshop', day: 4 },
     { id: 17, name: '편지', cost: [{ res: 'wood', amount: 500 }, { res: 'flower', amount: 500 }, { res: 'stone', amount: 100 }], craftTime: 35, workshop: 'jewelshop', day: 4 },
-    { id: 18, name: '꽃다발 장식', cost: [{ res: 'flower', amount: 1500 }, { res: 'metal', amount: 350 }, { res: 'gem', amount: 250 }, { res: 'stone', amount: 500 }], craftTime: 40, workshop: 'jewelshop', day: 4 },
+    { id: 18, name: '꽃다발', cost: [{ res: 'flower', amount: 1500 }, { res: 'metal', amount: 350 }, { res: 'gem', amount: 250 }, { res: 'stone', amount: 500 }], craftTime: 40, workshop: 'jewelshop', day: 4 },
     { id: 19, name: '블루투스 수신기', cost: [{ res: 'metal', amount: 350 }, { res: 'gem', amount: 250 }, { res: 'stone', amount: 600 }, { res: 'wood', amount: 500 }], craftTime: 35, workshop: 'jewelshop', day: 4 },
     { id: 20, name: '볼트', cost: [{ res: 'metal', amount: 350 }, { res: 'gem', amount: 250 }], craftTime: 45, workshop: 'jewelshop', day: 5 },
     { id: 21, name: '반도체', cost: [{ res: 'metal', amount: 400 }, { res: 'gem', amount: 250 }, { res: 'stone', amount: 700 }, { res: 'wood', amount: 500 }], craftTime: 50, workshop: 'jewelshop', day: 5 },
