@@ -239,7 +239,7 @@ function MerchantPanel() {
     const purchaseFromMerchant = useGameStore(s => s.purchaseFromMerchant);
     const closeBuildingModal = useGameStore(s => s.closeBuildingModal);
 
-    const woodCost = 600;
+    const woodCost = 1500;
     const canAfford = (resources.wood?.amount ?? 0) >= woodCost;
     const alreadyBought = merchantTruck.purchased;
 
@@ -282,7 +282,7 @@ function MerchantPanel() {
                         lineHeight: 1.6,
                         marginBottom: '12px',
                     }}>
-                        가죽 원단 팝니다! 나무 600개 정도면 하나 드릴 수 있어요~
+                        가죽 원단 팝니다! 나무 1500개 정도면 하나 드릴 수 있어요~
                     </div>
 
                     <div style={{

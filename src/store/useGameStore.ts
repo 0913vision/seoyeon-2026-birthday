@@ -387,7 +387,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     purchaseFromMerchant: () => {
         set(state => {
             if (state.merchantTruck.purchased) return {};
-            const woodCost = 600;
+            const woodCost = 1500;
             if ((state.resources.wood?.amount ?? 0) < woodCost) return {};
             return {
                 resources: {
