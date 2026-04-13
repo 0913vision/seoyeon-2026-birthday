@@ -951,11 +951,11 @@ export class GameScene extends Scene {
         const kstHour = new Date(kstMs).getHours();
 
         // Day 3, 19:00+
-        if (s.currentDay >= 3 && kstHour >= 19 && !this.secretDocSprites.has('day3')) {
+        if (s.currentDay >= 3 && kstHour >= 19 && !s.secretDocs.day3Found && !this.secretDocSprites.has('day3')) {
             this.spawnSecretDoc('day3');
         }
         // Day 4, 19:00+
-        if (s.currentDay >= 4 && kstHour >= 19 && !this.secretDocSprites.has('day4')) {
+        if (s.currentDay >= 4 && kstHour >= 19 && !s.secretDocs.day4Found && !this.secretDocSprites.has('day4')) {
             this.spawnSecretDoc('day4');
         }
     }
@@ -966,25 +966,34 @@ export class GameScene extends Scene {
             console.log('[SecretDoc] already spawned:', docId);
             return;
         }
-        // Pick a random empty outer tile
-        const outerTiles: { row: number; col: number }[] = [];
-        for (let r = 0; r < GRID_SIZE; r++) {
-            for (let c = 0; c < GRID_SIZE; c++) {
-                // Prefer outer ring (first/last 3 rows/cols)
-                if (r > 2 && r < GRID_SIZE - 3 && c > 2 && c < GRID_SIZE - 3) continue;
-                if (!this.occupiedTiles.has(`${r},${c}`)) outerTiles.push({ row: r, col: c });
+
+        const s = useGameStore.getState();
+        const posKey = docId === 'day3' ? 'day3Pos' : 'day4Pos';
+        let chosen = s.secretDocs[posKey];
+
+        if (!chosen) {
+            // Pick a random empty outer tile and persist it
+            const outerTiles: { row: number; col: number }[] = [];
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (r > 2 && r < GRID_SIZE - 3 && c > 2 && c < GRID_SIZE - 3) continue;
+                    if (!this.occupiedTiles.has(`${r},${c}`)) outerTiles.push({ row: r, col: c });
+                }
             }
+            if (outerTiles.length === 0) {
+                // eslint-disable-next-line no-console
+                console.log('[SecretDoc] FAIL: no outer tiles for', docId);
+                return;
+            }
+            const idx = Math.floor(Math.random() * outerTiles.length);
+            chosen = outerTiles[idx];
+            // Persist position so it survives reloads
+            useGameStore.setState({
+                secretDocs: { ...s.secretDocs, [posKey]: chosen },
+            });
         }
-        if (outerTiles.length === 0) {
-            // eslint-disable-next-line no-console
-            console.log('[SecretDoc] FAIL: no outer tiles for', docId);
-            return;
-        }
-        // Random pick among available outer tiles
-        const idx = Math.floor(Math.random() * outerTiles.length);
-        const chosen = outerTiles[idx];
         // eslint-disable-next-line no-console
-        console.log('[SecretDoc] spawn', docId, 'at', chosen.row, chosen.col, 'idx', idx, 'of', outerTiles.length);
+        console.log('[SecretDoc] spawn', docId, 'at', chosen.row, chosen.col);
 
         const { x, y } = this.toScreen(chosen.row, chosen.col);
         const depth = (chosen.row + chosen.col) * 10;

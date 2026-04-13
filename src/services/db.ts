@@ -66,7 +66,7 @@ export interface SaveData {
     seenNewDay?: { buildMenu: number; woodshop: number; jewelshop: number };
     shownDialogs?: string[];
     merchantTruck?: { purchased: boolean; purchasedAt: number | null };
-    secretDocs?: { day3Found: boolean; day4Found: boolean };
+    secretDocs?: { day3Found: boolean; day4Found: boolean; day3Pos?: { row: number; col: number } | null; day4Pos?: { row: number; col: number } | null };
     showDialog?: boolean;
     dialogSceneId?: string | null;
     dialogLineIndex?: number;
@@ -319,7 +319,7 @@ const MOCK_SEED: SaveData = {
     seenNewDay: { buildMenu: 0, woodshop: 0, jewelshop: 0 },
     shownDialogs: [],
     merchantTruck: { purchased: false, purchasedAt: null },
-    secretDocs: { day3Found: false, day4Found: false },
+    secretDocs: { day3Found: false, day4Found: false, day3Pos: null, day4Pos: null },
     // wood_farm is instantly ready so the Day 1 harvest tutorial can fire.
     harvestStates: {
         wood_farm: { lastHarvestAt: Date.now() - 90 * 60_000 },
