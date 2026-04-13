@@ -25,7 +25,7 @@ import { supabase } from './supabaseClient';
  * Current save schema version. Bump when SaveData changes shape and
  * add a migrator branch in `migrateSaveData` below.
  */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 /**
  * Player id is derived from the URL path, resolved once at module load:
@@ -82,16 +82,28 @@ export interface SaveData {
  */
 function migrateSaveData(data: SaveData): SaveData {
     const version = data.schemaVersion ?? 1;
+    let d = { ...data };
+    // eslint-disable-next-line default-case
     switch (version) {
         case 1:
-            // no-op — already current
+            // v1→v2: persist secretDocs positions from building locations.
+            // Day 3 doc → upper-left of mine (same row, col - 1).
+            if (d.secretDocs) {
+                const sd = d.secretDocs as { day3Found: boolean; day4Found: boolean; day3Pos?: { row: number; col: number } | null; day4Pos?: { row: number; col: number } | null };
+                if (!sd.day3Pos && d.buildings?.['mine']?.position) {
+                    const mp = d.buildings['mine'].position!;
+                    sd.day3Pos = { row: mp.row, col: mp.col - 1 };
+                }
+                d.secretDocs = sd as any;
+            }
+            // falls through to latest
             break;
         default:
             // Unknown future version — leave untouched, warn.
             // eslint-disable-next-line no-console
             console.warn('[DB] unknown schemaVersion', version);
     }
-    return { ...data, schemaVersion: CURRENT_SCHEMA_VERSION };
+    return { ...d, schemaVersion: CURRENT_SCHEMA_VERSION };
 }
 
 // ============================================================
