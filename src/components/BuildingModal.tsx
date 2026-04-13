@@ -184,7 +184,7 @@ const TERRAIN_TO_BUILDING: Record<string, { buildingId: string; buildHint: strin
 function SecretDocReveal({ docId }: { docId: string }) {
     const imgSrc = docId === 'day3'
         ? 'assets/generated/parts/bag.png'
-        : 'assets/generated/parts/part_23_plastic.png';
+        : 'assets/generated/parts/secret_doc_day4.png';
 
     // Mark as found on mount
     useEffect(() => {
