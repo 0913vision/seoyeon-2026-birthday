@@ -42,7 +42,7 @@
     <script>
         const assets = {
             buildings: ['wood_farm','flower_farm','quarry','woodshop','mine','jewelshop','gem_cave'],
-            giftbox: ['box_stage1_base','box_stage2_frame','box_stage3_flowers','box_stage4_numbers','box_stage5_metal','box_stage6_complete','box_stage7_wrapped'],
+            giftbox: ['box_stage1_base','box_stage2_frame','box_stage3_flowers','box_stage4_numbers','box_stage5_metal','box_stage6_complete','box_stage7_packaging','box_stage8_wrapped'],
             resources: ['wood','flower','stone','metal','gem'],
             parts: Array.from({length:24}, (_,i) => {
                 const names = ['base','body','front','back','lid','flower_a','wreath','number2','number4','pedestal','handle','buckle','trim','button','leather','metal_frame','letter','bouquet','bluetooth','bolt','chip','happy24_banner','plastic','ribbon'];
@@ -52,14 +52,14 @@
         };
 
         const labels = {
-            wood_farm:'나무밭', flower_farm:'꽃밭', quarry:'채석장', woodshop:'목공방',
-            mine:'광산', jewelshop:'세공소', gem_cave:'수정동굴',
-            box_stage1_base:'1.바닥판', box_stage2_frame:'2.골격', box_stage3_flowers:'3.꽃장식', box_stage4_numbers:'4.숫자24', box_stage5_metal:'5.금속장식', box_stage6_complete:'6.완성', box_stage7_wrapped:'7.포장',
+            wood_farm:'숲', flower_farm:'꽃밭', quarry:'채석장', woodshop:'목공방',
+            mine:'광산', jewelshop:'세공소', gem_cave:'수정 채굴장',
+            box_stage1_base:'1.바닥판', box_stage2_frame:'2.골격', box_stage3_flowers:'3.꽃장식', box_stage4_numbers:'4.숫자24', box_stage5_metal:'5.금속장식', box_stage6_complete:'6.완성', box_stage7_packaging:'7.포장중', box_stage8_wrapped:'8.포장완료',
             wood:'나무', flower:'꽃', stone:'돌', metal:'금속', gem:'보석',
-            rock_outcrop:'바위(채석장)', crystal_cluster:'수정(수정동굴)', flower_patch:'꽃밭(꽃밭)', cave_entrance:'동굴(광산)',
+            rock_outcrop:'바위(채석장)', crystal_cluster:'수정(수정채굴장)', flower_patch:'꽃(꽃밭)', cave_entrance:'동굴(광산)',
         };
 
-        const partLabels = ['바닥판','몸통','앞면판','뒷면판','뚜껑','꽃 장식','꽃 화환','숫자2','숫자4','받침대','손잡이','버클','테두리','크리스탈 별','보석 장식','금속 프레임','꽃 왕관','보석 리본','장식판','크리스탈 왕관','메인 리본','HAPPY24','불꽃 장식','뚜껑 매듭'];
+        const partLabels = ['바닥판','몸통','앞면판','뒷면판','뚜껑','꽃 장식','꽃 화환','숫자2','숫자4','받침대','손잡이','버클','테두리','버튼','가죽 장식','보석 장식','편지','꽃다발 장식','블루투스 수신기','볼트','반도체','HAPPY24','플라스틱 부품','리본'];
 
         for (const [section, names] of Object.entries(assets)) {
             const container = document.getElementById(section);
