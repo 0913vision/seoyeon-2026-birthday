@@ -45,7 +45,7 @@
             giftbox: ['box_stage1_base','box_stage2_frame','box_stage3_flowers','box_stage4_numbers','box_stage5_metal','box_stage6_complete','box_stage7_packaging','box_stage8_wrapped'],
             resources: ['wood','flower','stone','metal','gem'],
             parts: Array.from({length:24}, (_,i) => {
-                const names = ['base','body','front','back','lid','flower_a','wreath','number2','number4','pedestal','handle','buckle','trim','button','leather','metal_frame','letter','bouquet','bluetooth','bolt','chip','happy24_banner','plastic','ribbon'];
+                const names = ['base','body','front','back','lid','flower_a','wreath','number2','number4','pedestal','handle','buckle','trim','button','leather','bag_ring','letter','bouquet','bluetooth','bolt','chip','happy24_banner','plastic','ribbon'];
                 return 'part_' + String(i+1).padStart(2,'0') + '_' + names[i];
             }),
             terrain: ['rock_outcrop','crystal_cluster','flower_patch','cave_entrance'],
@@ -59,7 +59,7 @@
             rock_outcrop:'바위(채석장)', crystal_cluster:'수정(수정채굴장)', flower_patch:'꽃(꽃밭)', cave_entrance:'동굴(광산)',
         };
 
-        const partLabels = ['바닥판','몸통','앞면판','뒷면판','뚜껑','꽃 장식','꽃 화환','숫자2','숫자4','받침대','손잡이','버클','테두리','버튼','가죽 장식','보석 장식','편지','꽃다발 장식','블루투스 수신기','볼트','반도체','HAPPY24','플라스틱 부품','리본'];
+        const partLabels = ['바닥판','몸통','앞면판','뒷면판','뚜껑','꽃 장식','꽃 화환','숫자2','숫자4','받침대','손잡이','버클','테두리','버튼','가죽 장식','가방장식','편지','꽃다발 장식','블루투스 수신기','볼트','반도체','HAPPY24','플라스틱 부품','리본'];
 
         for (const [section, names] of Object.entries(assets)) {
             const container = document.getElementById(section);

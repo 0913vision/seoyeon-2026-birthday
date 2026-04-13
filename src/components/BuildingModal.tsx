@@ -674,7 +674,7 @@ const PART_FILE_NAMES: Record<number, string> = {
     1: 'base', 2: 'body', 3: 'front', 4: 'back', 5: 'lid', 6: 'flower_a',
     7: 'wreath', 8: 'number2', 9: 'number4', 10: 'pedestal', 11: 'handle',
     12: 'buckle', 13: 'trim', 14: 'button', 15: 'leather',
-    16: 'metal_frame', 17: 'letter', 18: 'bouquet', 19: 'bluetooth',
+    16: 'bag_ring', 17: 'letter', 18: 'bouquet', 19: 'bluetooth',
     20: 'bolt', 21: 'chip', 22: 'happy24_banner', 23: 'plastic',
     24: 'ribbon',
 };
