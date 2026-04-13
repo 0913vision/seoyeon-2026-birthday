@@ -227,7 +227,7 @@ export const DIALOGUES: DialogueScene[] = [
     {
         id: 'day2_quarry_unlocked',
         // Stagger unlock — can be wired to a time-of-day trigger later
-        when: (ctx) => ctx.currentDay === 2 && hasShown(ctx, 'day2_start') && ctx.partsAttached.length >= 6,
+        when: (ctx) => ctx.currentDay === 2 && hasShown(ctx, 'day2_start') && ctx.partsAttached.length >= 6 && !built(ctx, 'quarry'),
         lines: [
             { text: '채석장도 지을 수 있게 되었습니다.' },
             { text: '돌이 필요한 파츠를 만들려면 먼저 채석장을 지어 주세요.' },
@@ -256,7 +256,7 @@ export const DIALOGUES: DialogueScene[] = [
     },
     {
         id: 'day3_jewelshop_unlocked',
-        when: (ctx) => ctx.currentDay === 3 && hasShown(ctx, 'day3_start') && ctx.partsAttached.length >= 11,
+        when: (ctx) => ctx.currentDay === 3 && hasShown(ctx, 'day3_start') && ctx.partsAttached.length >= 11 && !built(ctx, 'jewelshop'),
         lines: [
             { text: '세공소도 지을 수 있게 되었습니다.' },
             { text: '두 번째 공방입니다. 금속 파츠는 이곳에서 만듭니다.' },
