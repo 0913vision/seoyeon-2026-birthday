@@ -8,6 +8,7 @@ import { BuildingModal } from './components/BuildingModal';
 import { DebugPanel } from './components/DebugPanel';
 import { DialogBox } from './components/DialogBox';
 import { RevealOverlay } from './components/RevealOverlay';
+import { ConfettiOverlay } from './components/ConfettiOverlay';
 import { DIALOGUES, findNextDialog, DialogContext } from './data/dialogues';
 import { loadGame, applyLoadedData, startAutoSave, stopAutoSave } from './services/db';
 import { EventBus } from './game/EventBus';
@@ -369,6 +370,7 @@ function App() {
 
             {/* Full-screen celebration on first boxHarvested transition */}
             <RevealOverlay />
+            <ConfettiOverlay />
 
             {/* Debug admin panel — only on /debug path */}
             {typeof window !== 'undefined' && window.location.pathname === '/debug' && (
