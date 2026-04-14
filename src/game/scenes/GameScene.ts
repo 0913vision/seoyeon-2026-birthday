@@ -967,44 +967,13 @@ export class GameScene extends Scene {
             return;
         }
 
-        const s = useGameStore.getState();
-        const posKey = docId === 'day3' ? 'day3Pos' : 'day4Pos';
-        let chosen = s.secretDocs[posKey];
-
-        if (!chosen) {
-            // Day 3 doc: place upper-left of the mine building
-            if (docId === 'day3') {
-                const mine = s.buildings['mine'];
-                if (mine?.position) {
-                    // Upper-left in isometric = same row, col - 1
-                    const candidate = { row: mine.position.row, col: mine.position.col - 1 };
-                    if (!this.occupiedTiles.has(`${candidate.row},${candidate.col}`)) {
-                        chosen = candidate;
-                    }
-                }
-            }
-            // Fallback: pick a random empty outer tile
-            if (!chosen) {
-                const outerTiles: { row: number; col: number }[] = [];
-                for (let r = 0; r < GRID_SIZE; r++) {
-                    for (let c = 0; c < GRID_SIZE; c++) {
-                        if (r > 2 && r < GRID_SIZE - 3 && c > 2 && c < GRID_SIZE - 3) continue;
-                        if (!this.occupiedTiles.has(`${r},${c}`)) outerTiles.push({ row: r, col: c });
-                    }
-                }
-                if (outerTiles.length === 0) {
-                    // eslint-disable-next-line no-console
-                    console.log('[SecretDoc] FAIL: no outer tiles for', docId);
-                    return;
-                }
-                const idx = Math.floor(Math.random() * outerTiles.length);
-                chosen = outerTiles[idx];
-            }
-            // Persist position so it survives reloads
-            useGameStore.setState({
-                secretDocs: { ...s.secretDocs, [posKey]: chosen },
-            });
-        }
+        // Fixed positions — no random
+        const FIXED_POS: Record<string, { row: number; col: number }> = {
+            day3: { row: 12, col: 5 },
+            day4: { row: 12, col: 0 },
+        };
+        const chosen = FIXED_POS[docId];
+        if (!chosen) return;
         // eslint-disable-next-line no-console
         console.log('[SecretDoc] spawn', docId, 'at', chosen.row, chosen.col);
 
