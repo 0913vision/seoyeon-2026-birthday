@@ -320,6 +320,14 @@ export function DebugPanel() {
                         <button style={btn} onClick={resetMerchant}>reset merchant</button>
                     </div>
 
+                    {/* Gift Delivery */}
+                    <Label>Gift Delivery</Label>
+                    <div style={row}>
+                        <button style={btn} onClick={() => useGameStore.setState({ boxHarvested: true })}>harvest box</button>
+                        <button style={btn} onClick={() => useGameStore.setState({ giftDelivered: true, deliverySignature: null })}>deliver</button>
+                        <button style={btn} onClick={() => useGameStore.setState({ boxHarvested: false, giftDelivered: false, deliverySignature: null, packagingStartedAt: null })}>reset</button>
+                    </div>
+
                     {/* Secret Docs */}
                     <Label>Secret Docs</Label>
                     <div style={row}>
