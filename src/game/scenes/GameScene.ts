@@ -970,7 +970,7 @@ export class GameScene extends Scene {
         // Fixed positions — no random
         const FIXED_POS: Record<string, { row: number; col: number }> = {
             day3: { row: 12, col: 5 },
-            day4: { row: 12, col: 0 },
+            day4: { row: 1, col: 4 },
         };
         const chosen = FIXED_POS[docId];
         if (!chosen) return;
