@@ -239,8 +239,10 @@ function MerchantPanel() {
     const purchaseFromMerchant = useGameStore(s => s.purchaseFromMerchant);
     const closeBuildingModal = useGameStore(s => s.closeBuildingModal);
 
-    const woodCost = 1500;
-    const canAfford = (resources.wood?.amount ?? 0) >= woodCost;
+    const cost = { wood: 2000, flower: 1500, stone: 1000 };
+    const canAfford = (resources.wood?.amount ?? 0) >= cost.wood
+        && (resources.flower?.amount ?? 0) >= cost.flower
+        && (resources.stone?.amount ?? 0) >= cost.stone;
     const alreadyBought = merchantTruck.purchased;
 
     const handleBuy = () => {
@@ -282,7 +284,7 @@ function MerchantPanel() {
                         lineHeight: 1.6,
                         marginBottom: '12px',
                     }}>
-                        가죽 원단 팝니다! 나무 1500개 정도면 하나 드릴 수 있어요~
+                        진짜 좋은 가죽이에요. 이 정도 품질이면 싸게 드리는 거예요~
                     </div>
 
                     <div style={{
@@ -295,15 +297,19 @@ function MerchantPanel() {
                         borderRadius: '10px',
                         marginBottom: '12px',
                     }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <img src="assets/generated/resources/wood.png" alt="나무"
-                                 style={{ width: '36px', height: '36px' }} />
-                            <div style={{
-                                fontSize: '14px', fontWeight: 700,
-                                color: canAfford ? '#fbbf24' : '#ef4444',
-                            }}>
-                                {woodCost}
-                            </div>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            {Object.entries(cost).map(([res, amt]) => (
+                                <div key={res} style={{ textAlign: 'center' }}>
+                                    <img src={`assets/generated/resources/${res}.png`} alt={res}
+                                         style={{ width: '36px', height: '36px' }} />
+                                    <div style={{
+                                        fontSize: '14px', fontWeight: 700,
+                                        color: (resources[res]?.amount ?? 0) >= amt ? '#fbbf24' : '#ef4444',
+                                    }}>
+                                        {amt}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                         <div style={{ fontSize: '20px', color: '#c8a888' }}>{'\u2192'}</div>
                         <div style={{ textAlign: 'center' }}>

@@ -140,9 +140,12 @@ interface GameState {
 
     // Secret document events. Each spawns at 19:00 KST on its day and
     // persists on the map. `found` = the player has tapped it.
+    // `pos` = persisted tile so the doc doesn't move on reload.
     secretDocs: {
         day3Found: boolean;
         day4Found: boolean;
+        day3Pos: { row: number; col: number } | null;
+        day4Pos: { row: number; col: number } | null;
     };
 
     // UI (not persisted to DB)
@@ -233,7 +236,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     shownDialogs: [],
     tutorialLock: null,
     merchantTruck: { purchased: false, purchasedAt: null },
-    secretDocs: { day3Found: false, day4Found: false },
+    secretDocs: { day3Found: false, day4Found: false, day3Pos: null, day4Pos: null },
 
     // wood_farm starts ready to harvest so the Day 1 tutorial hint can fire
     // immediately. Others seed an empty record; harvestStates for later
@@ -387,14 +390,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     purchaseFromMerchant: () => {
         set(state => {
             if (state.merchantTruck.purchased) return {};
-            const woodCost = 1500;
-            if ((state.resources.wood?.amount ?? 0) < woodCost) return {};
+            const cost = { wood: 2000, flower: 1500, stone: 1000 };
+            for (const [res, amt] of Object.entries(cost)) {
+                if ((state.resources[res]?.amount ?? 0) < amt) return {};
+            }
+            const newResources = { ...state.resources };
+            for (const [res, amt] of Object.entries(cost)) {
+                newResources[res] = { ...newResources[res], amount: newResources[res].amount - amt };
+            }
+            newResources.leather = { amount: 1, unlocked: true };
             return {
-                resources: {
-                    ...state.resources,
-                    wood: { ...state.resources.wood, amount: state.resources.wood.amount - woodCost },
-                    leather: { amount: 1, unlocked: true },
-                },
+                resources: newResources,
                 merchantTruck: { purchased: true, purchasedAt: Date.now() },
             };
         });
