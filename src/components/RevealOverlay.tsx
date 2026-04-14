@@ -98,7 +98,7 @@ export function RevealOverlay() {
                 }}>
                     5일간의 작업이 모두 마무리되었습니다.
                     <br />
-                    이 증명서를 김유찬님께 제시해 주세요.
+                    선물 완성을 축하합니다.
                 </div>
                 <div style={{
                     marginTop: '18px',

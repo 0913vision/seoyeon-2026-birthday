@@ -132,7 +132,6 @@ export function DebugPanel() {
             partsAttached: ids,
             partsCompleted: state.partsCompleted.filter(id => !ids.includes(id)),
             boxStage: boxStageFromAttachedCount(ids.length),
-            packagingStartedAt: state.packagingStartedAt ?? Date.now(),
         }));
     };
 
@@ -311,7 +310,7 @@ export function DebugPanel() {
                     {/* Parts */}
                     <Label>Parts</Label>
                     <button style={btnWide} onClick={completeAllParts}>complete all (to tray)</button>
-                    <button style={btnWide} onClick={attachAllParts}>attach all → stage 7 + packaging</button>
+                    <button style={btnWide} onClick={attachAllParts}>attach all (no packaging)</button>
 
                     {/* Merchant */}
                     <Label>Merchant (Day 4)</Label>
