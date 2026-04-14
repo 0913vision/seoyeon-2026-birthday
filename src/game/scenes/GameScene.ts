@@ -25,7 +25,7 @@ const BOX_STAGE_CAL: Record<number, { originY: number; scale: number; offX: numb
     4: { originY: 0.64, scale: 1.25, offX: 0.5, offY: -4 },
     5: { originY: 0.67, scale: 1.25, offX: 0.5, offY: -4 },
     6: { originY: 0.65, scale: 1.05, offX: 0.5, offY: -4 },
-    7: { originY: 0.63, scale: 1.15, offX: -0.5, offY: -4 },
+    7: { originY: 0.63, scale: 1.4, offX: 0.5, offY: -3 },
     8: { originY: 0.65, scale: 1.05, offX: 0.5, offY: -4 },
 };
 
