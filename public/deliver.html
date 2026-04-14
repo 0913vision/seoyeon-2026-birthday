@@ -148,7 +148,7 @@
     <script>
         const SUPABASE_URL = 'https://nxeyzowpvbapapufyjlo.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54ZXl6b3dwdmJhcGFwdWZ5amxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDUxMjYsImV4cCI6MjA5MTQ4MTEyNn0.TitjRCdqOu0I131XduuG4xGY9U9vSJynA7pi2TGtPXk';
-        const PLAYER_ID = 'seoyeon';
+        const PLAYER_ID = window.location.pathname.startsWith('/debug') ? 'debug' : 'seoyeon';
 
         // Set date
         const now = new Date();
