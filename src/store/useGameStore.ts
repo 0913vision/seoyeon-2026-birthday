@@ -98,6 +98,8 @@ interface GameState {
     boxStage: number; // 1-7
     packagingStartedAt: number | null;
     boxHarvested: boolean;
+    giftDelivered: boolean;
+    deliverySignature: string | null;
 
     // Resources
     resources: ResourceState;
@@ -170,6 +172,7 @@ interface GameState {
     setBoxStage: (stage: number) => void;
     startPackaging: () => void;
     harvestBox: () => void;
+    deliverGift: (signature?: string) => void;
 
     // Build mode actions
     enterBuildMode: (buildingId: string) => void;
@@ -212,6 +215,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     boxStage: 1,
     packagingStartedAt: null,
     boxHarvested: false,
+    giftDelivered: false,
+    deliverySignature: null,
 
     resources: { ...INITIAL_RESOURCES },
 
@@ -525,6 +530,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     setBoxStage: (stage) => set({ boxStage: stage }),
     startPackaging: () => set({ packagingStartedAt: Date.now() }),
     harvestBox: () => set({ boxHarvested: true }),
+    deliverGift: (signature) => set({ giftDelivered: true, deliverySignature: signature ?? null }),
 
     // UI actions
     openDialog: (sceneId) => set({ showDialog: true, dialogSceneId: sceneId, dialogLineIndex: 0 }),
@@ -559,6 +565,8 @@ export function getSerializableState() {
         boxStage: state.boxStage,
         packagingStartedAt: state.packagingStartedAt,
         boxHarvested: state.boxHarvested,
+        giftDelivered: state.giftDelivered,
+        deliverySignature: state.deliverySignature,
         resources: state.resources,
         buildings: state.buildings,
         partsCompleted: state.partsCompleted,

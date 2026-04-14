@@ -52,6 +52,8 @@ export interface SaveData {
     boxStage: number;
     packagingStartedAt: number | null;
     boxHarvested: boolean;
+    giftDelivered?: boolean;
+    deliverySignature?: string | null;
     resources: Record<string, { amount: number; unlocked: boolean }>;
     buildings: Record<string, {
         built: boolean;
@@ -303,6 +305,8 @@ const MOCK_SEED: SaveData = {
     boxStage: 1,
     packagingStartedAt: null,
     boxHarvested: false,
+    giftDelivered: false,
+    deliverySignature: null,
     // Starter resources tuned so the player can clear Day 1 with at most a
     // single wood harvest: 4000 wood covers woodshop (500) + 4 parts (2000)
     // + 1500 carry-over for Day 2 build costs. Other resources stay locked.
@@ -350,6 +354,8 @@ export function applyLoadedData(data: SaveData): void {
         boxStage: data.boxStage,
         packagingStartedAt: data.packagingStartedAt,
         boxHarvested: data.boxHarvested,
+        giftDelivered: data.giftDelivered ?? false,
+        deliverySignature: data.deliverySignature ?? null,
         resources: data.resources,
         buildings: data.buildings,
         partsCompleted: data.partsCompleted,
@@ -420,6 +426,8 @@ type PersistentSlice = {
     boxStage: unknown;
     packagingStartedAt: unknown;
     boxHarvested: unknown;
+    giftDelivered: unknown;
+    deliverySignature: unknown;
     woodshopCrafting: unknown;
     jewelshopCrafting: unknown;
     tutorialStep: unknown;
@@ -442,6 +450,8 @@ function pickPersistent(s: ReturnType<typeof useGameStore.getState>): Persistent
         boxStage: s.boxStage,
         packagingStartedAt: s.packagingStartedAt,
         boxHarvested: s.boxHarvested,
+        giftDelivered: s.giftDelivered,
+        deliverySignature: s.deliverySignature,
         woodshopCrafting: s.woodshopCrafting,
         jewelshopCrafting: s.jewelshopCrafting,
         tutorialStep: s.tutorialStep,
@@ -468,6 +478,8 @@ function persistentEqual(a: PersistentSlice, b: PersistentSlice): boolean {
         a.boxStage === b.boxStage &&
         a.packagingStartedAt === b.packagingStartedAt &&
         a.boxHarvested === b.boxHarvested &&
+        a.giftDelivered === b.giftDelivered &&
+        a.deliverySignature === b.deliverySignature &&
         a.woodshopCrafting === b.woodshopCrafting &&
         a.jewelshopCrafting === b.jewelshopCrafting &&
         a.tutorialStep === b.tutorialStep &&

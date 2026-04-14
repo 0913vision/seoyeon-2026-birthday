@@ -395,7 +395,7 @@ export const DIALOGUES: DialogueScene[] = [
         lines: [
             { text: '선물 준비가 완료되었습니다.' },
             { text: '5일간의 작업이 모두 마무리되었습니다.' },
-            { text: '이 증명서를 김유찬님께 제시해 주세요.' },
+            { text: '선물을 잘 전달하겠습니다.' },
         ],
     },
 ];

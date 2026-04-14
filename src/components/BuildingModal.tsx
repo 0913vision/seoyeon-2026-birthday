@@ -827,6 +827,8 @@ function GiftBoxPanel() {
     const attachPart = useGameStore(s => s.attachPart);
     const packagingStartedAt = useGameStore(s => s.packagingStartedAt);
     const boxHarvested = useGameStore(s => s.boxHarvested);
+    const giftDelivered = useGameStore(s => s.giftDelivered);
+    const deliverySignature = useGameStore(s => s.deliverySignature);
     const harvestBox = useGameStore(s => s.harvestBox);
 
     // Live tick for packaging countdown
@@ -1059,6 +1061,41 @@ function GiftBoxPanel() {
                     <span>/ {PARTS.length}</span>
                 </div>
 
+                {/* Delivery signature receipt — shown when gift is delivered with a signature */}
+                {boxHarvested && giftDelivered && deliverySignature && (
+                    <div style={{
+                        position: 'absolute', top: '8px', right: '8px',
+                        width: '72px',
+                        background: '#fff',
+                        borderRadius: '4px',
+                        padding: '4px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.08)',
+                        transform: 'rotate(3deg)',
+                        pointerEvents: 'none',
+                    }}>
+                        <div style={{
+                            fontSize: '6px',
+                            color: '#888',
+                            fontFamily: 'system-ui, sans-serif',
+                            textAlign: 'center',
+                            marginBottom: '2px',
+                            letterSpacing: '0.05em',
+                        }}>
+                            수령 확인
+                        </div>
+                        <img
+                            src={deliverySignature}
+                            alt="서명"
+                            style={{
+                                width: '100%',
+                                height: '36px',
+                                objectFit: 'contain',
+                                display: 'block',
+                            }}
+                        />
+                    </div>
+                )}
+
                 {/* Snap effect overlay (sparkles + flash) */}
                 {attaching && <AttachSparkles />}
             </div>
@@ -1071,8 +1108,10 @@ function GiftBoxPanel() {
                 textAlign: 'center',
                 fontFamily: 'Fredoka, sans-serif',
             }}>
-                {boxHarvested
-                    ? '선물 준비가 완료되었습니다.'
+                {boxHarvested && giftDelivered
+                    ? '선물이 전달 완료되었습니다.'
+                    : boxHarvested
+                    ? '선물을 전달 중입니다.'
                     : isReadyToOpen
                     ? '포장이 완료되었습니다.'
                     : isPackaging
@@ -1120,6 +1159,8 @@ function GiftBoxPanel() {
                     remainingMs={packagingRemaining}
                     ready={isReadyToOpen}
                     harvested={boxHarvested}
+                    delivered={giftDelivered}
+                    signature={deliverySignature}
                     onHarvest={harvestBox}
                 />
             )}
@@ -1224,10 +1265,12 @@ const STAGE_FILE_NAMES: Record<number, string> = {
 //   - counting down: shows "포장 중 HH:MM:SS"
 //   - ready to open: shows a long-press "상자 열기" button
 //   - harvested:     shows a celebratory "선물이 준비되었습니다" block
-function PackagingPanel({ remainingMs, ready, harvested, onHarvest }: {
+function PackagingPanel({ remainingMs, ready, harvested, delivered, signature, onHarvest }: {
     remainingMs: number;
     ready: boolean;
     harvested: boolean;
+    delivered: boolean;
+    signature: string | null;
     onHarvest: () => void;
 }) {
     const hours = Math.floor(remainingMs / 3_600_000);
@@ -1277,10 +1320,32 @@ function PackagingPanel({ remainingMs, ready, harvested, onHarvest }: {
                 fontFamily: 'Fredoka, sans-serif',
                 color: '#3a220e',
             }}>
-                <div style={{ fontSize: '15px', fontWeight: 700 }}>선물이 준비되었습니다</div>
-                <div style={{ fontSize: '12px', marginTop: '4px', color: '#5a3418' }}>
-                    이 증명서를 김유찬님께 제시해 주세요.
+                <div style={{ fontSize: '15px', fontWeight: 700 }}>
+                    {delivered ? '선물이 전달 완료되었습니다' : '선물을 전달 중입니다'}
                 </div>
+                {delivered && (
+                    <button
+                        onClick={() => { window.location.href = '/gallery.html'; }}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            marginTop: '10px',
+                            padding: '12px',
+                            border: 'none',
+                            borderRadius: '10px',
+                            background: 'linear-gradient(180deg, #ec4899 0%, #be185d 100%)',
+                            color: '#fff',
+                            fontSize: '15px',
+                            fontWeight: 700,
+                            fontFamily: 'Fredoka, sans-serif',
+                            cursor: 'pointer',
+                            boxShadow: '0 3px 0 #831843',
+                            borderTop: '2px solid rgba(255,255,255,0.3)',
+                        }}
+                    >
+                        {'\uD83D\uDDBC\uFE0F'} 갤러리 보기
+                    </button>
+                )}
             </div>
         );
     }

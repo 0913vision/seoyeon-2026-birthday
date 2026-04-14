@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>배송 완료 확인</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f5f5f5;
+            color: #333;
+            font-family: system-ui, sans-serif;
+            min-height: 100dvh;
+            padding: 20px;
+        }
+        .receipt {
+            background: #fff;
+            border-radius: 4px;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 24px 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px dashed #ccc;
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #222;
+            letter-spacing: 2px;
+        }
+        .header .sub {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-row .label { color: #888; }
+        .info-row .value { font-weight: 600; color: #333; }
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #888;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .sign-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background: #fafafa;
+            position: relative;
+            touch-action: none;
+            display: none;
+        }
+        .sign-area canvas {
+            display: block;
+            width: 100%;
+            border-radius: 6px;
+        }
+        .sign-hint {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #bbb;
+            font-size: 14px;
+            pointer-events: none;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: opacity 150ms;
+        }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-primary { background: #2563eb; color: #fff; }
+        .btn-confirm { background: #16a34a; color: #fff; }
+        .btn-clear { background: #e5e7eb; color: #666; font-size: 13px; padding: 10px; }
+        .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+        .btn-row .btn { flex: 1; }
+        .status {
+            text-align: center;
+            font-size: 13px;
+            margin-top: 12px;
+            color: #888;
+        }
+        .status.error { color: #dc2626; }
+        .status.success { color: #16a34a; }
+        .done-block {
+            text-align: center;
+            padding: 20px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        .done-block .check { font-size: 32px; }
+        .done-block .msg { font-size: 14px; color: #166534; margin-top: 8px; font-weight: 600; }
+        .sig-preview { max-width: 120px; margin: 8px auto 0; border: 1px solid #ddd; border-radius: 4px; background: #fff; }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="header">
+            <h1>배송 완료 확인서</h1>
+            <div class="sub">DELIVERY CONFIRMATION</div>
+        </div>
+
+        <div class="info-row"><span class="label">수령인</span><span class="value">서연</span></div>
+        <div class="info-row"><span class="label">품목</span><span class="value">생일 선물 (수제 상자)</span></div>
+        <div class="info-row"><span class="label">배송일</span><span class="value" id="dateValue">—</span></div>
+        <div class="info-row"><span class="label">상태</span><span class="value" id="statusValue">확인 대기</span></div>
+
+        <div id="signSection">
+            <div class="section-title">수령인 서명</div>
+            <div class="sign-area" id="signArea">
+                <canvas id="signCanvas" height="160"></canvas>
+                <div class="sign-hint" id="signHint">여기에 서명해 주세요</div>
+            </div>
+            <button class="btn btn-primary" id="receiveBtn" onclick="showSignPad()">수령 확인</button>
+            <div class="btn-row" id="signBtns" style="display:none;">
+                <button class="btn btn-clear" onclick="clearSign()">지우기</button>
+                <button class="btn btn-confirm" id="confirmBtn" onclick="confirmDelivery()" disabled>서명 완료</button>
+            </div>
+        </div>
+
+        <div id="doneSection" style="display:none;"></div>
+        <div class="status" id="statusMsg"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://nxeyzowpvbapapufyjlo.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54ZXl6b3dwdmJhcGFwdWZ5amxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDUxMjYsImV4cCI6MjA5MTQ4MTEyNn0.TitjRCdqOu0I131XduuG4xGY9U9vSJynA7pi2TGtPXk';
+        const PLAYER_ID = 'seoyeon';
+
+        // Set date
+        const now = new Date();
+        const kst = new Date(now.getTime() + 9 * 3600000);
+        document.getElementById('dateValue').textContent =
+            kst.getFullYear() + '.' + String(kst.getMonth() + 1).padStart(2, '0') + '.' + String(kst.getDate()).padStart(2, '0');
+
+        // Canvas signature pad
+        const canvas = document.getElementById('signCanvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let hasDrawn = false;
+        const dpr = window.devicePixelRatio || 1;
+
+        function initCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = 160 * dpr;
+            canvas.style.height = '160px';
+            ctx.scale(dpr, dpr);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const t = e.touches ? e.touches[0] : e;
+            return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+        }
+
+        canvas.addEventListener('pointerdown', e => {
+            drawing = true;
+            const p = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            document.getElementById('signHint').style.display = 'none';
+        });
+        canvas.addEventListener('pointermove', e => {
+            if (!drawing) return;
+            const p = getPos(e);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+            hasDrawn = true;
+            document.getElementById('confirmBtn').disabled = false;
+        });
+        canvas.addEventListener('pointerup', () => { drawing = false; });
+        canvas.addEventListener('pointerleave', () => { drawing = false; });
+
+        function showSignPad() {
+            document.getElementById('signArea').style.display = 'block';
+            document.getElementById('signBtns').style.display = 'flex';
+            document.getElementById('receiveBtn').style.display = 'none';
+            initCanvas();
+        }
+
+        function clearSign() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasDrawn = false;
+            document.getElementById('confirmBtn').disabled = true;
+            document.getElementById('signHint').style.display = 'block';
+        }
+
+        async function confirmDelivery() {
+            if (!hasDrawn) return;
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.disabled = true;
+            document.getElementById('statusMsg').textContent = '처리 중...';
+            document.getElementById('statusMsg').className = 'status';
+
+            try {
+                // Get signature as base64
+                const sigData = canvas.toDataURL('image/png');
+
+                // Read current state
+                const getRes = await fetch(
+                    `${SUPABASE_URL}/rest/v1/player_saves?player_id=eq.${PLAYER_ID}&select=state`,
+                    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+                );
+                if (!getRes.ok) throw new Error('데이터 조회 실패: ' + getRes.status);
+                const rows = await getRes.json();
+                if (rows.length === 0) throw new Error('저장 데이터 없음');
+
+                const state = rows[0].state;
+                state.giftDelivered = true;
+                state.deliverySignature = sigData;
+
+                // PATCH
+                const patchRes = await fetch(
+                    `${SUPABASE_URL}/rest/v1/player_saves?player_id=eq.${PLAYER_ID}`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal',
+                        },
+                        body: JSON.stringify({ state, updated_at: new Date().toISOString() }),
+                    }
+                );
+                if (!patchRes.ok) throw new Error('저장 실패: ' + patchRes.status);
+
+                showDone(sigData);
+            } catch (e) {
+                document.getElementById('statusMsg').textContent = '오류: ' + e.message;
+                document.getElementById('statusMsg').className = 'status error';
+                confirmBtn.disabled = false;
+            }
+        }
+
+        function showDone(sigData) {
+            document.getElementById('signSection').style.display = 'none';
+            document.getElementById('statusValue').textContent = '수령 완료';
+            document.getElementById('statusValue').style.color = '#16a34a';
+            const doneEl = document.getElementById('doneSection');
+            doneEl.style.display = 'block';
+            doneEl.innerHTML = `
+                <div class="done-block">
+                    <div class="check">✓</div>
+                    <div class="msg">배송이 완료되었습니다</div>
+                    ${sigData ? `<img src="${sigData}" class="sig-preview" alt="서명">` : ''}
+                </div>
+            `;
+            document.getElementById('statusMsg').textContent = '';
+        }
+
+        // Check if already delivered on load
+        (async function checkState() {
+            try {
+                const res = await fetch(
+                    `${SUPABASE_URL}/rest/v1/player_saves?player_id=eq.${PLAYER_ID}&select=state`,
+                    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+                );
+                if (!res.ok) return;
+                const rows = await res.json();
+                if (rows.length > 0 && rows[0].state?.giftDelivered) {
+                    showDone(rows[0].state.deliverySignature || null);
+                }
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
+</body>
+</html>
