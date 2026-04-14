@@ -950,12 +950,12 @@ export class GameScene extends Scene {
         const kstMs = now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60000;
         const kstHour = new Date(kstMs).getHours();
 
-        // Day 3, 19:00+
-        if (s.currentDay >= 3 && kstHour >= 19 && !this.secretDocSprites.has('day3')) {
+        // Day 3: first spawn at 19:00+, but if position already saved always show
+        if (s.currentDay >= 3 && (s.secretDocs.day3Pos || kstHour >= 19) && !this.secretDocSprites.has('day3')) {
             this.spawnSecretDoc('day3');
         }
-        // Day 4, 19:00+
-        if (s.currentDay >= 4 && kstHour >= 19 && !this.secretDocSprites.has('day4')) {
+        // Day 4: first spawn at 19:00+, but if position already saved always show
+        if (s.currentDay >= 4 && (s.secretDocs.day4Pos || kstHour >= 19) && !this.secretDocSprites.has('day4')) {
             this.spawnSecretDoc('day4');
         }
     }
