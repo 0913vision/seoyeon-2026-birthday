@@ -125,7 +125,7 @@
 
         <div class="info-row"><span class="label">수령인</span><span class="value">서연</span></div>
         <div class="info-row"><span class="label">품목</span><span class="value">생일 선물 (수제 상자)</span></div>
-        <div class="info-row"><span class="label">배송일</span><span class="value" id="dateValue">—</span></div>
+        <div class="info-row"><span class="label">배송일</span><span class="value" id="dateValue">2026.04.15</span></div>
         <div class="info-row"><span class="label">상태</span><span class="value" id="statusValue">확인 대기</span></div>
 
         <div id="signSection">
@@ -150,11 +150,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54ZXl6b3dwdmJhcGFwdWZ5amxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDUxMjYsImV4cCI6MjA5MTQ4MTEyNn0.TitjRCdqOu0I131XduuG4xGY9U9vSJynA7pi2TGtPXk';
         const PLAYER_ID = window.location.pathname.startsWith('/debug') ? 'debug' : 'seoyeon';
 
-        // Set date
-        const now = new Date();
-        const kst = new Date(now.getTime() + 9 * 3600000);
-        document.getElementById('dateValue').textContent =
-            kst.getFullYear() + '.' + String(kst.getMonth() + 1).padStart(2, '0') + '.' + String(kst.getDate()).padStart(2, '0');
+        // Date is hardcoded to 2026.04.15 (birthday)
 
         // Canvas signature pad
         const canvas = document.getElementById('signCanvas');
