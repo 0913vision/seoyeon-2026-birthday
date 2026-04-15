@@ -451,16 +451,24 @@ export class GameScene extends Scene {
                 // Giftbox uses a dynamic stage texture (box_stage1..7) based on
                 // partsAttached.length; other buildings use their static key.
                 let initialKey = b.spriteKey;
+                let usedCal: { originY: number; scale: number; offX: number; offY: number } | null = null;
                 if (b.isGiftBox) {
                     const st = useGameStore.getState();
                     const stage = boxStageForDisplay(st.partsAttached.length, st.packagingStartedAt, st.boxHarvested);
                     initialKey = `box_stage${stage}`;
                     this.giftBoxStage = stage;
+                    usedCal = BOX_STAGE_CAL[stage] ?? null;
                 }
-                const sprite = this.add.image(bx, by, initialKey);
-                const scale = TILE_W * b.scale / sprite.width;
+                const calOriginY = usedCal ? usedCal.originY : b.originY;
+                const calScale = usedCal ? usedCal.scale : b.scale;
+                const calOffX = usedCal ? usedCal.offX : (b.offX || 0);
+                const calOffY = usedCal ? usedCal.offY : (b.offY || 0);
+                const bxFinal = x + calOffX * DPR;
+                const byFinal = y + calOffY * DPR;
+                const sprite = this.add.image(bxFinal, byFinal, initialKey);
+                const scale = TILE_W * calScale / sprite.width;
                 sprite.setScale(scale);
-                sprite.setOrigin(0.5, b.originY);
+                sprite.setOrigin(0.5, calOriginY);
                 sprite.setDepth(depth + 2);
                 topY = y - sprite.displayHeight * 0.5;
                 if (b.isGiftBox) this.giftBoxSprite = sprite;
@@ -693,14 +701,14 @@ export class GameScene extends Scene {
         sprite.setTexture(key);
         this.giftBoxStage = stage;
 
-        // Apply per-stage calibration so different-sized stage images
-        // sit properly on the same tile.
+        // Apply per-stage calibration (origin, scale, and position).
         const cal = BOX_STAGE_CAL[stage] ?? BOX_STAGE_CAL[1];
         const newScale = TILE_W * cal.scale / sprite.width;
         sprite.setScale(newScale);
         sprite.setOrigin(0.5, cal.originY);
-        // offX/offY are baked into the initial position in placeBuildings,
-        // so we don't re-position here — the sprite stays at the same x/y.
+        // Reposition for this stage's offsets
+        const { x, y } = this.toScreen(8, 8); // gift box is always at (8,8)
+        sprite.setPosition(x + cal.offX * DPR, y + cal.offY * DPR);
 
         // Punch feedback
         this.tweens.add({
