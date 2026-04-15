@@ -375,6 +375,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         const hs = state.harvestStates[buildingId];
         if (!hs) return 0;
 
+        // After packaging starts, each building gets exactly 1 more harvest.
+        // If lastHarvestAt is already after packagingStartedAt, block.
+        if (state.packagingStartedAt != null && hs.lastHarvestAt > state.packagingStartedAt) {
+            return -1; // signal: final harvest already done
+        }
+
         const info = computeHarvest(hs.lastHarvestAt, Date.now(), prod.cycle, prod.perCycle);
         if (info.amount <= 0) return 0;
 

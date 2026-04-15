@@ -379,6 +379,7 @@ function HarvestInfo({ id }: { id: string }) {
 
     const harvestStates = useGameStore(s => s.harvestStates);
     const harvestBuilding = useGameStore(s => s.harvestBuilding);
+    const packagingStartedAt = useGameStore(s => s.packagingStartedAt);
     const closeBuildingModal = useGameStore(s => s.closeBuildingModal);
 
     // Tick every 500ms so remaining time / amount stay live
@@ -417,8 +418,11 @@ function HarvestInfo({ id }: { id: string }) {
         ? computeHarvest(hs.lastHarvestAt, Date.now(), prod.cycle, prod.perCycle)
         : { amount: 0, percent: 0, msUntil100: prod.cycle * 60_000, msUntil200: prod.cycle * 60_000 * 5 };
 
+    // After packaging, each building gets 1 final harvest. If already done, block.
+    const finalHarvestDone = packagingStartedAt != null && hs != null && hs.lastHarvestAt > packagingStartedAt;
+
     const percentClamped = Math.min(2, info.percent);
-    const ready = percentClamped >= 1;
+    const ready = !finalHarvestDone && percentClamped >= 1;
     const cap = prod.perCycle * 2;
     const progressPct = (percentClamped / 2) * 100;
 
@@ -484,20 +488,28 @@ function HarvestInfo({ id }: { id: string }) {
 
             {/* Production info */}
             <div style={{ fontSize: '13px', color: '#c8a888', lineHeight: 1.8 }}>
-                <div>
-                    기본 생산량: <b style={{ color: '#f0e0b8' }}>{formatCycle(prod.cycle)}마다 +{prod.perCycle}</b>
-                </div>
-                {percentClamped >= 2 ? (
-                    <div>저장 한도에 도달했어요. 수확해야 다시 쌓입니다.</div>
-                ) : percentClamped >= 1 ? (
-                    <>
-                        <div>저장 한도까지: <b style={{ color: '#f0e0b8' }}>{formatRemaining(info.msUntil200)}</b></div>
-                        <div style={{ fontSize: '12px', color: '#8a7358' }}>
-                            지금은 1/4 속도로 천천히 쌓이는 중이에요.
-                        </div>
-                    </>
+                {finalHarvestDone ? (
+                    <div style={{ textAlign: 'center', color: '#8a7358', padding: '8px 0' }}>
+                        수확할 수 있는 모든 자원을 수확했습니다.
+                    </div>
                 ) : (
-                    <div>수확 준비까지: <b style={{ color: '#f0e0b8' }}>{formatRemaining(info.msUntil100)}</b></div>
+                    <>
+                        <div>
+                            기본 생산량: <b style={{ color: '#f0e0b8' }}>{formatCycle(prod.cycle)}마다 +{prod.perCycle}</b>
+                        </div>
+                        {percentClamped >= 2 ? (
+                            <div>저장 한도에 도달했어요. 수확해야 다시 쌓입니다.</div>
+                        ) : percentClamped >= 1 ? (
+                            <>
+                                <div>저장 한도까지: <b style={{ color: '#f0e0b8' }}>{formatRemaining(info.msUntil200)}</b></div>
+                                <div style={{ fontSize: '12px', color: '#8a7358' }}>
+                                    지금은 1/4 속도로 천천히 쌓이는 중이에요.
+                                </div>
+                            </>
+                        ) : (
+                            <div>수확 준비까지: <b style={{ color: '#f0e0b8' }}>{formatRemaining(info.msUntil100)}</b></div>
+                        )}
+                    </>
                 )}
             </div>
 
